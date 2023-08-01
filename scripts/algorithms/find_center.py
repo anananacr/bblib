@@ -208,11 +208,11 @@ def main():
                 for j in result:
                     f.write(f"{j}\n")
                 f.close()
-                
+
                 ## Second aproximation of the direct beam
 
                 ## Check for pairs of Friedel in the image
-                """
+                
 
 if __name__ == "__main__":
     main()

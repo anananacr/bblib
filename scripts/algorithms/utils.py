@@ -2,6 +2,7 @@ from typing import List, Optional, Callable, Tuple, Any, Dict
 from numpy import exp
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 
 def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> Tuple[int]:
@@ -61,8 +62,7 @@ def azimuthal_average(
     radius = np.arange(0, r_bin.size)
     # Replace by one if r_bin is zero for division
     np.maximum(r_bin, 1, out=r_bin)
-    # plt.plot(radius, px_bin / r_bin)
-    # plt.show()
+
     return radius, px_bin / r_bin
 
 

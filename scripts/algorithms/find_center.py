@@ -7,7 +7,8 @@ from utils import get_format, mask_peaks, center_of_mass, azimuthal_average, gau
 from models import PF8, PF8Info
 from scipy.optimize import curve_fit
 import multiprocessing
-
+import math
+import matplotlib.pyplot as plt
 
 def shift_and_calculate_fwhm(shift: tuple) -> Dict[str, int]:
     ## Radial average from the center of mass
@@ -17,10 +18,10 @@ def shift_and_calculate_fwhm(shift: tuple) -> Dict[str, int]:
     yc = center_y + shift_y
 
     x, y = azimuthal_average(unbragged_data, center=(xc, yc), bad_px_mask=pf8_mask)
-
+    plt.plot(x,y)
     ## Define background peak region
     x_min = 150
-    x_max = 350
+    x_max = 400
     x = x[x_min:x_max]
     y = y[x_min:x_max]
 
@@ -35,11 +36,23 @@ def shift_and_calculate_fwhm(shift: tuple) -> Dict[str, int]:
     r_squared = 1 - (ss_res / ss_tot)
 
     ## Calculation of FWHM
-    fwhm = popt[2] * np.sqrt(8 * np.log(2))
+    fwhm = popt[2] * math.sqrt(8 * np.log(2))
 
     ## Divide by radius of the peak to get shasrpness ratio
     fwhm_over_radius = fwhm / popt[1]
 
+    ## Display plots
+    """
+    x_fit=x.copy()
+    y_fit=gaussian(x_fit, *popt)
+
+    plt.plot(x,y)
+    plt.plot(x_fit,y_fit, 'r:', label=f'gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM/R : {round(fwhm_over_radius,3)}')
+    plt.title('Azimuthal integration')
+    plt.legend()
+    plt.savefig(f'/home/rodria/Desktop/radial/lyso_shift_{shift[0]}_{shift[1]}.png')
+    plt.show()
+    """
     return {
         "shift_x": shift_x,
         "shift_y": shift_y,
@@ -84,7 +97,7 @@ def main():
     file_format = get_format(args.input)
     if file_format == "lst":
         ref_image = []
-        for i in range(len(paths[:])):
+        for i in range(0,len(paths[:])):
             file_name = paths[i][:-1]
             print(file_name)
             if get_format(file_name) == "cbf":
@@ -165,25 +178,41 @@ def main():
                 center_x = xc
                 global center_y
                 center_y = yc
+                print(xc,yc)
+                
+                ## Display first approximation plots
+                """
+                xr=831
+                yr=833
+                plt.imshow(unbragged_data, vmax=10, cmap='jet')
+                plt.scatter(xr,yr, color='lime', label='xds')
+                plt.scatter(xc,yc, color='r', label='center of mass')
+                plt.title('First approximation: center of mass')
+                plt.legend()
+                plt.savefig(f'/home/rodria/Desktop/com/lyso_25_error_{xc-xr}_{yc-yr}.png')
+                plt.show()
 
+                """
                 ## Grid search of sharpness of the azimutal average
                 xx, yy = np.meshgrid(
-                    np.arange(-20, 20, 1, dtype=int), np.arange(-20, 20, 1, dtype=int)
+                    np.arange(-30, 31, 1, dtype=int), np.arange(-30, 31, 1, dtype=int)
                 )
                 coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
 
                 pool = multiprocessing.Pool()
                 with pool:
                     result = pool.map(shift_and_calculate_fwhm, coordinates)
+                
 
                 f = open(f"{args.output}_{i}.txt", "w")
                 for j in result:
                     f.write(f"{j}\n")
                 f.close()
+                
                 ## Second aproximation of the direct beam
 
                 ## Check for pairs of Friedel in the image
-
+                """
 
 if __name__ == "__main__":
     main()

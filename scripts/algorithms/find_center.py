@@ -26,7 +26,7 @@ def shift_and_calculate_fwhm(shift: tuple) -> Dict[str, int]:
     xc = center_x + shift_x
     yc = center_y + shift_y
 
-    x, y = azimuthal_average(unbragged_data, center=(xc, yc), bad_px_mask=pf8_mask)
+    x, y = azimuthal_average(unbragged_data, center=(xc, yc), mask=pf8_mask)
     plt.plot(x, y)
     ## Define background peak region
     x_min = 150
@@ -105,7 +105,7 @@ def main():
     file_format = get_format(args.input)
     if file_format == "lst":
         ref_image = []
-        for i in range(36, len(paths[:])):
+        for i in range(0, len(paths[:])):
             file_name = paths[i][:-1]
             print(file_name)
             if get_format(file_name) == "cbf":
@@ -225,8 +225,8 @@ def main():
 
                 ## Display plots
                 """
-                xr=823
-                yr=766
+                xr=831
+                yr=761
                 fig, (ax1, ax2) = plt.subplots(1, 2,figsize=(10, 5))
                 pos1=ax1.imshow(unbragged_data, vmax=7, cmap='jet')
                 ax1.scatter(xr,yr, color='lime', label='xds')

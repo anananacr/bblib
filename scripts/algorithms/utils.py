@@ -6,6 +6,7 @@ import math
 import json
 import pandas as pd
 
+
 def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> Tuple[int]:
     """
     Adapted from Robert Bücker work on diffractem (https://github.com/robertbuecker/diffractem/tree/master)
@@ -82,27 +83,27 @@ def azimuthal_average(
 
 def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int) -> np.ndarray:
     """
-    Gather coordinates of a box of 3x3 pixels around each point from the indices list. Bragg flag indicates if the mask returned will contain only bragg peaks regions (bragg =1), no bragg peaks regions (bragg=0), or both (bragg =-1).
+    Gather coordinates of a box of 1x1 pixels around each point from the indices list. Bragg flag indicates if the mask returned will contain only bragg peaks regions (bragg =1), no bragg peaks regions (bragg=0), or both (bragg =-1).
     Parameters
     ----------
     mask: np.ndarray
-        Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
+        An array where mask will be built based on its shape. Mask shape is the same size of data.
     indices: tuple
         Bragg peaks coordinates, indices[0] contains x-coordinates of Bragg peaks and indices[1] the corresponding y-coordinates.
     bragg: int
-        Bragg flag, choose between return only peaks, only background or both.
+        Bragg flag, choose between return only peaks, only background or both (bypass masking of peaks).
     Returns
     ----------
-    mask: np.ndarray
+    surrounding_mask: np.ndarray
         Corresponding mask according to bragg flag choice. It contains zeros for unvalid pixels and one for valid pixels. Mask shape is the same size of data.
     """
     surrounding_positions = []
     count = 0
     for index in zip(indices[0], indices[1]):
-        n = 3
+        n = 1
         row, col = index
-        for i in range(-1 * n, n):
-            for k in range(-1 * n, n):
+        for i in range(-n, n + 1):
+            for k in range(-n, n + 1):
                 surrounding_positions.append((row + i, col + k))
         count += 1
 
@@ -122,9 +123,7 @@ def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int) -> np.ndarray:
             if 0 <= row < mask.shape[0] and 0 <= col < mask.shape[1]:
                 surrounding_mask[row, col] = 0
 
-    surrounding_mask[np.where(mask == 0)] = 0
-    mask = surrounding_mask
-    return mask
+    return surrounding_mask
 
 
 def get_format(file_path: str) -> str:
@@ -330,114 +329,66 @@ def fit_fwhm(lines: list) -> Tuple[int]:
     return xc, yc
 
 
-def shift_image_by_n_pixels(data: np.ndarray, n: float, axis: int) -> np.ndarray:
+def shift_image_by_n_pixels(data: np.ndarray, n: int, axis: int) -> np.ndarray:
+    """
+    Linear translation of image by n pixels in given axis. Empty values in the shifted image is filled with zero.
+
+    Parameters
+    ----------
+    data: np.ndarray
+        Input image to be shifted
+    n: int
+        Number of pixels to be shifted.
+    axis: int
+        Axis in which the image will be shifted. Axis 0 corresponds to a shift in the rows (y-axis), axis 1 shifts in the columns (x-axis).
+    Returns
+    ----------
+    shifted_data: np.ndarray
+        Data shifted by n pixels in axis.
+    """
     max_row, max_col = data.shape
     # print(max_row,max_col)
     if axis == 1 and n >= 0:
-        shifted_image = np.pad(data, pad_width=[(0, 0), (abs(n), 0)], mode="constant")
-        image_cut = shifted_image[:max_row, :max_col]
+        shifted_data = np.pad(data, pad_width=[(0, 0), (abs(n), 0)], mode="constant")
+        image_cut = shifted_data[:max_row, :max_col]
     elif axis == 1 and n < 0:
-        shifted_image = np.pad(data, pad_width=[(0, 0), (0, abs(n))], mode="constant")
-        image_cut = shifted_image[:max_row, abs(n) :]
+        shifted_data = np.pad(data, pad_width=[(0, 0), (0, abs(n))], mode="constant")
+        image_cut = shifted_data[:max_row, abs(n) :]
     elif axis == 0 and n >= 0:
-        shifted_image = np.pad(data, pad_width=[(abs(n), 0), (0, 0)], mode="constant")
-        image_cut = shifted_image[:max_row, :max_col]
+        shifted_data = np.pad(data, pad_width=[(abs(n), 0), (0, 0)], mode="constant")
+        image_cut = shifted_data[:max_row, :max_col]
     elif axis == 0 and n < 0:
-        shifted_image = np.pad(data, pad_width=[(0, abs(n)), (0, 0)], mode="constant")
-        image_cut = shifted_image[abs(n) :, :max_col]
+        shifted_data = np.pad(data, pad_width=[(0, abs(n)), (0, 0)], mode="constant")
+        image_cut = shifted_data[abs(n) :, :max_col]
     # print("Image cut shape", image_cut.shape)
     return image_cut
-
-def open_cc_map(lines: list, label: str = None):
-    """
-    Open autocorrelation grid search optmization plot, fit projections in both axis to get the point of maximum autocorrelation of Bragg peaks positions.
-    Parameters
-    ----------
-    lines: list
-        Output of grid search for FWHM/R optmization, each line should contain a dictionary contaning entries for xc, yc and fwhm_over_radius.
-    """
-    n = int(math.sqrt(len(lines)))
-
-    merged_dict = {}
-    for dictionary in lines[:]:
-
-        for key, value in dictionary.items():
-            if key in merged_dict:
-                merged_dict[key].append(value)
-            else:
-                merged_dict[key] = [value]
-
-    # Create a figure with two subplots
-    fig, (ax1,ax2) = plt.subplots(1, 2, figsize=(10, 5))
-
-    # Extract x, y, and z from merged_dict
-
-    x = np.array(merged_dict["xc"]).reshape((n, n))[0]
-    y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
-    z1 = np.nan_to_num(np.array(merged_dict["cc_0"]).reshape((n, n)))
-    z2 = np.nan_to_num(np.array(merged_dict["cc_1"]).reshape((n, n)))
-
-
-    
-    #norm_z1=z1**2/np.max(z1**2)
-    #norm_z1=z1/np.max(z1)
-    #norm_z1=z1
-    index_y, index_x = np.where(z1==np.max(z1))
-    print('xc yc',x[index_x], y[index_y])
-    pos1 = ax1.imshow(z1, cmap="nipy_spectral")
-    step = 10
-    n = z1.shape[0]
-    ax1.set_xticks(np.arange(0, n, step, dtype=int))
-    ax1.set_yticks(np.arange(0, n, step, dtype=int))
-    step = step * (abs(x[0] - x[1]))
-    ax1.set_xticklabels(np.arange(x[0], x[-1] + step, step, dtype=int))
-    ax1.set_yticklabels(np.arange(y[0], y[-1] + step, step, dtype=int))
-    ax1.set_ylabel("yc [px]")
-    ax1.set_xlabel("xc [px]")
-    ax1.set_title("cc matrix sum")
-
-    index_y, index_x = np.where(z2==np.max(z2))
-    print('xc yc',x[index_x], y[index_y])
-    pos2 = ax2.imshow(z2, cmap="nipy_spectral")
-    step = 10
-    n = z2.shape[0]
-    ax2.set_xticks(np.arange(0, n, step, dtype=int))
-    ax2.set_yticks(np.arange(0, n, step, dtype=int))
-    step = step * (abs(x[0] - x[1]))
-    ax2.set_xticklabels(np.arange(x[0], x[-1] + step, step, dtype=int))
-    ax2.set_yticklabels(np.arange(y[0], y[-1] + step, step, dtype=int))
-    ax2.set_ylabel("yc [px]")
-    ax2.set_xlabel("xc [px]")
-    ax2.set_title("cc matrix max")
-    """
-    z=np.multiply(norm_z1,norm_z2)
-    pos3 = ax3.imshow(z, cmap="nipy_spectral")
-    step = 10
-    n = z.shape[0]
-    ax3.set_xticks(np.arange(0, n, step, dtype=int))
-    ax3.set_yticks(np.arange(0, n, step, dtype=int))
-    step = step * (abs(x[0] - x[1]))
-    ax3.set_xticklabels(np.arange(x[0], x[-1] + step, step, dtype=int))
-    ax3.set_yticklabels(np.arange(y[0], y[-1] + step, step, dtype=int))
-    ax3.set_ylabel("yc [px]")
-    ax3.set_xlabel("xc [px]")
-    ax3.set_title("cc both")
-    """
-
-    fig.colorbar(pos1, ax=ax1, shrink=0.6)
-    fig.colorbar(pos2, ax=ax2, shrink=0.6)
-    #fig.colorbar(pos3, ax=ax3, shrink=0.6)
-
-    # Display the figure
-
-    # plt.show()
-    plt.savefig(f'/home/rodria/Desktop/cc_map/lyso_{label}.png')
-    # plt.close()
 
 
 def table_of_center(
     crystal: int, rot: int, center_file: str = None, loaded_table_center: Dict = None
 ) -> List[int]:
+    """
+    Return theoretical center positions for the data given its ID (crystal and rotation number) in a .txt file.
+
+    Parameters
+    ----------
+    crystal: int
+        Crystal number identification.
+    rot: int
+        Rotation number identification.
+    center_file:
+        Path to the theoretical center positions .txt file.
+        Example: center.txt
+        {'crystal': 1, 'rot': 1, 'center_x': 831, 'center_y': 993}
+        {'crystal': 1, 'rot': 2, 'center_x': 834, 'center_y': 982}
+    loaded_table_center: Dict
+        Bypass loading of the table if the function had already been called.
+
+    Returns
+    ----------
+    center_theory: Tuple[int]
+        Theoretical center positions for the data with given crystal and rotation ID.
+    """
 
     if loaded_table_center is None:
         if center_file is None:
@@ -505,6 +456,22 @@ def table_of_center(
 
 
 def get_table_center(center_file: str) -> Dict:
+    """
+    Load theoretical center positions for the data given its ID (crystal and rotation number) from a .txt file.
+
+    Parameters
+    ----------
+    center_file:
+        Path to the theoretical center positions .txt file.
+        Example: center.txt
+        {'crystal': 1, 'rot': 1, 'center_x': 831, 'center_y': 993}
+        {'crystal': 1, 'rot': 2, 'center_x': 834, 'center_y': 982}
+
+    Returns
+    ----------
+    loaded_table_center: Dict
+        Theoretical center positions table.
+    """
     data = open(center_file, "r").read().splitlines()
     data = [x.replace("'", '"') for x in data]
     data = [json.loads(d) for d in data]
@@ -541,239 +508,36 @@ def transpose_dict(data: list) -> dict:
 def get_center_theory(
     files_path: np.ndarray, center_file: str = None, loaded_table_center: str = None
 ) -> List[int]:
-    center_theory = []
+    """
+    Extract crystal and rotation number ID from the file name and get theoretical center positions from a .txt file.
 
+    Parameters
+    ----------
+    files_path: np.ndarray
+        Array of input images path.
+    center_file:
+        Path to the theoretical center positions .txt file.
+        Example: center.txt
+        {'crystal': 1, 'rot': 1, 'center_x': 831, 'center_y': 993}
+        {'crystal': 1, 'rot': 2, 'center_x': 834, 'center_y': 982}
+    loaded_table_center: Dict
+        Theoretical center positions table.
+    Returns
+    ----------
+    center_theory: List[int]
+        Theoretical center positions table for input images.
+    loaded_table_center: Dict
+        Theoretical center positions table from .txt file to avoid opening it many times.
+    """
+    center_theory = []
     for i in files_path:
 
         label = str(i).split("/")[-1]
-        # print(label)
-        # crystal = int(label.split("_")[0][-2:])
-        # rot = int(label.split("_")[1][-3:])
         crystal = int(label.split("_")[-3][-2:])
         rot = int(label.split("_")[-2][:])
-        # print(crystal, rot)
         center, loaded_table_center = table_of_center(
             crystal, rot, center_file, loaded_table_center
         )
         center_theory.append(center)
-    # print(center_theory)
     center_theory = np.array(center_theory)
     return center_theory, loaded_table_center
-
-
-def extend_image(img:np.ndarray)->np.ndarray:
-    row, col = img.shape
-    print(row, col)
-    extended_img=np.pad(img, pad_width=((0,0),(col,col)))
-    extended_img=np.pad(extended_img, pad_width=((row,row),(0,0)))
-    extended_img[np.where(extended_img)==0]=np.nan
-    return extended_img
-
-def shift_and_calculate_cc(shift: tuple)-> Dict[str, float]:
-    """
-    Wrong
-    """
-    #print(shift)
-    shift_x = -shift[0]
-    shift_y = -shift[1]
-    xc = round(data.shape[1]/2) + shift[0]
-    yc = round(data.shape[0]/2) + shift[1]
-    #print(xc,yc)
-    shifted_data=shift_image_by_n_pixels(shift_image_by_n_pixels(data, shift_y, 0), shift_x, 1)
-    shifted_mask=shift_image_by_n_pixels(shift_image_by_n_pixels(xds_mask, shift_y, 0), shift_x, 1)
-    pf8_info = PF8Info(
-        max_num_peaks=10000,
-        pf8_detector_info=dict(
-            asic_nx=shifted_mask.shape[1],
-            asic_ny=shifted_mask.shape[0],
-            nasics_x=1,
-            nasics_y=1,
-        ),
-        adc_threshold=10,
-        minimum_snr=5,
-        min_pixel_count=1,
-        max_pixel_count=200,
-        local_bg_radius=3,
-        min_res=0,
-        max_res=100,
-        _bad_pixel_map=shifted_mask,
-    )
-
-    pf8 = PF8(pf8_info)
-
-    peak_list = pf8.get_peaks_pf8(data=shifted_data)
-    
-    flipped_data=shifted_data[::-1,::-1]
-    pf8_info._bad_pixel_map=shifted_mask[::-1,::-1]
-    pf8 = PF8(pf8_info)
-
-    peak_list_flipped = pf8.get_peaks_pf8(data=flipped_data)
-    
-    if peak_list["num_peaks"]>=peak_list_flipped["num_peaks"]:
-        n_peaks=peak_list_flipped["num_peaks"]
-        indices = (
-        np.array(peak_list["ss"][:n_peaks], dtype=int),
-        np.array(peak_list["fs"][:n_peaks], dtype=int),
-        )    
-        indices_flipped = (
-        np.array(peak_list_flipped["ss"], dtype=int),
-        np.array(peak_list_flipped["fs"], dtype=int),
-        )
-    else:
-        n_peaks=peak_list["num_peaks"]
-        indices = (
-        np.array(peak_list["ss"], dtype=int),
-        np.array(peak_list["fs"], dtype=int),
-        )    
-        indices_flipped = (
-        np.array(peak_list_flipped["ss"][:n_peaks], dtype=int),
-        np.array(peak_list_flipped["fs"][:n_peaks], dtype=int),
-        )
-    """
-    if peak_list["num_peaks"]>=peak_list_flipped["num_peaks"]:
-        n_pads=peak_list["num_peaks"]-peak_list_flipped["num_peaks"]
-        n_peaks=peak_list["num_peaks"]
-        indices = (
-        np.array(peak_list["ss"], dtype=int),
-        np.array(peak_list["fs"], dtype=int),
-        )    
-        indices_flipped = (
-        np.pad(np.array(peak_list_flipped["ss"], dtype=int), pad_width=(0, n_pads)),
-        np.pad(np.array(peak_list_flipped["fs"], dtype=int), pad_width=(0, n_pads))
-        )
-    else:
-        n_peaks=peak_list_flipped["num_peaks"]
-        n_pads=peak_list_flipped["num_peaks"]-peak_list["num_peaks"]
-        indices = (
-        np.pad(np.array(peak_list["ss"], dtype=int),pad_width=(0, n_pads)),
-        np.pad(np.array(peak_list["fs"], dtype=int),pad_width=(0, n_pads))
-        )    
-        indices_flipped = (
-        np.array(peak_list_flipped["ss"], dtype=int),
-        np.array(peak_list_flipped["fs"], dtype=int),
-        )
-        """
-    #print(n_peaks)
-    #print(peak_list['ss'], peak_list_flipped['ss'])
-    #print(peak_list['fs'], peak_list_flipped['fs'])
-
-    #fig, ((ax1, ax2),(ax3,ax4)) = plt.subplots(2, 2,figsize=(10, 10))
-    #ax1.imshow(shifted_data,cmap='cividis',vmax=10)
-    #ax1.scatter(data.shape[1]/2, data.shape[0]/2)
-    #ax1.scatter(indices[1], indices[0], marker="o", edgecolor="r", facecolor="none", s=30)
-    #ax2.imshow(flipped_data,cmap='cividis',vmax=10)
-    #ax2.scatter(indices_flipped[1], indices_flipped[0], marker="o", edgecolor="lime", facecolor="none", s=30)
-    #ax2.scatter(data.shape[1]/2, data.shape[0]/2)
-    #ax3.scatter(np.sort(indices[1]), np.sort(indices_flipped[1]))
-
-    peaks={'peaks_x': indices[1],
-          'peaks_y': indices[0],
-        }
-    peaks_flipped={'peaks_x': indices_flipped[1],
-          'peaks_y': indices_flipped[0]
-        }
-
-    df_orig=pd.DataFrame(peaks)
-    df_flip=pd.DataFrame(peaks_flipped)
-    
-
-    cc_matrix = df_orig.corrwith(df_flip, axis=0)
-    #print(cc_matrix)
-    
-    #print('norm cc x',cc_matrix.peaks_x)
-    #print('norm cc y',cc_matrix.peaks_y)
-    #print('sum', cc_matrix.peaks_x+cc_matrix.peaks_y)
-    #ax4.scatter(indices[0], indices_flipped[0])
-    #plt.show()
-    return {
-        "shift_x": shift_x,
-        "shift_y": shift_y,
-        "xc": xc,
-        "yc": yc,
-        "cc_0": cc_matrix.peaks_x,
-        "cc_1": cc_matrix.peaks_y
-    }
-
-def shift_and_calculate_autocorrelation(shift: tuple)-> Dict[str, float]:
-    """
-    Wrong
-    """
-    
-    pf8_info = PF8Info(
-        max_num_peaks=10000,
-        pf8_detector_info=dict(
-            asic_nx=xds_mask.shape[1],
-            asic_ny=xds_mask.shape[0],
-            nasics_x=1,
-            nasics_y=1,
-        ),
-        adc_threshold=10,
-        minimum_snr=5,
-        min_pixel_count=1,
-        max_pixel_count=200,
-        local_bg_radius=3,
-        min_res=0,
-        max_res=85,
-        _bad_pixel_map=xds_mask,
-    )
-
-    pf8 = PF8(pf8_info)
-
-    peak_list = pf8.get_peaks_pf8(data=data)
-    
-    shift_x = shift[0]
-    shift_y = shift[1]
-    xc = data.shape[1]/2 + shift[0]/2
-    yc = data.shape[0]/2 + shift[1]/2
-    flipped_data=data[::-1,::-1]
-    flipped_mask=xds_mask[::-1,::-1]
-    shifted_data=shift_image_by_n_pixels(shift_image_by_n_pixels(flipped_data, shift_y, 0), shift_x, 1)
-    shifted_mask=shift_image_by_n_pixels(shift_image_by_n_pixels(flipped_mask, shift_y, 0), shift_x, 1)
-
-    
-    pf8_info._bad_pixel_map=shifted_mask
-    pf8 = PF8(pf8_info)
-
-    peak_list_flipped = pf8.get_peaks_pf8(data=shifted_data)
-    
-
-    if peak_list["num_peaks"]>=peak_list_flipped["num_peaks"]:
-        n_peaks=peak_list_flipped["num_peaks"]
-        indices = (
-        np.array(peak_list["ss"][:n_peaks], dtype=int),
-        np.array(peak_list["fs"][:n_peaks], dtype=int),
-        )    
-        indices_flipped = (
-        np.array(peak_list_flipped["ss"], dtype=int),
-        np.array(peak_list_flipped["fs"], dtype=int),
-        )
-    else:
-        n_peaks=peak_list["num_peaks"]
-        indices = (
-        np.array(peak_list["ss"], dtype=int),
-        np.array(peak_list["fs"], dtype=int),
-        )    
-        indices_flipped = (
-        np.array(peak_list_flipped["ss"][:n_peaks], dtype=int),
-        np.array(peak_list_flipped["fs"][:n_peaks], dtype=int),
-        )
-    #print(n_peaks)
-    #print(peak_list, peak_list_flipped)
-    #fig, (ax1, ax2, ax3) = plt.subplots(1, 3,figsize=(15, 5))
-    #ax1.scatter(indices[1], indices[0])
-    #ax1.scatter(indices_flipped[1], indices_flipped[0])
-
-    #ax2.scatter(indices[1], indices_flipped[1])
-    cc_0 = np.corrcoef(x=(indices[0], indices_flipped[0]))
-    
-
-    cc_1 = np.corrcoef(x=(indices[1], indices_flipped[1]))
-    
-    return {
-        "shift_x": shift[0],
-        "shift_y": shift[1],
-        "xc": xc,
-        "yc": yc,
-        "cc_0": cc_0[0,1],
-        "cc_1": cc_1[0,1]
-    }

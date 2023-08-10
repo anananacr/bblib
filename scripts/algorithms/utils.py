@@ -3,6 +3,8 @@ from numpy import exp
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+import json
+import pandas as pd
 
 
 def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> Tuple[int]:
@@ -81,27 +83,27 @@ def azimuthal_average(
 
 def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int) -> np.ndarray:
     """
-    Gather coordinates of a box of 3x3 pixels around each point from the indices list. Bragg flag indicates if the mask returned will contain only bragg peaks regions (bragg =1), no bragg peaks regions (bragg=0), or both (bragg =-1).
+    Gather coordinates of a box of 1x1 pixels around each point from the indices list. Bragg flag indicates if the mask returned will contain only bragg peaks regions (bragg =1), no bragg peaks regions (bragg=0), or both (bragg =-1).
     Parameters
     ----------
     mask: np.ndarray
-        Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
+        An array where mask will be built based on its shape. Mask shape is the same size of data.
     indices: tuple
         Bragg peaks coordinates, indices[0] contains x-coordinates of Bragg peaks and indices[1] the corresponding y-coordinates.
     bragg: int
-        Bragg flag, choose between return only peaks, only background or both.
+        Bragg flag, choose between return only peaks, only background or both (bypass masking of peaks).
     Returns
     ----------
-    mask: np.ndarray
+    surrounding_mask: np.ndarray
         Corresponding mask according to bragg flag choice. It contains zeros for unvalid pixels and one for valid pixels. Mask shape is the same size of data.
     """
     surrounding_positions = []
     count = 0
     for index in zip(indices[0], indices[1]):
-        n = 3
+        n = 1
         row, col = index
-        for i in range(-1 * n, n):
-            for k in range(-1 * n, n):
+        for i in range(-n, n + 1):
+            for k in range(-n, n + 1):
                 surrounding_positions.append((row + i, col + k))
         count += 1
 
@@ -110,7 +112,7 @@ def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int) -> np.ndarray:
         surrounding_mask = np.zeros_like(mask)
         for pos in surrounding_positions:
             row, col = pos
-            if 0 <= row < mask.shape[0] and 0 <= col <= mask.shape[1]:
+            if 0 <= row < mask.shape[0] and 0 <= col < mask.shape[1]:
                 surrounding_mask[row, col] = 1
     elif bragg == -1:
         surrounding_mask = np.ones_like(mask)
@@ -118,12 +120,10 @@ def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int) -> np.ndarray:
         surrounding_mask = np.ones_like(mask)
         for pos in surrounding_positions:
             row, col = pos
-            if 0 <= row < mask.shape[0] and 0 <= col <= mask.shape[1]:
+            if 0 <= row < mask.shape[0] and 0 <= col < mask.shape[1]:
                 surrounding_mask[row, col] = 0
 
-    surrounding_mask[np.where(mask == 0)] = 0
-    mask = surrounding_mask
-    return mask
+    return surrounding_mask
 
 
 def get_format(file_path: str) -> str:
@@ -327,3 +327,217 @@ def fit_fwhm(lines: list) -> Tuple[int]:
     yc = round((-1 * popt[1]) / (2 * popt[0]))
 
     return xc, yc
+
+
+def shift_image_by_n_pixels(data: np.ndarray, n: int, axis: int) -> np.ndarray:
+    """
+    Linear translation of image by n pixels in given axis. Empty values in the shifted image is filled with zero.
+
+    Parameters
+    ----------
+    data: np.ndarray
+        Input image to be shifted
+    n: int
+        Number of pixels to be shifted.
+    axis: int
+        Axis in which the image will be shifted. Axis 0 corresponds to a shift in the rows (y-axis), axis 1 shifts in the columns (x-axis).
+    Returns
+    ----------
+    shifted_data: np.ndarray
+        Data shifted by n pixels in axis.
+    """
+    max_row, max_col = data.shape
+    # print(max_row,max_col)
+    if axis == 1 and n >= 0:
+        shifted_data = np.pad(data, pad_width=[(0, 0), (abs(n), 0)], mode="constant")
+        image_cut = shifted_data[:max_row, :max_col]
+    elif axis == 1 and n < 0:
+        shifted_data = np.pad(data, pad_width=[(0, 0), (0, abs(n))], mode="constant")
+        image_cut = shifted_data[:max_row, abs(n) :]
+    elif axis == 0 and n >= 0:
+        shifted_data = np.pad(data, pad_width=[(abs(n), 0), (0, 0)], mode="constant")
+        image_cut = shifted_data[:max_row, :max_col]
+    elif axis == 0 and n < 0:
+        shifted_data = np.pad(data, pad_width=[(0, abs(n)), (0, 0)], mode="constant")
+        image_cut = shifted_data[abs(n) :, :max_col]
+    # print("Image cut shape", image_cut.shape)
+    return image_cut
+
+
+def table_of_center(
+    crystal: int, rot: int, center_file: str = None, loaded_table_center: Dict = None
+) -> List[int]:
+    """
+    Return theoretical center positions for the data given its ID (crystal and rotation number) in a .txt file.
+
+    Parameters
+    ----------
+    crystal: int
+        Crystal number identification.
+    rot: int
+        Rotation number identification.
+    center_file:
+        Path to the theoretical center positions .txt file.
+        Example: center.txt
+        {'crystal': 1, 'rot': 1, 'center_x': 831, 'center_y': 993}
+        {'crystal': 1, 'rot': 2, 'center_x': 834, 'center_y': 982}
+    loaded_table_center: Dict
+        Bypass loading of the table if the function had already been called.
+
+    Returns
+    ----------
+    center_theory: Tuple[int]
+        Theoretical center positions for the data with given crystal and rotation ID.
+    """
+
+    if loaded_table_center is None:
+        if center_file is None:
+            data = {
+                "crystal": [1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5],
+                "rot": [1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2],
+                "center_x": [
+                    831,
+                    834,
+                    825,
+                    830,
+                    831,
+                    832,
+                    832,
+                    833,
+                    831,
+                    831,
+                    831,
+                    834,
+                    831,
+                    833,
+                    831,
+                    829,
+                    826,
+                    825,
+                    823,
+                    831,
+                ],
+                "center_y": [
+                    993,
+                    982,
+                    979,
+                    973,
+                    962,
+                    928,
+                    927,
+                    925,
+                    894,
+                    885,
+                    877,
+                    851,
+                    833,
+                    824,
+                    810,
+                    795,
+                    785,
+                    774,
+                    766,
+                    761,
+                ],
+            }
+        else:
+            # print(center_file)
+            data = get_table_center(center_file)
+
+            # print(data)
+        loaded_table_center = data.copy()
+
+    data = loaded_table_center
+    df = pd.DataFrame.from_dict(data)
+    # print(df)
+    match = df.loc[(df["crystal"] == crystal) & (df["rot"] == rot)].reset_index()
+
+    return [match["center_x"][0], match["center_y"][0]], loaded_table_center
+
+
+def get_table_center(center_file: str) -> Dict:
+    """
+    Load theoretical center positions for the data given its ID (crystal and rotation number) from a .txt file.
+
+    Parameters
+    ----------
+    center_file:
+        Path to the theoretical center positions .txt file.
+        Example: center.txt
+        {'crystal': 1, 'rot': 1, 'center_x': 831, 'center_y': 993}
+        {'crystal': 1, 'rot': 2, 'center_x': 834, 'center_y': 982}
+
+    Returns
+    ----------
+    loaded_table_center: Dict
+        Theoretical center positions table.
+    """
+    data = open(center_file, "r").read().splitlines()
+    data = [x.replace("'", '"') for x in data]
+    data = [json.loads(d) for d in data]
+    # print(data)
+    return transpose_dict(data)
+
+
+def transpose_dict(data: list) -> dict:
+    """
+    Transposes a list of dictionaries into a dictionary of lists.
+
+    Parameters:
+        data (list): A list of dictionaries to be transposed.
+
+    Returns:
+        dict: A dictionary with keys from the original dictionaries and values as lists
+              containing the corresponding values from each dictionary.
+
+    Example:
+        >>> data = [{'key1': 1, 'key2': 2}, {'key1': 3, 'key2': 4}]
+        >>> transpose_dict(data)
+        {'key1': [1, 3], 'key2': [2, 4]}
+    """
+    result = {}
+    for d in data:
+        for k, v in d.items():
+            if k not in result:
+                result[k] = []
+            result[k].append(v)
+
+    return result
+
+
+def get_center_theory(
+    files_path: np.ndarray, center_file: str = None, loaded_table_center: str = None
+) -> List[int]:
+    """
+    Extract crystal and rotation number ID from the file name and get theoretical center positions from a .txt file.
+
+    Parameters
+    ----------
+    files_path: np.ndarray
+        Array of input images path.
+    center_file:
+        Path to the theoretical center positions .txt file.
+        Example: center.txt
+        {'crystal': 1, 'rot': 1, 'center_x': 831, 'center_y': 993}
+        {'crystal': 1, 'rot': 2, 'center_x': 834, 'center_y': 982}
+    loaded_table_center: Dict
+        Theoretical center positions table.
+    Returns
+    ----------
+    center_theory: List[int]
+        Theoretical center positions table for input images.
+    loaded_table_center: Dict
+        Theoretical center positions table from .txt file to avoid opening it many times.
+    """
+    center_theory = []
+    for i in files_path:
+
+        label = str(i).split("/")[-1]
+        crystal = int(label.split("_")[-3][-2:])
+        rot = int(label.split("_")[-2][:])
+        center, loaded_table_center = table_of_center(
+            crystal, rot, center_file, loaded_table_center
+        )
+        center_theory.append(center)
+    center_theory = np.array(center_theory)
+    return center_theory, loaded_table_center

@@ -1,3 +1,4 @@
+from typing import List, Optional, Callable, Tuple, Any, Dict
 import numpy as np
 from dataclasses import dataclass, field
 import math
@@ -6,7 +7,26 @@ from om.algorithms.crystallography import TypePeakList, Peakfinder8PeakDetection
 ## Some abstractions to call peakfinder8 in Python
 
 
-def build_pixel_map(row: int, col: int, y0: int, x0: int):
+def build_pixel_map(row: int, col: int, y0: int, x0: int) -> Dict[str, int]:
+    """
+    Calculate radius pixels map for a given center x0,y0.
+
+    Parameters
+    ----------
+    row: int
+        Number of rows of data.
+    col: int
+        Number of columns of data.
+    y0:
+        Radial center position in y axis (row).
+    x0:
+        Radial center position in x axis (column).
+
+    Returns
+    ----------
+    radius_pixel_map: Dict
+        "radius": radius pixel map in realtion to the give center. It has same size of data given by row and col.
+    """
     radius_pixel_map = np.ones((row, col)).astype(int)
     for idy, i in enumerate(radius_pixel_map):
         for idx, j in enumerate(i):
@@ -52,7 +72,6 @@ class PF8Info:
 
 
 class PF8:
-    ##test for om peakfinder8
     def __init__(self, info):
         assert isinstance(
             info, PF8Info

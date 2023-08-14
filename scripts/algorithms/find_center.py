@@ -31,9 +31,10 @@ def shift_and_calculate_fwhm(shift: tuple) -> Dict[str, int]:
     shift_y = shift[1]
     xc = center_x + shift_x
     yc = center_y + shift_y
-
+    
     x, y = azimuthal_average(unbragged_data, center=(xc, yc), mask=pf8_mask)
     # Plot all radial average
+    #fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
     #plt.plot(x, y)
 
     ## Define background peak region
@@ -67,7 +68,9 @@ def shift_and_calculate_fwhm(shift: tuple) -> Dict[str, int]:
     plt.plot(x_fit,y_fit, 'r:', label=f'gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM/R : {round(fwhm_over_radius,3)}')
     plt.title('Azimuthal integration')
     plt.legend()
+    plt.savefig(f'/home/rodria/Desktop/20230814/gaussian_fit/lyso_{frame_number}_{shift[0]}_{shift[1]}.png')
     plt.show()
+    plt.close()
     """
 
     return {
@@ -232,6 +235,8 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
                 orig_xc + ((xx[index]) / 2),
                 orig_yc + ((yy[index]) / 2),
                 1 / math.sqrt(sub_reduced_cc_matrix[index]),
+                index[0],
+                index[1]
             ]
         )
 
@@ -242,6 +247,8 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
                 orig_xc + ((xx[index]) / 2),
                 orig_yc + ((yy[index]) / 2),
                 1 / math.sqrt(sub_reduced_cc_matrix[index]),
+                index[0],
+                index[1]
             ]
         )
 
@@ -256,6 +263,15 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
         * math.sqrt((x[0] - reference_point[0]) ** 2 + (x[1] - reference_point[1]) ** 2)
     )
 
+    ## Sort index list
+    non_zero_index=[]
+    for candidate in non_zero_candidates:
+        non_zero_index.append((candidate[3], candidate[4]))
+
+    max_index=[]
+    for candidate in max_candidates:
+        max_index.append((candidate[3], candidate[4]))
+
     ## Selection of best candidate for center approximation
     xc = non_zero_candidates[0][0]
     yc = non_zero_candidates[0][1]
@@ -269,8 +285,11 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
     ax2.scatter(indices_flipped[1], indices_flipped[0], facecolor="none", edgecolor="lime")
     ax3.imshow(orig_cut*img_1, cmap='jet', vmax=10)
     ax4.imshow(flip_cut*img_2, cmap='jet', vmax=10)
+    plt.savefig(f'/home/rodria/Desktop/20230814/cc_flip/lyso_{frame_number}_{shift[0]}_{shift[1]}.png')
     plt.show()
+    plt.close()
     """
+    
 
     return {
         "max_index": maximum_index,
@@ -410,6 +429,8 @@ def main():
             file_name = paths[i][:-1]
             global data
             global mask
+            global frame_number
+            frame_number=i
             print(file_name)
             if get_format(file_name) == "cbf":
                 data = np.array(fabio.open(f"{file_name}").data)
@@ -509,8 +530,8 @@ def main():
 
             ## Display first approximation plots
             """
-            xr = 831
-            yr = 833
+            xr = real_center[0]
+            yr = real_center[1]
             pos = plt.imshow(unbragged_data, vmax=7, cmap="jet")
             plt.scatter(xr, yr, color="lime", label="xds")
             plt.scatter(xc, yc, color="r", label="center of mass")
@@ -518,14 +539,17 @@ def main():
             plt.colorbar(pos, shrink=0.6)
             plt.legend()
             plt.savefig(
-                f"/home/rodria/Desktop/com/lyso_{i}_error_x_{xc-xr}_y_{yc-yr}.png"
+                f"/home/rodria/Desktop/20230814/com/lyso_{i}.png"
             )
+            plt.close()
             plt.show()
             """
+
             ## Grid search of sharpness of the azimutal average
             xx, yy = np.meshgrid(
                 np.arange(-30, 31, 1, dtype=int), np.arange(-30, 31, 1, dtype=int)
             )
+
             coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
 
             pool = multiprocessing.Pool()
@@ -533,17 +557,17 @@ def main():
                 fwhm_summary = pool.map(shift_and_calculate_fwhm, coordinates)
 
             ## Display plots
-            # open_fwhm_map(fwhm_summary, i)
+            #open_fwhm_map(fwhm_summary, i)
 
             ## Second aproximation of the direct beam
 
             xc, yc = fit_fwhm(fwhm_summary)
             print("Second approximation", xc, yc)
-
+            
             ## Display plots
             """
-            xr=831
-            yr=761
+            xr=real_center[0]
+            yr=real_center[1]
             fig, (ax1, ax2) = plt.subplots(1, 2,figsize=(10, 5))
             pos1=ax1.imshow(unbragged_data, vmax=7, cmap='jet')
             ax1.scatter(xr,yr, color='lime', label='xds')
@@ -558,18 +582,22 @@ def main():
             ax2.set_title('Second approximation: FWHM/R minimization')
             fig.colorbar(pos2, ax=ax2,shrink=0.6)
             ax2.legend()
-            plt.savefig(f'/home/rodria/Desktop/second/lyso_{i}.png')
-            plt.show()
+            plt.savefig(f'/home/rodria/Desktop/20230814/second/lyso_{i}.png')
+            plt.close()
+            #plt.show()
             """
             ## Check pairs of Friedel
 
             # shift to closest center know so far
-            # shift = [int(-(data.shape[1] / 2) + xc), int(-(data.shape[0] / 2) + yc)]
-
+            shift = [int(-(data.shape[1] / 2) + xc), int(-(data.shape[0] / 2) + yc)]
+            
+            """
             shift = [
                 int(-(data.shape[1] / 2) + real_center[0]),
                 int(-(data.shape[0] / 2) + real_center[1]),
             ]
+            """
+            
             results = shift_and_calculate_cross_correlation(shift)
 
             f = h5py.File(f"{args.output}_{i}.h5", "w")
@@ -579,7 +607,53 @@ def main():
                     f.create_dataset(key, data=results[key])
                 f.close()
             print("Third approximation", results["xc"], results["yc"])
+            
+            ## Display plots
+            """
+            xr=real_center[0]
+            yr=real_center[1]
+            fig, (ax1, ax2, ax3) = plt.subplots(1, 3,figsize=(15, 5))
+            pos1=ax1.imshow(unbragged_data, vmax=7, cmap='jet')
+            ax1.scatter(xr,yr, color='lime', label='xds')
+            ax1.scatter(first_xc,first_yc, color='r', label='calculated center')
+            ax1.set_title('First approximation: center of mass')
+            fig.colorbar(pos1, ax=ax1,shrink=0.6)
+            ax1.legend()
 
+            pos2=ax2.imshow(unbragged_data, vmax=7, cmap='jet')
+            ax2.scatter(xr,yr, color='lime', label='xds')
+            ax2.scatter(xc,yc, color='blueviolet', label='calculated center')
+            ax2.set_title('Second approximation: FWHM/R minimization')
+            fig.colorbar(pos2, ax=ax2,shrink=0.6)
+            ax2.legend()
+
+            pos3=ax3.imshow(data*mask, vmax=30, cmap='jet')
+            ax3.scatter(xr,yr, color='lime', label='xds')
+            ax3.scatter(results["xc"], results["yc"], color='darkorange', label='calculated center')
+            ax3.set_title('Third approximation: Autocorrelation \nof Bragg peaks position')
+            fig.colorbar(pos3, ax=ax3,shrink=0.6)
+            ax3.legend()
+
+            plt.savefig(f'/home/rodria/Desktop/20230814/third/lyso_{i}.png')
+            plt.close()
+            #plt.show()
+            
+            ## Display cc matrix plot
+            xr=2*(real_center[0]-xc)
+            yr=2*(real_center[1]-yc)
+            index=[]
+            index.append(np.where(results['yy']==yr)[0][0])
+            index.append(np.where(results['xx']==xr)[1][0])
+            fig, ax1 = plt.subplots(1, 1,figsize=(5, 5))
+            pos1=ax1.imshow(results['sub_reduced_cc_matrix'], cmap='jet')
+            ax1.scatter(index[0],index[1], color='lime', label='xds')
+            ax1.scatter(results['non_zero_index'][0][1],results['non_zero_index'][0][0], color='r', label='calculated center')
+            ax1.set_title('Autocorrelation matrix')
+            fig.colorbar(pos1, ax=ax1,shrink=0.6)
+            ax1.legend()
+            plt.savefig(f'/home/rodria/Desktop/20230814/cc_map/lyso_{i}.png')
+            plt.close()
+            """
 
 if __name__ == "__main__":
     main()

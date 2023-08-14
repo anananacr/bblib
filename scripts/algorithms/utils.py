@@ -203,7 +203,7 @@ def open_fwhm_map(lines: list, label: str = None):
             else:
                 merged_dict[key] = [value]
 
-    # Create a figure with two subplots
+    # Create a figure with three subplots
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
 
     # Extract x, y, and z from merged_dict
@@ -277,8 +277,8 @@ def open_fwhm_map(lines: list, label: str = None):
     # Display the figure
 
     plt.show()
-    # plt.savefig(f'/home/rodria/Desktop/fwhm_map/lyso_{label}.png')
-    # plt.close()
+    #plt.savefig(f'/home/rodria/Desktop/20230814/fwhm_map/lyso_{label}.png')
+    #plt.close()
 
 
 def fit_fwhm(lines: list) -> Tuple[int]:

@@ -16,4 +16,4 @@ source /etc/profile.d/modules.sh
 module load maxwell python/3.7
 source /home/rodria/scripts/p09/env-p09/bin/activate
 
-./find_center.py -i /gpfs/cfel/user/rodria/processed/p09/11016566/lists/lyso_test.lst -m  /gpfs/cfel/user/rodria/processed/p09/11016566/lists/mask_lyso_test.lst  -c center.txt -o /gpfs/cfel/user/rodria/processed/p09/11016566/cc_4/lyso
+./find_center.py -i /gpfs/cfel/user/rodria/processed/p09/11016566/lists/lyso_test.lst -m  /gpfs/cfel/user/rodria/processed/p09/11016566/lists/mask_lyso_test.lst  -c center.txt -o /gpfs/cfel/user/rodria/processed/p09/11016566/cc_6/lyso

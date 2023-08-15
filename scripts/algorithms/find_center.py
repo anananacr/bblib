@@ -268,13 +268,15 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
     for candidate in non_zero_candidates:
         non_zero_index.append((candidate[3], candidate[4]))
 
-    max_index=[]
+    maximum_index=[]
     for candidate in max_candidates:
-        max_index.append((candidate[3], candidate[4]))
+        maximum_index.append((candidate[3], candidate[4]))
 
     ## Selection of best candidate for center approximation
     xc = non_zero_candidates[0][0]
     yc = non_zero_candidates[0][1]
+    index = (non_zero_candidates[0][3], non_zero_candidates[0][4])
+
 
     ## Display plots
     """

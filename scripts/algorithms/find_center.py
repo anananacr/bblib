@@ -104,13 +104,13 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
             nasics_x=1,
             nasics_y=1,
         ),
-        adc_threshold=8,
-        minimum_snr=3,
-        min_pixel_count=1,
-        max_pixel_count=200,
-        local_bg_radius=3,
-        min_res=0,
-        max_res=120,
+        adc_threshold=100,
+        minimum_snr=3.4,
+        min_pixel_count=5,
+        max_pixel_count=100,
+        local_bg_radius=10,
+        min_res=90,
+        max_res=200,
         _bad_pixel_map=shifted_mask,
     )
 
@@ -421,7 +421,8 @@ def main():
     mask_files.close()
 
     file_format = get_format(args.input)
-    table_real_center, loaded_table = get_center_theory(paths, args.center)
+    if args.center:
+        table_real_center, loaded_table = get_center_theory(paths, args.center)
     # (table_real_center)
     if file_format == "lst":
         ref_image = []
@@ -450,10 +451,11 @@ def main():
                 f.close()
                 mask_file_name = mask_paths[0][:-1]
                 f = h5py.File(f"{mask_file_name}", "r")
-                data = np.array(f["data/data"])
+                mask = np.array(f["data/data"])
                 mask = np.array(mask, dtype=np.int32)
+                mask[np.where(data < 0)] = 0
                 f.close()
-                real_center = [543, 543]
+                real_center = [537, 541]
 
             ## Find peaks with peakfinder8 and mask peaks
             pf8_info = PF8Info(
@@ -541,8 +543,8 @@ def main():
             plt.savefig(
                 f"/home/rodria/Desktop/20230814/com/lyso_{i}.png"
             )
-            plt.close()
             plt.show()
+            plt.close()
             """
 
             ## Grid search of sharpness of the azimutal average
@@ -589,6 +591,7 @@ def main():
             ## Check pairs of Friedel
 
             # shift to closest center know so far
+            
             shift = [int(-(data.shape[1] / 2) + xc), int(-(data.shape[0] / 2) + yc)]
             
             """

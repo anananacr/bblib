@@ -39,7 +39,6 @@ def build_pixel_map(row: int, col: int, y0: int, x0: int) -> Dict[str, int]:
 @dataclass
 class PF8Info:
     max_num_peaks: int
-    pf8_detector_info: dict
     adc_threshold: float
     minimum_snr: int
     min_pixel_count: int
@@ -47,20 +46,10 @@ class PF8Info:
     local_bg_radius: int
     min_res: float
     max_res: float
-    _bad_pixel_map: np.array
+    pf8_detector_info: dict = None
+    _bad_pixel_map: np.array = None
     _pixelmaps: np.array = field(init=False)
 
-    def __post_init__(self):
-
-        self._pixelmaps = build_pixel_map(
-            (self._bad_pixel_map).shape[0],
-            (self._bad_pixel_map.shape[1]),
-            int((self._bad_pixel_map).shape[0] / 2),
-            int((self._bad_pixel_map).shape[1] / 2),
-        )
-
-    def modify_mask(self, mask):
-        self._bad_pixel_map = mask
 
     def modify_radius(self, center_x, center_y):
         self._pixelmaps = build_pixel_map(

@@ -7,7 +7,7 @@ from om.algorithms.crystallography import TypePeakList, Peakfinder8PeakDetection
 ## Some abstractions to call peakfinder8 in Python
 
 
-def build_pixel_map(row: int, col: int, y0: int, x0: int) -> Dict[str, int]:
+def build_pixel_map(row: int, col: int, x0: int, y0: int) -> Dict[str, int]:
     """
     Calculate radius pixels map for a given center x0,y0.
 
@@ -17,23 +17,21 @@ def build_pixel_map(row: int, col: int, y0: int, x0: int) -> Dict[str, int]:
         Number of rows of data.
     col: int
         Number of columns of data.
-    y0:
-        Radial center position in y axis (row).
     x0:
         Radial center position in x axis (column).
+    y0:
+        Radial center position in y axis (row).
 
     Returns
     ----------
     radius_pixel_map: Dict
         "radius": radius pixel map in realtion to the give center. It has same size of data given by row and col.
     """
-    radius_pixel_map = np.ones((row, col)).astype(int)
-    for idy, i in enumerate(radius_pixel_map):
-        for idx, j in enumerate(i):
-            radius_pixel_map[idy, idx] = int(
-                math.sqrt((idx - x0) ** 2 + (idy - y0) ** 2)
-            )
-    return dict(radius=radius_pixel_map)
+    
+    [X, Y] = np.meshgrid(np.arange(col) - x0, np.arange(row) - y0)
+    R = np.sqrt(np.square(X) + np.square(Y))
+    Rint = np.rint(R).astype(int)
+    return dict(radius=Rint)
 
 
 @dataclass
@@ -55,8 +53,8 @@ class PF8Info:
         self._pixelmaps = build_pixel_map(
             (self._bad_pixel_map).shape[0],
             (self._bad_pixel_map.shape[1]),
-            center_y,
             center_x,
+            center_y,
         )
 
 

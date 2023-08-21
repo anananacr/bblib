@@ -29,14 +29,21 @@ global pf8_info
 
 pf8_info = PF8Info(
     max_num_peaks=10000,
-    adc_threshold=10,
-    minimum_snr=7,
+    adc_threshold=5,
+    minimum_snr=8,
     min_pixel_count=2,
     max_pixel_count=10,
     local_bg_radius=3,
     min_res=0,
     max_res=10000
 )
+
+global threshold_distance
+# Distance in pixels of centers calculated between consecutive iterations.
+threshold_distance=0.5
+
+global n_iterations
+n_iterations=10
 
 def main():
     parser = argparse.ArgumentParser(
@@ -108,20 +115,35 @@ def main():
             nasics_y=1,
             )
             pf8_info._bad_pixel_map=mask
+            pf8_info.modify_radius(int(mask.shape[1]/2), int(mask.shape[0]/2))
+            pf8 = PF8(pf8_info)
+
+            peak_list = pf8.get_peaks_pf8(data=data)
+            indices = (
+            np.array(peak_list["ss"], dtype=int),
+            np.array(peak_list["fs"], dtype=int),
+            )
+
+            # Mask Bragg  peaks
+
+            only_peaks_mask = mask_peaks(mask, indices, bragg=0)
+            pf8_mask = only_peaks_mask * mask
+            data_to_fill = data
             
-            delta_center=2
+            delta_center_x=2
+            delta_center_y=2
             count=0
             center_iter=[]
             filled_data_iter=[]
-            last_iter=[]
+            last_iter=center_of_mass(data_to_fill*pf8_mask)
             
-            while delta_center>0.7 and count<=10:
-                if not last_iter:
-                    pf8_info.modify_radius(int(mask.shape[1]/2), int(mask.shape[0]/2))
-                else:
-                    pf8_info.modify_radius(last_iter[0], last_iter[1])
-                pf8 = PF8(pf8_info)
+            while delta_center_x>threshold_distance and delta_center_y>threshold_distance and count<n_iterations:
 
+                # Update center for pf8 with the last calculated center
+                pf8_info.modify_radius(last_iter[0], last_iter[1])
+                
+                # Find Bragg peaks list with pf8
+                pf8 = PF8(pf8_info)
                 peak_list = pf8.get_peaks_pf8(data=data)
                 indices = (
                 np.array(peak_list["ss"], dtype=int),
@@ -129,21 +151,22 @@ def main():
                 )
 
                 # Mask Bragg  peaks
-
                 only_peaks_mask = mask_peaks(mask, indices, bragg=0)
                 pf8_mask = only_peaks_mask * mask
-                data_to_fill = data
                 
-                if last_iter:
-                    filled_data=fill_gaps(data_to_fill, last_iter, pf8_mask)
-                    filled_data_iter.append(filled_data.astype(np.float32))
-                    xc_new, yc_new = center_of_mass(filled_data)
-                    center_iter.append([xc_new,yc_new])
-                    delta_center=math.sqrt((xc_new-last_iter[0])**2+(yc_new-last_iter[1])**2)
-                    last_iter=[xc_new, yc_new]
-                else:
-                    last_iter = center_of_mass(data_to_fill*pf8_mask)
-                    
+                # Fill gaps with the radial average with origin at the calculated center from last iteration
+                filled_data=fill_gaps(data_to_fill, last_iter, pf8_mask)
+                filled_data_iter.append(filled_data.astype(np.float32))
+                xc_new, yc_new = center_of_mass(filled_data)
+
+                center_iter.append([xc_new,yc_new])
+
+                # Calculate distance in pixels from the last calculated center
+                delta_center_x=abs(xc_new-last_iter[0])
+                delta_center_y=abs(yc_new-last_iter[1])
+
+                # Update center for next iteration
+                last_iter=[xc_new, yc_new]
                 count+=1
 
                 """

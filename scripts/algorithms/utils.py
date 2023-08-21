@@ -547,7 +547,7 @@ def get_center_theory(
 
 def fill_gaps(data: np.ndarray, center: tuple, mask: np.ndarray)-> np.ndarray:
     ave_r, ave_y = azimuthal_average(data, center, mask)
-    filled_data=(data*mask).copy()
+    filled_data=(data*mask).copy().astype(np.float32)
     y, x = np.where(data*mask<=0)
 
     for i in zip(y,x):

@@ -31,8 +31,8 @@ pf8_info = PF8Info(
     max_num_peaks=10000,
     adc_threshold=5,
     minimum_snr=8,
-    min_pixel_count=2,
-    max_pixel_count=10,
+    min_pixel_count=1,
+    max_pixel_count=20,
     local_bg_radius=3,
     min_res=0,
     max_res=10000
@@ -170,6 +170,8 @@ def main():
             center_iter=[]
             filled_data_iter=[]
             last_iter=center_of_mass(data_to_fill*pf8_mask)
+            center_iter.append(last_iter)
+            filled_data_iter.append(data_to_fill*pf8_mask)
             
             while delta_center_x>threshold_distance and delta_center_y>threshold_distance and count<n_iterations:
 
@@ -216,7 +218,7 @@ def main():
                 plt.show()
                 """
 
-            print(f"Last center: ({xc_new},{yc_new})")
+            #print(f"Last center: ({xc_new},{yc_new})")
             f=h5py.File(f"{args.output}_{i}.h5", "w")
             f.create_dataset("center_iter", data=center_iter)
             f.create_dataset("filled_data_iter", data=filled_data_iter)

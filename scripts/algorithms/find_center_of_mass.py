@@ -60,7 +60,14 @@ def main():
     parser.add_argument(
         "-m", "--mask", type=str, action="store", help="path to list of mask files .lst"
     )
+    
+    parser.add_argument(
+        "-m_sym", "--mask_sym", type=str, action="store", help="path to list of symmetric mask files .lst"
+    )
 
+    parser.add_argument(
+        "-m_hr", "--mask_hr", type=str, action="store", help="path to list of symmetric mask files .lst"
+    )
     parser.add_argument(
         "-center",
         "--center",
@@ -83,6 +90,15 @@ def main():
     mask_paths = mask_files.readlines()
     mask_files.close()
 
+    mask_sym_files = open(args.mask_sym, "r")
+    mask_sym_paths = mask_sym_files.readlines()
+    mask_sym_files.close()
+
+
+    mask_hr_files = open(args.mask_hr, "r")
+    mask_hr_paths = mask_hr_files.readlines()
+    mask_hr_files.close()
+
     file_format = get_format(args.input)
     if args.center:
         table_real_center, loaded_table = get_center_theory(paths, args.center)
@@ -95,7 +111,9 @@ def main():
             print(file_name)
             if get_format(file_name) == "cbf":
                 data = np.array(fabio.open(f"{file_name}").data)
-                mask_file_name = mask_paths[0][:-1]
+                mask_file_name = mask_paths[i][:-1]
+                mask_sym_file_name = mask_sym_paths[i][:-1]
+                mask_hr_file_name = mask_hr_paths[i][:-1]
                 xds_mask = np.array(fabio.open(f"{mask_file_name}").data)
                 # Mask of defective pixels
                 xds_mask[np.where(xds_mask <= 0)] = 0
@@ -103,6 +121,22 @@ def main():
                 # Mask hot pixels
                 xds_mask[np.where(data > 1e3)] = 0
                 mask = xds_mask
+
+                # Mask of defective pixels
+
+                xds_mask_sym = np.array(fabio.open(f"{mask_sym_file_name}").data)
+                xds_mask_sym[np.where(xds_mask_sym <= 0)] = 0
+                xds_mask_sym[np.where(xds_mask_sym > 0)] = 1
+                # Mask hot pixels
+                xds_mask_sym[np.where(data > 1e3)] = 0
+                mask_sym = xds_mask_sym
+
+                xds_mask_hr = np.array(fabio.open(f"{mask_hr_file_name}").data)
+                xds_mask_hr[np.where(xds_mask_hr <= 0)] = 0
+                xds_mask_hr[np.where(xds_mask_hr > 0)] = 1
+                # Mask hot pixels
+                xds_mask_hr[np.where(data > 1e3)] = 0
+                mask_hr = xds_mask_hr
                 real_center = table_real_center[i]
 
             
@@ -114,7 +148,7 @@ def main():
             nasics_x=1,
             nasics_y=1,
             )
-            pf8_info._bad_pixel_map=mask
+            pf8_info._bad_pixel_map=mask_sym
             pf8_info.modify_radius(int(mask.shape[1]/2), int(mask.shape[0]/2))
             pf8 = PF8(pf8_info)
 
@@ -126,8 +160,8 @@ def main():
 
             # Mask Bragg  peaks
 
-            only_peaks_mask = mask_peaks(mask, indices, bragg=0)
-            pf8_mask = only_peaks_mask * mask
+            only_peaks_mask = mask_peaks(mask_sym, indices, bragg=0)
+            pf8_mask = only_peaks_mask * mask_sym
             data_to_fill = data
             
             delta_center_x=2
@@ -141,6 +175,7 @@ def main():
 
                 # Update center for pf8 with the last calculated center
                 pf8_info.modify_radius(last_iter[0], last_iter[1])
+                pf8_info._bad_pixel_map=mask
                 
                 # Find Bragg peaks list with pf8
                 pf8 = PF8(pf8_info)
@@ -153,11 +188,12 @@ def main():
                 # Mask Bragg  peaks
                 only_peaks_mask = mask_peaks(mask, indices, bragg=0)
                 pf8_mask = only_peaks_mask * mask
+            
                 
                 # Fill gaps with the radial average with origin at the calculated center from last iteration
                 filled_data=fill_gaps(data_to_fill, last_iter, pf8_mask)
                 filled_data_iter.append(filled_data.astype(np.float32))
-                xc_new, yc_new = center_of_mass(filled_data)
+                xc_new, yc_new = center_of_mass(filled_data, mask_hr)
 
                 center_iter.append([xc_new,yc_new])
 

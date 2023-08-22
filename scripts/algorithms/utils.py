@@ -556,7 +556,7 @@ def fill_gaps(data: np.ndarray, center: tuple, mask: np.ndarray)-> np.ndarray:
         
         index=np.where(ave_r==round(radius))[0]
         if not index:
-            index = ave_r[-1]
+            index = ave_r[0:10]
         
-        filled_data[i]=ave_y[index]
+        filled_data[i]=np.mean(ave_y[index])
     return filled_data

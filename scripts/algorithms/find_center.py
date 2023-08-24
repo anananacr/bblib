@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 from scipy import signal
 import h5py
 
-global pf8_info            
+global pf8_info
 
 pf8_info = PF8Info(
     max_num_peaks=10000,
@@ -34,20 +34,21 @@ pf8_info = PF8Info(
     max_pixel_count=200,
     local_bg_radius=3,
     min_res=0,
-    max_res=10000
+    max_res=10000,
 )
+
 
 def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
     # Update center for pf8 with the last calculated center
     pf8_info.modify_radius(center_to_radial_average[0], center_to_radial_average[1])
-    pf8_info._bad_pixel_map=mask
-                
+    pf8_info._bad_pixel_map = mask
+
     # Find Bragg peaks list with pf8
     pf8 = PF8(pf8_info)
     peak_list = pf8.get_peaks_pf8(data=data)
     indices = (
-    np.array(peak_list["ss"], dtype=int),
-    np.array(peak_list["fs"], dtype=int),
+        np.array(peak_list["ss"], dtype=int),
+        np.array(peak_list["fs"], dtype=int),
     )
 
     only_peaks_mask = mask_peaks(mask, indices, bragg=0)
@@ -55,8 +56,8 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
 
     x, y = azimuthal_average(data, center=center_to_radial_average, mask=pf8_mask)
     # Plot all radial average
-    #fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
-    #plt.plot(x, y)
+    # fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
+    # plt.plot(x, y)
 
     ## Define background peak region
     x_min = 150
@@ -118,9 +119,9 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
 
     # Update center for pf8 with the last calculated center
     pf8_info.modify_radius(round(data.shape[1] / 2), round(data.shape[0] / 2))
-    pf8_info._bad_pixel_map=shifted_mask
-    pf8_info.max_res=200
-                
+    pf8_info._bad_pixel_map = shifted_mask
+    pf8_info.max_res = 200
+
     # Find Bragg peaks list with pf8
     pf8 = PF8(pf8_info)
     peak_list = pf8.get_peaks_pf8(data=shifted_data)
@@ -135,12 +136,12 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
     indices = (
         np.array(peak_list["ss"], dtype=int),
         np.array(peak_list["fs"], dtype=int),
-        )    
-    
+    )
+
     indices_flipped = (
         np.array(peak_list_flipped["ss"], dtype=int),
         np.array(peak_list_flipped["fs"], dtype=int),
-        )
+    )
 
     # Original image Bragg peak limits
     x_min_orig = np.min(indices[1])
@@ -214,8 +215,8 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
     sub_reduced_cc_matrix = reduced_cc_matrix[row - 16 : row + 17, col - 16 : col + 17]
 
     ## Collect shifts from maximum and non zero values of the sub-reduced cc matrix
-    if np.max(sub_reduced_cc_matrix)==0:
-        maximum_index=[]
+    if np.max(sub_reduced_cc_matrix) == 0:
+        maximum_index = []
     else:
         maximum_index = np.where(sub_reduced_cc_matrix == np.max(sub_reduced_cc_matrix))
     non_zero_index = np.where(sub_reduced_cc_matrix != 0)
@@ -242,7 +243,7 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
                 orig_yc + ((yy[index]) / 2),
                 1 / math.sqrt(sub_reduced_cc_matrix[index]),
                 index[0],
-                index[1]
+                index[1],
             ]
         )
 
@@ -254,7 +255,7 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
                 orig_yc + ((yy[index]) / 2),
                 1 / math.sqrt(sub_reduced_cc_matrix[index]),
                 index[0],
-                index[1]
+                index[1],
             ]
         )
 
@@ -270,20 +271,20 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
     )
 
     ## Sort index list
-    non_zero_index=[]
+    non_zero_index = []
     for candidate in non_zero_candidates:
         non_zero_index.append((candidate[3], candidate[4]))
 
-    maximum_index=[]
+    maximum_index = []
     for candidate in max_candidates:
         maximum_index.append((candidate[3], candidate[4]))
 
     ## Selection of best candidate for center approximation
-    if len(non_zero_candidates)>0:
+    if len(non_zero_candidates) > 0:
         xc = non_zero_candidates[0][0]
         yc = non_zero_candidates[0][1]
         index = (non_zero_candidates[0][3], non_zero_candidates[0][4])
-    elif len(max_candidates)>0:
+    elif len(max_candidates) > 0:
         xc = max_candidates[0][0]
         yc = maxx_candidates[0][1]
         index = (max_candidates[0][3], max_candidates[0][4])
@@ -292,21 +293,20 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
         yc = 0
         index = []
 
-
     ## Display plots
-    
-    fig, ((ax1, ax2),(ax3,ax4)) = plt.subplots(2, 2,figsize=(20, 20))
-    ax1.imshow(shifted_data*shifted_mask, vmax=10,cmap='cividis')
+
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(20, 20))
+    ax1.imshow(shifted_data * shifted_mask, vmax=10, cmap="cividis")
     ax1.scatter(indices[1], indices[0], facecolor="none", edgecolor="red")
-    ax2.imshow(flipped_data*shifted_mask[::-1,::-1], vmax=10, cmap='cividis')
-    ax2.scatter(indices_flipped[1], indices_flipped[0], facecolor="none", edgecolor="lime")
-    ax3.imshow(orig_cut*img_1, cmap='jet', vmax=10)
-    ax4.imshow(flip_cut*img_2, cmap='jet', vmax=10)
-    plt.savefig(f'/home/rodria/Desktop/test/cc_flip/lyso_{frame_number}.png')
-    #plt.show()
+    ax2.imshow(flipped_data * shifted_mask[::-1, ::-1], vmax=10, cmap="cividis")
+    ax2.scatter(
+        indices_flipped[1], indices_flipped[0], facecolor="none", edgecolor="lime"
+    )
+    ax3.imshow(orig_cut * img_1, cmap="jet", vmax=10)
+    ax4.imshow(flip_cut * img_2, cmap="jet", vmax=10)
+    plt.savefig(f"/home/rodria/Desktop/test/cc_flip/lyso_{frame_number}.png")
+    # plt.show()
     plt.close()
-    
-    
 
     return {
         "max_index": np.array(maximum_index, dtype=np.int32),
@@ -318,7 +318,7 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
         "xx": xx,
         "yy": yy,
         "max_candidates_com": max_candidates,
-        "non_zero_candidates_com": non_zero_candidates
+        "non_zero_candidates_com": non_zero_candidates,
     }
 
 
@@ -342,28 +342,31 @@ def correlate_2d(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
 
     corr = np.zeros((im1.shape[0] + im2.shape[0], (im1.shape[1] + im2.shape[1])))
     # Whole matrix
-    #scan_boundaries_x = (-im1.shape[1],im1.shape[1])
-    #scan_boundaries_y = (-im1.shape[0],im1.shape[0])
+    # scan_boundaries_x = (-im1.shape[1],im1.shape[1])
+    # scan_boundaries_y = (-im1.shape[0],im1.shape[0])
 
     # Fast mode
-    scan_boundaries_x = (-16,17)
-    scan_boundaries_y = (-16,17)
-    
+    scan_boundaries_x = (-16, 17)
+    scan_boundaries_y = (-16, 17)
+
     xx, yy = np.meshgrid(
         np.arange(scan_boundaries_x[0], scan_boundaries_x[1], 1, dtype=int),
         np.arange(scan_boundaries_y[0], scan_boundaries_y[1], 1, dtype=int),
     )
-    
+
     coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
-    coordinates_anchor_data = [(coordinate, im1,im2) for coordinate in coordinates]
+    coordinates_anchor_data = [(coordinate, im1, im2) for coordinate in coordinates]
     pool = multiprocessing.Pool()
     with pool:
         cc_summary = pool.map(calculate_product, coordinates_anchor_data)
 
     corr_reduced = np.array(cc_summary).reshape((xx.shape))
-    center_row=im1.shape[0]
-    center_col=im1.shape[1]
-    corr[center_row+scan_boundaries_y[0]:center_row+scan_boundaries_y[1], center_col+scan_boundaries_x[0]:center_col+scan_boundaries_x[1]]=corr_reduced
+    center_row = im1.shape[0]
+    center_col = im1.shape[1]
+    corr[
+        center_row + scan_boundaries_y[0] : center_row + scan_boundaries_y[1],
+        center_col + scan_boundaries_x[0] : center_col + scan_boundaries_x[1],
+    ] = corr_reduced
     return corr
 
 
@@ -416,7 +419,11 @@ def main():
         "-m", "--mask", type=str, action="store", help="path to list of mask files .lst"
     )
     parser.add_argument(
-        "-m_sym", "--mask_sym", type=str, action="store", help="path to list of symmetric mask files .lst"
+        "-m_sym",
+        "--mask_sym",
+        type=str,
+        action="store",
+        help="path to list of symmetric mask files .lst",
     )
 
     parser.add_argument(
@@ -450,7 +457,6 @@ def main():
     mask_paths = mask_files.readlines()
     mask_files.close()
 
-
     file_format = get_format(args.input)
     if args.center:
         table_real_center, loaded_table = get_center_theory(paths, args.center)
@@ -459,8 +465,8 @@ def main():
         ref_image = []
         for i in range(0, len(paths[:])):
             file_name = paths[i][:-1]
-            
-            frame_number=i
+
+            frame_number = i
             print(file_name)
             if get_format(file_name) == "cbf":
                 data = np.array(fabio.open(f"{file_name}").data)
@@ -497,27 +503,28 @@ def main():
 
             ## Peakfinder8 detector information and bad_pixel_map
 
-            pf8_info.pf8_detector_info=dict(
-            asic_nx=mask.shape[1],
-            asic_ny=mask.shape[0],
-            nasics_x=1,
-            nasics_y=1,
+            pf8_info.pf8_detector_info = dict(
+                asic_nx=mask.shape[1],
+                asic_ny=mask.shape[0],
+                nasics_x=1,
+                nasics_y=1,
             )
-            pf8_info._bad_pixel_map=mask_sym
-            pf8_info.modify_radius(int(mask_sym.shape[1]/2), int(mask_sym.shape[0]/2))
+            pf8_info._bad_pixel_map = mask_sym
+            pf8_info.modify_radius(
+                int(mask_sym.shape[1] / 2), int(mask_sym.shape[0] / 2)
+            )
             pf8 = PF8(pf8_info)
 
             peak_list = pf8.get_peaks_pf8(data=data)
             indices = (
-            np.array(peak_list["ss"], dtype=int),
-            np.array(peak_list["fs"], dtype=int),
+                np.array(peak_list["ss"], dtype=int),
+                np.array(peak_list["fs"], dtype=int),
             )
 
             # Mask Bragg  peaks
 
             only_peaks_mask = mask_peaks(mask_sym, indices, bragg=0)
             pf8_mask = only_peaks_mask * mask_sym
-
 
             ## Approximate center of mass
             xc, yc = center_of_mass(data, pf8_mask)
@@ -550,30 +557,33 @@ def main():
             yc = int(round(h / 2 - shift_y))
 
             first_center = (xc, yc)
-            first_masked_data=(data*pf8_mask).copy()
+            first_masked_data = (data * pf8_mask).copy()
 
             print("First approximation", xc, yc)
 
             ## Display first approximation plots
-            
+
             xr = real_center[0]
             yr = real_center[1]
             pos = plt.imshow(first_masked_data, vmax=7, cmap="jet")
             plt.scatter(xr, yr, color="lime", label=f"xds:({xr},{yr})")
-            plt.scatter(first_center[0], first_center[1], color="r", label=f"calculated center:({first_center[0]}, {first_center[1]})")
+            plt.scatter(
+                first_center[0],
+                first_center[1],
+                color="r",
+                label=f"calculated center:({first_center[0]}, {first_center[1]})",
+            )
             plt.title("First approximation: center of mass")
             plt.colorbar(pos, shrink=0.6)
             plt.legend()
-            plt.savefig(
-                f"/home/rodria/Desktop/test/com/lyso_{i}.png"
-            )
-            #plt.show()
+            plt.savefig(f"/home/rodria/Desktop/test/com/lyso_{i}.png")
+            # plt.show()
             plt.close()
-            
 
             ## Grid search of sharpness of the azimutal average
             xx, yy = np.meshgrid(
-                np.arange(xc - 30, xc  +31, 1, dtype=int), np.arange(yc - 30, yc + 31, 1, dtype=int)
+                np.arange(xc - 30, xc + 31, 1, dtype=int),
+                np.arange(yc - 30, yc + 31, 1, dtype=int),
             )
 
             coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
@@ -583,57 +593,64 @@ def main():
                 fwhm_summary = pool.map(calculate_fwhm, coordinates)
 
             ## Display plots
-            #open_fwhm_map(fwhm_summary, i)
+            # open_fwhm_map(fwhm_summary, i)
 
             ## Second aproximation of the direct beam
 
             xc, yc = fit_fwhm(fwhm_summary)
             print("Second approximation", xc, yc)
-            second_center=(xc,yc)
-            second_masked_data=(data*pf8_mask).copy()
+            second_center = (xc, yc)
+            second_masked_data = (data * pf8_mask).copy()
             ## Display plots
-            
-            xr=real_center[0]
-            yr=real_center[1]
-            fig, (ax1, ax2) = plt.subplots(1, 2,figsize=(10, 5))
-            pos1=ax1.imshow(first_masked_data, vmax=7, cmap='jet')
-            ax1.scatter(xr,yr, color='lime', label=f'xds:({xr},{yr})')
-            ax1.scatter(first_center[0],first_center[1], color='r', label=f'calculated center:({first_center[0]},{first_center[1]})')
-            ax1.set_title('First approximation: center of mass')
-            fig.colorbar(pos1, ax=ax1,shrink=0.6)
+
+            xr = real_center[0]
+            yr = real_center[1]
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+            pos1 = ax1.imshow(first_masked_data, vmax=7, cmap="jet")
+            ax1.scatter(xr, yr, color="lime", label=f"xds:({xr},{yr})")
+            ax1.scatter(
+                first_center[0],
+                first_center[1],
+                color="r",
+                label=f"calculated center:({first_center[0]},{first_center[1]})",
+            )
+            ax1.set_title("First approximation: center of mass")
+            fig.colorbar(pos1, ax=ax1, shrink=0.6)
             ax1.legend()
 
-            pos2=ax2.imshow(data*pf8_mask, vmax=7, cmap='jet')
-            ax2.scatter(xr,yr, color='lime', label=f'xds:({xr},{yr})')
-            ax2.scatter(xc,yc, color='blueviolet', label=f'calculated center:({xc},{yc})')
-            ax2.set_title('Second approximation: FWHM/R minimization')
-            fig.colorbar(pos2, ax=ax2,shrink=0.6)
+            pos2 = ax2.imshow(data * pf8_mask, vmax=7, cmap="jet")
+            ax2.scatter(xr, yr, color="lime", label=f"xds:({xr},{yr})")
+            ax2.scatter(
+                xc, yc, color="blueviolet", label=f"calculated center:({xc},{yc})"
+            )
+            ax2.set_title("Second approximation: FWHM/R minimization")
+            fig.colorbar(pos2, ax=ax2, shrink=0.6)
             ax2.legend()
-            plt.savefig(f'/home/rodria/Desktop/test/second/lyso_{i}.png')
+            plt.savefig(f"/home/rodria/Desktop/test/second/lyso_{i}.png")
             plt.close()
-            #plt.show()
-            
+            # plt.show()
+
             ## Third approximation autocorrelation of Bragg peaks position
             # Calculate shift to closest center know so far
-            
+
             shift = [int(-(data.shape[1] / 2) + xc), int(-(data.shape[0] / 2) + yc)]
-            
+
             """
             shift = [
                 int(-(data.shape[1] / 2) + real_center[0]),
                 int(-(data.shape[0] / 2) + real_center[1]),
             ]
             """
-            
+
             results = shift_and_calculate_cross_correlation(shift)
             third_center = (results["xc"], results["yc"])
-            third_masked_data = data*mask
+            third_masked_data = data * mask
             f = h5py.File(f"{args.output}_{i}.h5", "w")
 
             if args.output:
                 for key in results:
                     f.create_dataset(key, data=results[key])
-                
+
                 f.create_dataset("first_center", data=first_center)
                 f.create_dataset("second_center", data=second_center)
                 f.create_dataset("third_center", data=third_center)
@@ -642,59 +659,91 @@ def main():
                 f.create_dataset("third_masked_data", data=third_masked_data)
                 f.close()
             print("Third approximation", results["xc"], results["yc"])
-            
+
             ## Display plots
-            
-            xr=real_center[0]
-            yr=real_center[1]
-            fig, (ax1, ax2, ax3) = plt.subplots(1, 3,figsize=(15, 5))
-            pos1=ax1.imshow(first_masked_data, vmax=7, cmap='jet')
-            ax1.scatter(xr,yr, color='lime', label=f'xds:({xr},{yr})')
-            ax1.scatter(first_center[0],first_center[1], color='r', label=f'calculated center:({first_center[0]},{first_center[1]})')
-            ax1.set_title('First approximation: center of mass')
-            fig.colorbar(pos1, ax=ax1,shrink=0.6)
+
+            xr = real_center[0]
+            yr = real_center[1]
+            fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+            pos1 = ax1.imshow(first_masked_data, vmax=7, cmap="jet")
+            ax1.scatter(xr, yr, color="lime", label=f"xds:({xr},{yr})")
+            ax1.scatter(
+                first_center[0],
+                first_center[1],
+                color="r",
+                label=f"calculated center:({first_center[0]},{first_center[1]})",
+            )
+            ax1.set_title("First approximation: center of mass")
+            fig.colorbar(pos1, ax=ax1, shrink=0.6)
             ax1.legend()
 
-            pos2=ax2.imshow(second_masked_data, vmax=7, cmap='jet')
-            ax2.scatter(xr,yr, color='lime', label=f'xds:({xr},{yr})')
-            ax2.scatter(second_center[0],second_center[1], color='blueviolet', label=f'calculated center:({second_center[0]},{second_center[1]})')
-            ax2.set_title('Second approximation: FWHM/R minimization')
-            fig.colorbar(pos2, ax=ax2,shrink=0.6)
+            pos2 = ax2.imshow(second_masked_data, vmax=7, cmap="jet")
+            ax2.scatter(xr, yr, color="lime", label=f"xds:({xr},{yr})")
+            ax2.scatter(
+                second_center[0],
+                second_center[1],
+                color="blueviolet",
+                label=f"calculated center:({second_center[0]},{second_center[1]})",
+            )
+            ax2.set_title("Second approximation: FWHM/R minimization")
+            fig.colorbar(pos2, ax=ax2, shrink=0.6)
             ax2.legend()
 
-            pos3=ax3.imshow(data*mask, vmax=30, cmap='jet')
-            ax3.scatter(xr,yr, color='lime', label=f'xds:({xr},{yr})')
-            ax3.scatter(results["xc"], results["yc"], color='darkorange', label=f'calculated center:({results["xc"]},{results["yc"]})')
-            ax3.set_title('Third approximation: Autocorrelation \nof Bragg peaks position')
-            fig.colorbar(pos3, ax=ax3,shrink=0.6)
+            pos3 = ax3.imshow(data * mask, vmax=30, cmap="jet")
+            ax3.scatter(xr, yr, color="lime", label=f"xds:({xr},{yr})")
+            ax3.scatter(
+                results["xc"],
+                results["yc"],
+                color="darkorange",
+                label=f'calculated center:({results["xc"]},{results["yc"]})',
+            )
+            ax3.set_title(
+                "Third approximation: Autocorrelation \nof Bragg peaks position"
+            )
+            fig.colorbar(pos3, ax=ax3, shrink=0.6)
             ax3.legend()
 
-            plt.savefig(f'/home/rodria/Desktop/test/third/lyso_{i}.png')
+            plt.savefig(f"/home/rodria/Desktop/test/third/lyso_{i}.png")
             plt.close()
-            #plt.show()
-            
-            ## Display cc matrix plot
-            xr=2*(real_center[0]-xc)
-            yr=2*(real_center[1]-yc)
-            index=[]
-            flag=0
-            try:
-                index.append(np.where(results['yy']==yr)[0][0])
-                index.append(np.where(results['xx']==xr)[1][0])
-            except IndexError:
-                flag=1
-            if results['index'].size!=0 and results['index'][0]!=0 and results['index'][1]!=0 and flag!=1:
+            # plt.show()
 
-                fig, ax1 = plt.subplots(1, 1,figsize=(5, 5))
-                pos1=ax1.imshow(results['sub_reduced_cc_matrix'], cmap='jet')
-                ax1.scatter(index[0],index[1], color='lime', label=f'xds:({real_center[0]},{real_center[1]})')
-                ax1.scatter(results['index'][1],results['index'][0], color='r', label=f'calculated center:({results["xc"]},{results["yc"]})')
-                ax1.set_title('Autocorrelation matrix')
-                fig.colorbar(pos1, ax=ax1,shrink=0.6)
+            ## Display cc matrix plot
+            xr = 2 * (real_center[0] - xc)
+            yr = 2 * (real_center[1] - yc)
+            index = []
+            flag = 0
+            try:
+                index.append(np.where(results["yy"] == yr)[0][0])
+                index.append(np.where(results["xx"] == xr)[1][0])
+            except IndexError:
+                flag = 1
+            if (
+                results["index"].size != 0
+                and results["index"][0] != 0
+                and results["index"][1] != 0
+                and flag != 1
+            ):
+
+                fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
+                pos1 = ax1.imshow(results["sub_reduced_cc_matrix"], cmap="jet")
+                ax1.scatter(
+                    index[0],
+                    index[1],
+                    color="lime",
+                    label=f"xds:({real_center[0]},{real_center[1]})",
+                )
+                ax1.scatter(
+                    results["index"][1],
+                    results["index"][0],
+                    color="r",
+                    label=f'calculated center:({results["xc"]},{results["yc"]})',
+                )
+                ax1.set_title("Autocorrelation matrix")
+                fig.colorbar(pos1, ax=ax1, shrink=0.6)
                 ax1.legend()
-                plt.savefig(f'/home/rodria/Desktop/test/cc_map/lyso_{i}.png')
+                plt.savefig(f"/home/rodria/Desktop/test/cc_map/lyso_{i}.png")
                 plt.close()
-            
+
 
 if __name__ == "__main__":
     main()

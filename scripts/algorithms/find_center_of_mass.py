@@ -30,9 +30,9 @@ global pf8_info
 pf8_info = PF8Info(
     max_num_peaks=10000,
     adc_threshold=5,
-    minimum_snr=8,
-    min_pixel_count=1,
-    max_pixel_count=20,
+    minimum_snr=7,
+    min_pixel_count=2,
+    max_pixel_count=200,
     local_bg_radius=3,
     min_res=0,
     max_res=10000
@@ -43,7 +43,7 @@ global threshold_distance
 threshold_distance=0.5
 
 global n_iterations
-n_iterations=10
+n_iterations=50
 
 def main():
     parser = argparse.ArgumentParser(
@@ -135,7 +135,7 @@ def main():
                 xds_mask_hr[np.where(xds_mask_hr <= 0)] = 0
                 xds_mask_hr[np.where(xds_mask_hr > 0)] = 1
                 # Mask hot pixels
-                xds_mask_hr[np.where(data > 1e3)] = 0
+                #xds_mask_hr[np.where(data > 1e3)] = 0
                 mask_hr = xds_mask_hr
                 real_center = table_real_center[i]
 
@@ -173,8 +173,8 @@ def main():
             center_iter.append(last_iter)
             filled_data_iter.append(data_to_fill*pf8_mask)
             
-            while delta_center_x>threshold_distance and delta_center_y>threshold_distance and count<n_iterations:
-
+            #while delta_center_x>threshold_distance and delta_center_y>threshold_distance and count<n_iterations:
+            while True and count<n_iterations:
                 # Update center for pf8 with the last calculated center
                 pf8_info.modify_radius(last_iter[0], last_iter[1])
                 pf8_info._bad_pixel_map=mask
@@ -190,7 +190,6 @@ def main():
                 # Mask Bragg  peaks
                 only_peaks_mask = mask_peaks(mask, indices, bragg=0)
                 pf8_mask = only_peaks_mask * mask
-            
                 
                 # Fill gaps with the radial average with origin at the calculated center from last iteration
                 filled_data=fill_gaps(data_to_fill, last_iter, pf8_mask)

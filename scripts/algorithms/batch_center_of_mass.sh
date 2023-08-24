@@ -17,4 +17,4 @@ module load maxwell python/3.7
 source /home/rodria/scripts/p09/env-p09/bin/activate
 
 
-./find_center_of_mass.py -i /gpfs/cfel/user/rodria/processed/p09/11016566/lists/lyso_test.lst -m /gpfs/cfel/user/rodria/processed/p09/11016566/lists/mask_lyso_com_fill.lst -m_sym /gpfs/cfel/user/rodria/processed/p09/11016566/lists/mask_valid.lst -m_hr /gpfs/cfel/user/rodria/processed/p09/11016566/lists/mask_hr.lst -c center.txt -o /asap3/petra3/gpfs/p09/2022/data/11016566/processed/rodria/centering/lyso;
+./find_center_of_mass.py -i /gpfs/cfel/user/rodria/processed/p09/11016566/lists/lyso_test.lst -m /gpfs/cfel/user/rodria/processed/p09/11016566/lists/mask_lyso_com_fill.lst -m_sym /gpfs/cfel/user/rodria/processed/p09/11016566/lists/mask_valid.lst -m_hr /gpfs/cfel/user/rodria/processed/p09/11016566/lists/mask_hr.lst -c center.txt -o /asap3/petra3/gpfs/p09/2022/data/11016566/processed/rodria/centering_3/lyso;

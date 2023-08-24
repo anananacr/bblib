@@ -44,8 +44,10 @@ def azimuthal_average(
 
     Parameters
     ----------
-     data: np.ndarray
+    data: np.ndarray
         Input data in which center of mass will be calculated. Values equal or less than zero will not be considered.
+    center: tuple
+        Center coordinates of the radial average (xc, yc)->(col, row).
     mask: np.ndarray
         Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
     Returns
@@ -100,7 +102,7 @@ def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int) -> np.ndarray:
     surrounding_positions = []
     count = 0
     for index in zip(indices[0], indices[1]):
-        n = 1
+        n = 2
         row, col = index
         for i in range(-n, n + 1):
             for k in range(-n, n + 1):
@@ -541,3 +543,20 @@ def get_center_theory(
         center_theory.append(center)
     center_theory = np.array(center_theory)
     return center_theory, loaded_table_center
+
+
+def fill_gaps(data: np.ndarray, center: tuple, mask: np.ndarray)-> np.ndarray:
+    ave_r, ave_y = azimuthal_average(data, center, mask)
+    filled_data=(data*mask).copy().astype(np.float32)
+    y, x = np.where(data*mask<=0)
+
+    for i in zip(y,x):
+
+        radius=math.sqrt((i[0]-center[1])**2+(i[1]-center[0])**2)
+        
+        index=np.where(ave_r==round(radius))[0]
+        if not index:
+            index = ave_r[0:10]
+        
+        filled_data[i]=np.mean(ave_y[index])
+    return filled_data

@@ -27,7 +27,7 @@ def build_pixel_map(row: int, col: int, x0: int, y0: int) -> Dict[str, int]:
     radius_pixel_map: Dict
         "radius": radius pixel map in realtion to the give center. It has same size of data given by row and col.
     """
-    
+
     [X, Y] = np.meshgrid(np.arange(col) - x0, np.arange(row) - y0)
     R = np.sqrt(np.square(X) + np.square(Y))
     Rint = np.rint(R).astype(int)
@@ -47,7 +47,6 @@ class PF8Info:
     pf8_detector_info: dict = None
     _bad_pixel_map: np.array = None
     _pixelmaps: np.array = field(init=False)
-
 
     def modify_radius(self, center_x, center_y):
         self._pixelmaps = build_pixel_map(

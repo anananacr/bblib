@@ -279,8 +279,8 @@ def open_fwhm_map(lines: list, label: str = None):
     # Display the figure
 
     plt.show()
-    #plt.savefig(f'/home/rodria/Desktop/20230814/fwhm_map/lyso_{label}.png')
-    #plt.close()
+    # plt.savefig(f'/home/rodria/Desktop/20230814/fwhm_map/lyso_{label}.png')
+    # plt.close()
 
 
 def fit_fwhm(lines: list) -> Tuple[int]:
@@ -545,18 +545,18 @@ def get_center_theory(
     return center_theory, loaded_table_center
 
 
-def fill_gaps(data: np.ndarray, center: tuple, mask: np.ndarray)-> np.ndarray:
+def fill_gaps(data: np.ndarray, center: tuple, mask: np.ndarray) -> np.ndarray:
     ave_r, ave_y = azimuthal_average(data, center, mask)
-    filled_data=(data*mask).copy().astype(np.float32)
-    y, x = np.where(data*mask<=0)
+    filled_data = (data * mask).copy().astype(np.float32)
+    y, x = np.where(data * mask <= 0)
 
-    for i in zip(y,x):
+    for i in zip(y, x):
 
-        radius=math.sqrt((i[0]-center[1])**2+(i[1]-center[0])**2)
-        
-        index=np.where(ave_r==round(radius))[0]
+        radius = math.sqrt((i[0] - center[1]) ** 2 + (i[1] - center[0]) ** 2)
+
+        index = np.where(ave_r == round(radius))[0]
         if not index:
             index = ave_r[0:10]
-        
-        filled_data[i]=np.mean(ave_y[index])
+
+        filled_data[i] = np.mean(ave_y[index])
     return filled_data

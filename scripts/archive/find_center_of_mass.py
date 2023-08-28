@@ -30,7 +30,7 @@ global pf8_info
 pf8_info = PF8Info(
     max_num_peaks=10000,
     adc_threshold=5,
-    minimum_snr=7,
+    minimum_snr=6,
     min_pixel_count=2,
     max_pixel_count=200,
     local_bg_radius=3,

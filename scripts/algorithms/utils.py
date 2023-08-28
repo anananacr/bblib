@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import math
 import json
 import pandas as pd
+import sys
+sys.path.append("/home/rodria/software/vdsCsPadMaskMaker/new-versions/")
+from maskMakerGUI import pMakePolarisationArray
 
 
 def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> Tuple[int]:
@@ -81,6 +84,39 @@ def azimuthal_average(
     np.maximum(r_bin, 1, out=r_bin)
 
     return radius, px_bin / r_bin
+
+def correct_polarization(x: np.ndarray, y: np.ndarray, dist: float, data: np.ndarray, mask:np.ndarray)->np.ndarray:
+    """
+    Correct data for polarisation effect.
+    Parameters
+    ----------
+    x: np.ndarray
+        x distance coordinates from the direct beam position.
+    y: np.ndarray
+        y distance coordinates from the direct beam position.
+    dist: float
+        z distance coordinates of the detector position.
+    data: np.ndarray
+        Raw data frame in which polarization correction will be applied.
+    mask: np.ndarray
+        Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
+    
+    Returns
+    ----------
+    corrected_data: np.ndarray
+        Corrected data frame for polarization effect.
+    """
+
+    mask = mask.astype(bool)
+    mask = mask.flatten()
+    len_array = len(x.flatten())
+    Int = np.reshape(data.copy(), len_array)
+    
+    Int = np.where(mask == False)
+    pol = np.zeros_like(Int)
+    pol = pMakePolarisationArray(pol, len_array, x.flatten(), y.flatten(), dist, 0.99)
+    Int = Int / pol
+    return Int.reshape(data.shape)
 
 
 def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int) -> np.ndarray:

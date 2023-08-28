@@ -2,6 +2,9 @@
 
 from typing import List, Optional, Callable, Tuple, Any, Dict
 import fabio
+import sys
+sys.path.append("/home/rodria/software/vdsCsPadMaskMaker/new-versions/")
+import geometry_funcs as gf
 import argparse
 import numpy as np
 from utils import (
@@ -14,6 +17,7 @@ from utils import (
     fit_fwhm,
     shift_image_by_n_pixels,
     get_center_theory,
+    correct_polarization
 )
 import pandas as pd
 from models import PF8, PF8Info
@@ -22,6 +26,7 @@ import multiprocessing
 import math
 import matplotlib.pyplot as plt
 from scipy import signal
+
 import h5py
 
 global pf8_info
@@ -101,6 +106,7 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
         "fwhm": fwhm,
         "fwhm_over_radius": fwhm_over_radius,
         "r_squared": r_squared,
+        "pf8_mask": pf8_mask 
     }
 
 
@@ -427,6 +433,14 @@ def main():
     )
 
     parser.add_argument(
+        "-g",
+        "--geom",
+        type=str,
+        action="store",
+        help="CrystFEL geometry filename",
+    )
+
+    parser.add_argument(
         "-center",
         "--center",
         type=str,
@@ -444,6 +458,7 @@ def main():
     global mask
     global pf8_mask
     global frame_number
+    global corrected_data
 
     files = open(args.input, "r")
     paths = files.readlines()
@@ -460,6 +475,42 @@ def main():
     file_format = get_format(args.input)
     if args.center:
         table_real_center, loaded_table = get_center_theory(paths, args.center)
+
+    ### Extract geometry file
+    x_map, y_map, det_dict = gf.pixel_maps_from_geometry_file(args.geom, return_dict = True)
+    preamb, dim_info = gf.read_geometry_file_preamble(args.geom)
+    dist_m = preamb['coffset']
+    res = preamb['res']
+    clen = preamb['clen']
+    dist = 0.
+    if clen is not None:
+        if not gf.is_float_try(clen):
+            check = H5_name + clen
+            myCmd = os.popen('h5ls ' + check).read()
+            if "NOT" in myCmd:
+                print('Error: no clen from .h5 file')
+                clen_v = 0.
+            else:
+                f = h5py.File(H5_name, 'r')
+                clen_v = f[clen][()] * (1e-3) # f[clen].value * (1e-3)
+                f.close()
+                pol_bool = True
+                print('Take into account polarisation')
+        else:
+            clen_v = float(clen)
+            pol_bool = True
+            print('Take into account polarisation')
+        
+        if dist_m is not None:
+            dist_m += clen_v
+        else:
+            print('Error: no coffset in geometry file. It is considered as 0.')
+            dist_m = 0.
+        print('CLEN, COFSET', clen, dist_m)
+        dist = dist_m * res
+        
+
+
     # (table_real_center)
     if file_format == "lst":
         ref_image = []
@@ -580,6 +631,13 @@ def main():
             # plt.show()
             plt.close()
 
+            ## Correct for polarisation
+            corrected_data=correct_polarization(x_map, y_map, clen_v, data, mask=mask)
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+            pos1 = ax1.imshow(data *mask, vmax=7, cmap="jet")
+            pos2 = ax2.imshow(corrected_data * mask, vmax=7, cmap="jet")
+            plt.savefig(f"/home/rodria/Desktop/test/com/lyso_corr_{i}.png")
+            """
             ## Grid search of sharpness of the azimutal average
             xx, yy = np.meshgrid(
                 np.arange(xc - 30, xc + 31, 1, dtype=int),
@@ -591,7 +649,7 @@ def main():
             pool = multiprocessing.Pool()
             with pool:
                 fwhm_summary = pool.map(calculate_fwhm, coordinates)
-
+            
             ## Display plots
             # open_fwhm_map(fwhm_summary, i)
 
@@ -635,12 +693,12 @@ def main():
 
             shift = [int(-(data.shape[1] / 2) + xc), int(-(data.shape[0] / 2) + yc)]
 
-            """
-            shift = [
-                int(-(data.shape[1] / 2) + real_center[0]),
-                int(-(data.shape[0] / 2) + real_center[1]),
-            ]
-            """
+            
+            #shift = [
+            #    int(-(data.shape[1] / 2) + real_center[0]),
+            #    int(-(data.shape[0] / 2) + real_center[1]),
+            #]
+            
 
             results = shift_and_calculate_cross_correlation(shift)
             third_center = (results["xc"], results["yc"])
@@ -743,7 +801,7 @@ def main():
                 ax1.legend()
                 plt.savefig(f"/home/rodria/Desktop/test/cc_map/lyso_{i}.png")
                 plt.close()
-
+                """
 
 if __name__ == "__main__":
     main()

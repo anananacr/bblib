@@ -17,7 +17,8 @@ from utils import (
     fit_fwhm,
     shift_image_by_n_pixels,
     get_center_theory,
-    correct_polarization
+    correct_polarization,
+    update_corner_in_geom
 )
 import pandas as pd
 from models import PF8, PF8Info
@@ -26,7 +27,7 @@ import multiprocessing
 import math
 import matplotlib.pyplot as plt
 from scipy import signal
-
+import subprocess as sub
 import h5py
 
 global pf8_info
@@ -483,6 +484,7 @@ def main():
     res = preamb['res']
     clen = preamb['clen']
     dist = 0.
+
     if clen is not None:
         if not gf.is_float_try(clen):
             check = H5_name + clen
@@ -580,6 +582,17 @@ def main():
             ## Approximate center of mass
             xc, yc = center_of_mass(data, pf8_mask)
 
+            ## Update geometry file for nw x_map and y_map
+            updated_geom=f"{args.geom[:-5]}_v1.geom"
+            cmd = f"cp {args.geom} {updated_geom}"
+            sub.call(cmd, shell=True)
+            update_corner_in_geom(updated_geom, xc, yc, data.shape)
+            x_map, y_map, det_dict = gf.pixel_maps_from_geometry_file(updated_geom, return_dict = True)
+
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+            pos1 = ax1.imshow(mask, cmap="jet")
+            pos2 = ax2.imshow(y_map, cmap="jet")
+            plt.show()
             ## Center of mass again with the flipped image to account for eventual background asymmetry
 
             flipped_data = data[::-1, ::-1]
@@ -636,7 +649,8 @@ def main():
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
             pos1 = ax1.imshow(data *mask, vmax=7, cmap="jet")
             pos2 = ax2.imshow(corrected_data * mask, vmax=7, cmap="jet")
-            plt.savefig(f"/home/rodria/Desktop/test/com/lyso_corr_{i}.png")
+            plt.show()
+            #plt.savefig(f"/home/rodria/Desktop/test/com/lyso_corr_{i}.png")
             """
             ## Grid search of sharpness of the azimutal average
             xx, yy = np.meshgrid(

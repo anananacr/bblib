@@ -8,7 +8,9 @@ import pandas as pd
 import sys
 sys.path.append("/home/rodria/software/vdsCsPadMaskMaker/new-versions/")
 from maskMakerGUI import pMakePolarisationArray
+import geometry_funcs as gf
 
+cspad_psana_shape =(1,1,1475,1679)
 
 def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> Tuple[int]:
     """
@@ -85,7 +87,7 @@ def azimuthal_average(
 
     return radius, px_bin / r_bin
 
-def correct_polarization(x: np.ndarray, y: np.ndarray, dist: float, data: np.ndarray, mask:np.ndarray)->np.ndarray:
+def correct_polarization(x: np.ndarray, y: np.ndarray, dist: float, data: np.ndarray, mask:np.ndarray, polarization_axis:str='x')->np.ndarray:
     """
     Correct data for polarisation effect.
     Parameters
@@ -108,15 +110,55 @@ def correct_polarization(x: np.ndarray, y: np.ndarray, dist: float, data: np.nda
     """
 
     mask = mask.astype(bool)
+    print(mask)
     mask = mask.flatten()
     len_array = len(x.flatten())
     Int = np.reshape(data.copy(), len_array)
     
-    Int = np.where(mask == False)
-    pol = np.zeros_like(Int)
+    bstpReg=-0.5
+    Int = np.where(mask == False, bstpReg - 1., Int)
+    pol = np.ones_like(Int)
     pol = pMakePolarisationArray(pol, len_array, x.flatten(), y.flatten(), dist, 0.99)
     Int = Int / pol
     return Int.reshape(data.shape)
+    """
+    du =  5814.0
+    y   *= du
+    x   *= du
+    z = dist * du
+    if polarization_axis == 'x':
+        polarization_map = 1 - x**2 /(z**2 + x**2 + y**2)
+    return Int.reshape(data.shape)*polarization_map
+    """
+    
+
+def update_corner_in_geom(geom, new_xc, new_yc, cspad_geom_shape):
+    
+    # convert y x values to i j values
+    y = int(-new_yc +1)
+    x = int(-new_xc +1 )
+    print(x,y)
+    f=open(geom, 'r')
+    lines=f.readlines()
+    f.close()
+
+    new_lines=[]
+
+    for i in lines:
+        key_args=i.split(" = ")[0]
+        
+        if key_args[-8:] == "corner_x":
+            new_lines.append(f"{key_args} = {x}\n")
+        elif key_args[-8:] == "corner_y":        
+            new_lines.append(f"{key_args} = {y}\n")
+        else:
+            new_lines.append(i)
+    
+    f=open(geom, 'w')
+    for i in new_lines:
+        f.write(i)
+    f.close()
+
 
 
 def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int) -> np.ndarray:

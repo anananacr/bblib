@@ -10,6 +10,8 @@ sys.path.append("/home/rodria/software/vdsCsPadMaskMaker/new-versions/")
 from maskMakerGUI import pMakePolarisationArray
 import geometry_funcs as gf
 
+MinVal = 1e-10
+
 cspad_psana_shape =(1,1,1475,1679)
 
 def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> Tuple[int]:
@@ -114,23 +116,32 @@ def correct_polarization(x: np.ndarray, y: np.ndarray, dist: float, data: np.nda
     mask = mask.flatten()
     len_array = len(x.flatten())
     Int = np.reshape(data.copy(), len_array)
-    
     bstpReg=-0.5
     Int = np.where(mask == False, bstpReg - 1., Int)
-    pol = np.ones_like(Int)
-    pol = pMakePolarisationArray(pol, len_array, x.flatten(), y.flatten(), dist, 0.99)
+    pol = np.zeros_like(Int)
+    pol = make_polarization_array(pol, len_array, x.flatten(), y.flatten(), dist, 0.99)
     Int = Int / pol
     return Int.reshape(data.shape)
-    """
-    du =  5814.0
-    y   *= du
-    x   *= du
-    z = dist * du
-    if polarization_axis == 'x':
-        polarization_map = 1 - x**2 /(z**2 + x**2 + y**2)
-    return Int.reshape(data.shape)*polarization_map
-    """
     
+
+
+def polarization_factor_det(detx, dety, detz, degree):
+    if np.all(np.abs(detx) < MinVal) and np.all(np.abs(dety) < MinVal):
+        return 1.0
+    
+    pdist2i = 1 / (detx * detx + dety * dety  + detz * detz)
+    pol = 1 - (dety * dety * (1 - degree) + detx * detx  * degree) * pdist2i
+    
+    pol = np.where(np.abs(pol) < MinVal, 1.0, pol)
+    return pol
+
+def make_polarization_array(pol, numcomp, cox, coy, detdist, poldegree):
+    res=172*1e-6
+    detx = cox * res
+    dety = coy * res
+    detz = detdist
+    pol += polarization_factor_det(detx, dety, detz, poldegree)
+    return pol
 
 def update_corner_in_geom(geom, new_xc, new_yc, cspad_geom_shape):
     
@@ -158,8 +169,6 @@ def update_corner_in_geom(geom, new_xc, new_yc, cspad_geom_shape):
     for i in new_lines:
         f.write(i)
     f.close()
-
-
 
 def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int) -> np.ndarray:
     """

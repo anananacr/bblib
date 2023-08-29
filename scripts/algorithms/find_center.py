@@ -51,7 +51,7 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
 
     # Find Bragg peaks list with pf8
     pf8 = PF8(pf8_info)
-    peak_list = pf8.get_peaks_pf8(data=data)
+    peak_list = pf8.get_peaks_pf8(data=corrected_data)
     indices = (
         np.array(peak_list["ss"], dtype=int),
         np.array(peak_list["fs"], dtype=int),
@@ -60,7 +60,7 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
     only_peaks_mask = mask_peaks(mask, indices, bragg=0)
     pf8_mask = only_peaks_mask * mask
 
-    x, y = azimuthal_average(data, center=center_to_radial_average, mask=pf8_mask)
+    x, y = azimuthal_average(corrected_data, center=center_to_radial_average, mask=pf8_mask)
     # Plot all radial average
     # fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
     # plt.plot(x, y)
@@ -115,18 +115,19 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
 
     shift_x = -shift[0]
     shift_y = -shift[1]
-    xc = round(data.shape[1] / 2) + shift[0]
-    yc = round(data.shape[0] / 2) + shift[1]
+    xc = round(corrected_data.shape[1] / 2) + shift[0]
+    yc = round(corrected_data.shape[0] / 2) + shift[1]
     shifted_data = shift_image_by_n_pixels(
-        shift_image_by_n_pixels(data, shift_y, 0), shift_x, 1
+        shift_image_by_n_pixels(corrected_data, shift_y, 0), shift_x, 1
     )
     shifted_mask = shift_image_by_n_pixels(
         shift_image_by_n_pixels(mask, shift_y, 0), shift_x, 1
     )
 
     # Update center for pf8 with the last calculated center
-    pf8_info.modify_radius(round(data.shape[1] / 2), round(data.shape[0] / 2))
+    pf8_info.modify_radius(round(corrected_data.shape[1] / 2), round(corrected_data.shape[0] / 2))
     pf8_info._bad_pixel_map = shifted_mask
+    pf8_info.minimum_snr=4
     pf8_info.max_res = 200
 
     # Find Bragg peaks list with pf8
@@ -583,16 +584,12 @@ def main():
             xc, yc = center_of_mass(data, pf8_mask)
 
             ## Update geometry file for nw x_map and y_map
-            updated_geom=f"{args.geom[:-5]}_v1.geom"
+            updated_geom=f"{args.geom[:-5]}_lyso_{i}_v1.geom"
             cmd = f"cp {args.geom} {updated_geom}"
             sub.call(cmd, shell=True)
             update_corner_in_geom(updated_geom, xc, yc, data.shape)
             x_map, y_map, det_dict = gf.pixel_maps_from_geometry_file(updated_geom, return_dict = True)
 
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
-            pos1 = ax1.imshow(mask, cmap="jet")
-            pos2 = ax2.imshow(y_map, cmap="jet")
-            plt.show()
             ## Center of mass again with the flipped image to account for eventual background asymmetry
 
             flipped_data = data[::-1, ::-1]
@@ -645,13 +642,19 @@ def main():
             plt.close()
 
             ## Correct for polarisation
+            
             corrected_data=correct_polarization(x_map, y_map, clen_v, data, mask=mask)
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
             pos1 = ax1.imshow(data *mask, vmax=7, cmap="jet")
             pos2 = ax2.imshow(corrected_data * mask, vmax=7, cmap="jet")
-            plt.show()
-            #plt.savefig(f"/home/rodria/Desktop/test/com/lyso_corr_{i}.png")
-            """
+            ax1.set_title("Original data")
+            ax2.set_title("Polarization corrected data")
+            fig.colorbar(pos1, shrink=0.6, ax=ax1)
+            fig.colorbar(pos2, shrink=0.6, ax=ax2)
+            #plt.show()
+            plt.savefig(f"/home/rodria/Desktop/test/pol/lyso_{i}.png")
+            plt.close()
+
             ## Grid search of sharpness of the azimutal average
             xx, yy = np.meshgrid(
                 np.arange(xc - 30, xc + 31, 1, dtype=int),
@@ -672,7 +675,7 @@ def main():
             xc, yc = fit_fwhm(fwhm_summary)
             print("Second approximation", xc, yc)
             second_center = (xc, yc)
-            second_masked_data = (data * pf8_mask).copy()
+            second_masked_data = (data * only_peaks_mask * mask).copy()
             ## Display plots
 
             xr = real_center[0]
@@ -690,7 +693,7 @@ def main():
             fig.colorbar(pos1, ax=ax1, shrink=0.6)
             ax1.legend()
 
-            pos2 = ax2.imshow(data * pf8_mask, vmax=7, cmap="jet")
+            pos2 = ax2.imshow(second_masked_data, vmax=7, cmap="jet")
             ax2.scatter(xr, yr, color="lime", label=f"xds:({xr},{yr})")
             ax2.scatter(
                 xc, yc, color="blueviolet", label=f"calculated center:({xc},{yc})"
@@ -702,21 +705,38 @@ def main():
             plt.close()
             # plt.show()
 
+            # Update geom and recorrect polarization
+            updated_geom=f"{args.geom[:-5]}_lyso_{i}_v2.geom"
+            cmd = f"cp {args.geom} {updated_geom}"
+            sub.call(cmd, shell=True)
+            update_corner_in_geom(updated_geom, xc, yc, data.shape)
+            x_map, y_map, det_dict = gf.pixel_maps_from_geometry_file(updated_geom, return_dict = True)
+            corrected_data=correct_polarization(x_map, y_map, clen_v, data, mask=mask)
+            
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+            pos1 = ax1.imshow(data *mask, vmax=7, cmap="jet")
+            ax1.set_title("Original data")
+            pos2 = ax2.imshow(corrected_data * mask, vmax=7, cmap="jet")
+            ax2.set_title("Polarization corrected data")
+            fig.colorbar(pos1, shrink=0.6, ax=ax1)
+            fig.colorbar(pos2, shrink=0.6, ax=ax2)
+            #plt.show()
+            plt.savefig(f"/home/rodria/Desktop/test/pol_2/lyso_{i}.png")
+            plt.close()
+
             ## Third approximation autocorrelation of Bragg peaks position
             # Calculate shift to closest center know so far
 
             shift = [int(-(data.shape[1] / 2) + xc), int(-(data.shape[0] / 2) + yc)]
 
-            
             #shift = [
             #    int(-(data.shape[1] / 2) + real_center[0]),
             #    int(-(data.shape[0] / 2) + real_center[1]),
             #]
             
-
             results = shift_and_calculate_cross_correlation(shift)
             third_center = (results["xc"], results["yc"])
-            third_masked_data = data * mask
+            third_masked_data = corrected_data * mask
             f = h5py.File(f"{args.output}_{i}.h5", "w")
 
             if args.output:
@@ -815,7 +835,7 @@ def main():
                 ax1.legend()
                 plt.savefig(f"/home/rodria/Desktop/test/cc_map/lyso_{i}.png")
                 plt.close()
-                """
+                
 
 if __name__ == "__main__":
     main()

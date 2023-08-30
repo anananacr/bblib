@@ -2,9 +2,18 @@ from typing import List, Optional, Callable, Tuple, Any, Dict
 from numpy import exp
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 import math
 import json
 import pandas as pd
+import sys
+
+sys.path.append("/home/rodria/software/vdsCsPadMaskMaker/new-versions/")
+from maskMakerGUI import pMakePolarisationArray as make_polarization_array_fast
+import geometry_funcs as gf
+
+Res = 172 * 1e-6
+cspad_psana_shape = (1, 1, 1475, 1679)
 
 
 def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> Tuple[int]:
@@ -61,9 +70,10 @@ def azimuthal_average(
     a = data.shape[0]
     b = data.shape[1]
     if mask is None:
-        mask = np.ones((a, b), dtype=bool)
+        mask = np.zeros((a, b), dtype=bool)
     else:
         mask.astype(bool)
+
     if center is None:
         center = [b / 2, a / 2]
     [X, Y] = np.meshgrid(np.arange(b) - center[0], np.arange(a) - center[1])
@@ -81,6 +91,199 @@ def azimuthal_average(
     np.maximum(r_bin, 1, out=r_bin)
 
     return radius, px_bin / r_bin
+
+
+def correct_polarization_python(
+    x: np.ndarray,
+    y: np.ndarray,
+    dist: float,
+    data: np.ndarray,
+    mask: np.ndarray,
+    polarization_axis: str = "x",
+) -> np.ndarray:
+    """
+    Correct data for polarisation effect, version in Python. It is based on pMakePolarisationArray from https://github.com/galchenm/vdsCsPadMaskMaker/blob/main/new-versions/maskMakerGUI-v2.py#L234
+    Acknowledgements: Oleksandr Yefanov, Marina Galchenkova
+
+    Parameters
+    ----------
+    x: np.ndarray
+        Array containg pixels coordinates in x (pixels) distance from the direct beam. It has same shape of data.
+    y: np.ndarray
+        Array containg pixels coordinates in y (pixels) distance from the direct beam. It has same shape of data.
+    dist: float
+        z distance coordinates of the detector position.
+    data: np.ndarray
+        Raw data frame in which polarization correction will be applied.
+    mask: np.ndarray
+        Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
+
+    Returns
+    ----------
+    corrected_data: np.ndarray
+        Corrected data frame for polarization effect.
+    pol: np.ndarray
+        Polarization array for polarization correction.
+    """
+
+    mask = mask.astype(bool)
+    mask = mask.flatten()
+    Int = np.reshape(data.copy(), len(mask))
+    pol = mask.copy().astype(np.float32)
+    pol = make_polarization_array(pol, x.flatten(), y.flatten(), dist / Res, 0.99)
+    Int = Int / pol
+    return Int.reshape(data.shape), pol.reshape(data.shape)
+
+
+def make_polarization_array(
+    pol: np.ndarray, cox: np.ndarray, coy: np.ndarray, detdist: float, poldegree: float
+) -> np.ndarray:
+    """
+    Create the polarization array for horizontal polarization correction, version in Python. It is based on pMakePolarisationArray from https://github.com/galchenm/vdsCsPadMaskMaker/blob/main/new-versions/maskMakerGUI-v2.py#L234
+    Acknowledgements: Oleksandr Yefanov, Marina Galchenkova
+
+    Parameters
+    ----------
+    pol: np.ndarray
+        An array where polarization arra will be built based on its shape. Mask shape is the same size of data. Unvalid pixels (values containing 0) will be skipped from calculation and put 1.
+    cox: np.ndarray
+        Array containg pixels coordinates in x (pixels) distance from the direct beam. It has same shape of data.
+    coy: np.ndarray
+        Array containg pixels coordinates in y (pixels) distance from the direct beam. It has same shape of data.
+    detdist: float
+        Detector distance from the sample in meters . The detctor distance will be transformed in pixel units based on Res defined as global parameter.
+    poldegree: float
+        Polarization degree, horizontal polarization at DESY p=0.99.
+    Returns
+    ----------
+    pol: np.ndarray
+        Polarization array for polarization correction.
+    """
+
+    detx = cox
+    dety = coy
+    detz = detdist
+    for i in range(len(pol)):
+        if pol[i] != 0:
+            pol[i] = polarization_factor_det(detx[i], dety[i], detz, poldegree)
+        else:
+            pol[i] = 1
+    return pol
+
+
+def polarization_factor_det(
+    detx: float, dety: float, detz: float, degree: float
+) -> float:
+    """
+    Create the polarization array for horizontal polarization correction, version in Python. It is based on pMakePolarisationArray from https://github.com/galchenm/vdsCsPadMaskMaker/blob/main/new-versions/maskMakerGUI-v2.py#L234
+    Acknowledgements: Oleksandr Yefanov, Marina Galchenkova
+
+    Parameters
+    ----------
+    detx: float
+        Pixel coordinates in x (pixels) distance from the direct beam.
+    dety: float
+        Pixel coordinates in y (pixels) distance from the direct beam.
+    detdist: float
+        Detector distance from the sample in pixels.
+    poldegree: float
+        Polarization degree, horizontal polarization at DESY p=0.99.
+    Returns
+    ----------
+    pol: float
+        Polarization factor for polarization correction.
+    """
+    pol = 1 - (
+        (degree * (detx**2) + (1 - degree) * (dety**2))
+        / (detx**2 + dety**2 + detz**2)
+    )
+    return pol
+
+
+def correct_polarization(
+    x: np.ndarray, y: np.ndarray, dist: float, data: np.ndarray, mask: np.ndarray
+) -> np.ndarray:
+    """
+    Correct data for polarisation effect, C built function from https://github.com/galchenm/vdsCsPadMaskMaker/blob/main/SubLocalBG.c#L249
+    Acknowledgements: Oleksandr Yefanov, Marina Galchenkova
+    Parameters
+    ----------
+    x: np.ndarray
+        x distance coordinates from the direct beam position.
+    y: np.ndarray
+        y distance coordinates from the direct beam position.
+    dist: float
+        z distance coordinates of the detector position.
+    data: np.ndarray
+        Raw data frame in which polarization correction will be applied.
+    mask: np.ndarray
+        Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
+
+    Returns
+    ----------
+    corrected_data: np.ndarray
+        Corrected data frame for polarization effect.
+    pol: np.ndarray
+        Polarization array for polarization correction.
+    """
+
+    mask = mask.astype(bool)
+    mask = ~mask.flatten()
+    Int = np.reshape(data.copy(), len(mask))
+    pol = mask.copy().astype(np.float32)
+    pol = make_polarization_array_fast(
+        pol, len(mask), x.flatten(), y.flatten(), dist / Res, 0.99
+    )
+    mask = ~mask
+    pol[np.where(mask == 0)] = 1
+    Int = Int / pol
+    return Int.reshape(data.shape), pol.reshape(data.shape)
+
+
+def update_corner_in_geom(geom: str, new_xc: float, new_yc: float):
+    """
+    Write new direct beam position in detector coordinates in the geometry file.
+
+    Parameters
+    ----------
+    geom: str
+        CrystFEL eometry file name to be updated .geom format.
+    new_xc: float
+        Direct beam position in detector coordinates in the x axis.
+    new_yc: float
+        Direct beam position in detector coordinates in the y axis.
+
+    Returns
+    ----------
+    corrected_data: np.ndarray
+        Corrected data frame for polarization effect.
+    pol: np.ndarray
+        Polarization array for polarization correction.
+    """
+    # convert y x values to i j values
+    y = int(-new_yc + 1)
+    x = int(-new_xc + 1)
+    # print(x,y)
+    f = open(geom, "r")
+    lines = f.readlines()
+    f.close()
+
+    new_lines = []
+
+    for i in lines:
+        key_args = i.split(" = ")[0]
+
+        if key_args[-8:] == "corner_x":
+            new_lines.append(f"{key_args} = {x}\n")
+        elif key_args[-8:] == "corner_y":
+            new_lines.append(f"{key_args} = {y}\n")
+        else:
+            new_lines.append(i)
+
+    f = open(geom, "w")
+    for i in new_lines:
+        f.write(i)
+    f.close()
 
 
 def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int) -> np.ndarray:
@@ -308,7 +511,7 @@ def fit_fwhm(lines: list) -> Tuple[int]:
 
     x = np.array(merged_dict["xc"]).reshape((n, n))[0]
     y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
-    z = np.array(merged_dict["fwhm_over_radius"]).reshape((n, n))
+    z = np.array(merged_dict["fwhm"]).reshape((n, n))
 
     proj_x = np.sum(z, axis=0) / z.shape[0]
     x = np.arange(x[0], x[-1] + 1, 1)

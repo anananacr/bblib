@@ -159,44 +159,13 @@ def make_polarization_array(
     pol: np.ndarray
         Polarization array for polarization correction.
     """
+    
+    z = detdist*np.ones_like(x)
+    valid=np.where(pol==1)
+    
+    pol[valid] = 1 - ((poldegree * (cox[valid]**2) + (1 - poldegree) * (coy[valid]**2))/(cox[valid]**2 + coy[valid]**2 + z[valid]**2))
+    pol[np.where(pol==0)] = 1.0
 
-    detx = cox
-    dety = coy
-    detz = detdist
-    for i in range(len(pol)):
-        if pol[i] != 0:
-            pol[i] = polarization_factor_det(detx[i], dety[i], detz, poldegree)
-        else:
-            pol[i] = 1
-    return pol
-
-
-def polarization_factor_det(
-    detx: float, dety: float, detz: float, degree: float
-) -> float:
-    """
-    Create the polarization array for horizontal polarization correction, version in Python. It is based on pMakePolarisationArray from https://github.com/galchenm/vdsCsPadMaskMaker/blob/main/new-versions/maskMakerGUI-v2.py#L234
-    Acknowledgements: Oleksandr Yefanov, Marina Galchenkova
-
-    Parameters
-    ----------
-    detx: float
-        Pixel coordinates in x (pixels) distance from the direct beam.
-    dety: float
-        Pixel coordinates in y (pixels) distance from the direct beam.
-    detdist: float
-        Detector distance from the sample in pixels.
-    poldegree: float
-        Polarization degree, horizontal polarization at DESY p=0.99.
-    Returns
-    ----------
-    pol: float
-        Polarization factor for polarization correction.
-    """
-    pol = 1 - (
-        (degree * (detx**2) + (1 - degree) * (dety**2))
-        / (detx**2 + dety**2 + detz**2)
-    )
     return pol
 
 

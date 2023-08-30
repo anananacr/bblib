@@ -159,12 +159,15 @@ def make_polarization_array(
     pol: np.ndarray
         Polarization array for polarization correction.
     """
-    
-    z = detdist*np.ones_like(x)
-    valid=np.where(pol==1)
-    
-    pol[valid] = 1 - ((poldegree * (cox[valid]**2) + (1 - poldegree) * (coy[valid]**2))/(cox[valid]**2 + coy[valid]**2 + z[valid]**2))
-    pol[np.where(pol==0)] = 1.0
+
+    z = detdist * np.ones_like(x)
+    valid = np.where(pol == 1)
+
+    pol[valid] = 1 - (
+        (poldegree * (cox[valid] ** 2) + (1 - poldegree) * (coy[valid] ** 2))
+        / (cox[valid] ** 2 + coy[valid] ** 2 + z[valid] ** 2)
+    )
+    pol[np.where(pol == 0)] = 1.0
 
     return pol
 

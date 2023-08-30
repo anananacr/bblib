@@ -36,17 +36,20 @@ global pf8_info
 pf8_info = PF8Info(
     max_num_peaks=10000,
     adc_threshold=5,
-    minimum_snr=7,
-    min_pixel_count=1,
+    minimum_snr=5,
+    min_pixel_count=2,
     max_pixel_count=200,
     local_bg_radius=3,
     min_res=0,
-    max_res=10000,
+    max_res=1200,
 )
+
+RealCenter = [1255, 1158]
 
 
 def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
     # Update center for pf8 with the last calculated center
+    #print(pf8_info)
     pf8_info.modify_radius(center_to_radial_average[0], center_to_radial_average[1])
     pf8_info._bad_pixel_map = mask
 
@@ -77,11 +80,11 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
         corrected_data, center=center_to_radial_average, mask=pf8_mask
     )
     # Plot all radial average
-    # fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
-    # plt.plot(x, y)
+    fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
+    plt.plot(x, y)
 
     ## Define background peak region
-    x_min = 150
+    x_min = 250
     x_max = 400
     x = x[x_min:x_max]
     y = y[x_min:x_max]
@@ -103,18 +106,19 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
     fwhm_over_radius = fwhm / popt[1]
 
     ## Display plots
-    """
+    
     x_fit=x.copy()
     y_fit=gaussian(x_fit, *popt)
 
     plt.plot(x,y)
     plt.plot(x_fit,y_fit, 'r:', label=f'gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM : {round(fwhm,3)}')
     plt.title('Azimuthal integration')
+    plt.xlim(200,1200)
     plt.legend()
-    plt.savefig(f'/home/rodria/Desktop/test/gaussian_fit/lyso_{frame_number}_{center_to_radial_average[0]}_{center_to_radial_average[1]}.png')
+    plt.savefig(f'/home/rodria/Desktop/f2x/gaussian_fit/f2x_04_03_{frame_number}_{center_to_radial_average[0]}_{center_to_radial_average[1]}.png')
     #plt.show()
     plt.close()
-    """
+    
 
     return {
         "xc": center_to_radial_average[0],
@@ -340,7 +344,7 @@ def shift_and_calculate_cross_correlation(shift: Tuple[int]) -> Dict[str, float]
     )
     ax3.imshow(orig_cut * img_1, cmap="jet", vmax=10)
     ax4.imshow(flip_cut * img_2, cmap="jet", vmax=10)
-    plt.savefig(f"/home/rodria/Desktop/test/cc_flip/lyso_{frame_number}.png")
+    plt.savefig(f"/home/rodria/Desktop/f2x/cc_flip/lyso_{frame_number}.png")
     # plt.show()
     plt.close()
 
@@ -494,18 +498,25 @@ def main():
     paths = files.readlines()
     files.close()
 
-    mask_sym_files = open(args.mask_sym, "r")
-    mask_sym_paths = mask_sym_files.readlines()
-    mask_sym_files.close()
+    if args.mask:
+        mask_files = open(args.mask, "r")
+        mask_paths = mask_files.readlines()
+        mask_files.close()
+    else:
+        mask_paths=[]
 
-    mask_files = open(args.mask, "r")
-    mask_paths = mask_files.readlines()
-    mask_files.close()
-
+    if args.mask_sym:
+        mask_sym_files = open(args.mask_sym, "r")
+        mask_sym_paths = mask_sym_files.readlines()
+        mask_sym_files.close()
+    else:
+        mask_sym_paths = []
+    
     file_format = get_format(args.input)
     if args.center:
         table_real_center, loaded_table = get_center_theory(paths, args.center)
-
+    else: 
+        table_real_center=[]
     ### Extract geometry file
     x_map, y_map, det_dict = gf.pixel_maps_from_geometry_file(
         args.geom, return_dict=True
@@ -543,48 +554,77 @@ def main():
 
         dist = dist_m * res
 
-    # (table_real_center)
     if file_format == "lst":
         ref_image = []
         for i in range(0, len(paths[:])):
 
-
             file_name = paths[i][:-1]
+            if len(mask_paths)>0:
+                mask_file_name = mask_paths[0][:-1]
+            else:
+                mask_file_name = False
+
+            if len(mask_sym_paths)>0:
+                mask_sym_file_name = mask_sym_paths[0][:-1]
+            else:
+                mask_sym_file_name = False
 
             frame_number = i
             print(file_name)
+            if len(table_real_center)>0:
+                real_center = table_real_center[i]
+            else:
+                real_center =  RealCenter
+
             if get_format(file_name) == "cbf":
                 data = np.array(fabio.open(f"{file_name}").data)
-                mask_file_name = mask_paths[i][:-1]
-                mask_sym_file_name = mask_sym_paths[i][:-1]
-                xds_mask = np.array(fabio.open(f"{mask_file_name}").data)
-
-                # Mask of defective pixels
-                xds_mask[np.where(xds_mask <= 0)] = 0
-                xds_mask[np.where(xds_mask > 0)] = 1
-                # Mask hot pixels
-                xds_mask[np.where(data > 1e3)] = 0
-                mask = xds_mask
-                real_center = table_real_center[i]
-
-                xds_mask_sym = np.array(fabio.open(f"{mask_sym_file_name}").data)
-                xds_mask_sym[np.where(xds_mask_sym <= 0)] = 0
-                xds_mask_sym[np.where(xds_mask_sym > 0)] = 1
-                # Mask hot pixels
-                xds_mask_sym[np.where(data > 1e3)] = 0
-                mask_sym = xds_mask_sym
-
             elif get_format(file_name) == "h":
                 f = h5py.File(f"{file_name}", "r")
                 data = np.array(f["data"][4801])
                 f.close()
-                mask_file_name = mask_paths[0][:-1]
-                f = h5py.File(f"{mask_file_name}", "r")
-                mask = np.array(f["data/data"])
-                mask = np.array(mask, dtype=np.int32)
-                mask[np.where(data < 0)] = 0
-                f.close()
-                real_center = [537, 541]
+
+            if not mask_file_name:
+                mask=np.ones(data.shape)
+            else:
+                if get_format(mask_file_name) == "cbf":
+                    xds_mask = np.array(fabio.open(f"{mask_file_name}").data)
+                    # Mask of defective pixels
+                    xds_mask[np.where(xds_mask <= 0)] = 0
+                    xds_mask[np.where(xds_mask > 0)] = 1
+                    # Mask hot pixels
+                    xds_mask[np.where(data > 1e3)] = 0
+                    mask = xds_mask
+                elif get_format(mask_file_name) == "h":
+                    f = h5py.File(f"{mask_file_name}", "r")
+                    mask = np.array(f["data/data"])
+                    mask = np.array(mask, dtype=np.int32)
+                    # Mask of defective pixels
+                    mask[np.where(data < 0)] = 0
+                    # Mask hot pixels
+                    mask[np.where(data > 1e3)] = 0
+                    f.close()
+            if not mask_sym_file_name and not mask_file_name:
+                mask_sym=np.ones(data.shape)
+            elif not mask_sym_file_name and mask_file_name:
+                mask_sym=mask.copy()
+            else:
+                if get_format(mask_sym_file_name) == "cbf":
+                    xds_mask_sym = np.array(fabio.open(f"{mask_sym_file_name}").data)
+                    # Mask of defective pixels
+                    xds_mask_sym[np.where(xds_mask_sym <= 0)] = 0
+                    xds_mask_sym[np.where(xds_mask_sym > 0)] = 1
+                    # Mask hot pixels
+                    xds_mask_sym[np.where(data > 1e3)] = 0
+                    mask_sym = xds_mask_sym
+                elif get_format(mask_sym_file_name) == "h":
+                    f = h5py.File(f"{mask_sym_file_name}", "r")
+                    mask_sym = np.array(f["data/data"])
+                    mask_sym = np.array(mask_sym, dtype=np.int32)
+                    # Mask of defective pixels
+                    mask_sym[np.where(data < 0)] = 0
+                    # Mask hot pixels
+                    mask_sym[np.where(data > 1e3)] = 0
+                    f.close()
 
             ## Peakfinder8 detector information and bad_pixel_map
 
@@ -659,7 +699,7 @@ def main():
             xr = real_center[0]
             yr = real_center[1]
             pos = plt.imshow(first_masked_data, vmax=7, cmap="jet")
-            plt.scatter(xr, yr, color="lime", label=f"xds:({xr},{yr})")
+            plt.scatter(xr, yr, color="lime", label=f"reference:({xr},{yr})")
             plt.scatter(
                 first_center[0],
                 first_center[1],
@@ -669,7 +709,7 @@ def main():
             plt.title("First approximation: center of mass")
             plt.colorbar(pos, shrink=0.6)
             plt.legend()
-            plt.savefig(f"/home/rodria/Desktop/test/com/lyso_{i}.png")
+            plt.savefig(f"/home/rodria/Desktop/f2x/com/lyso_{i}.png")
             # plt.show()
             plt.close()
 
@@ -689,11 +729,13 @@ def main():
             fig.colorbar(pos2, shrink=0.6, ax=ax2)
             fig.colorbar(pos3, shrink=0.6, ax=ax3)
             # plt.show()
-            plt.savefig(f"/home/rodria/Desktop/test/pol/lyso_{i}.png")
+            plt.savefig(f"/home/rodria/Desktop/f2x/pol/lyso_{i}.png")
             plt.close()
 
-            ## Grid search of sharpness of the azimutal average
 
+            _=calculate_fwhm((1255,1152))
+            ## Grid search of sharpness of the azimutal average
+            """
             xx, yy = np.meshgrid(
                 np.arange(xc - 30, xc + 31, 1, dtype=int),
                 np.arange(yc - 30, yc + 31, 1, dtype=int),
@@ -737,7 +779,7 @@ def main():
             fig.colorbar(pos2, shrink=0.6, ax=ax2)
             fig.colorbar(pos3, shrink=0.6, ax=ax3)
             # plt.show()
-            plt.savefig(f"/home/rodria/Desktop/test/pol_2/lyso_{i}.png")
+            plt.savefig(f"/home/rodria/Desktop/f2x/pol_2/lyso_{i}.png")
             plt.close()
 
             pf8_info.pf8_detector_info = dict(
@@ -768,7 +810,7 @@ def main():
             yr = real_center[1]
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
             pos1 = ax1.imshow(first_masked_data, vmax=7, cmap="jet")
-            ax1.scatter(xr, yr, color="lime", label=f"xds:({xr},{yr})")
+            ax1.scatter(xr, yr, color="lime", label=f"reference:({xr},{yr})")
             ax1.scatter(
                 first_center[0],
                 first_center[1],
@@ -780,14 +822,14 @@ def main():
             ax1.legend()
 
             pos2 = ax2.imshow(second_masked_data, vmax=7, cmap="jet")
-            ax2.scatter(xr, yr, color="lime", label=f"xds:({xr},{yr})")
+            ax2.scatter(xr, yr, color="lime", label=f"reference:({xr},{yr})")
             ax2.scatter(
                 xc, yc, color="blueviolet", label=f"calculated center:({xc},{yc})"
             )
             ax2.set_title("Second approximation: FWHM/R minimization")
             fig.colorbar(pos2, ax=ax2, shrink=0.6)
             ax2.legend()
-            plt.savefig(f"/home/rodria/Desktop/test/second/lyso_{i}.png")
+            plt.savefig(f"/home/rodria/Desktop/f2x/second/lyso_{i}.png")
             plt.close()
             # plt.show()
 
@@ -801,24 +843,26 @@ def main():
             #    int(-(data.shape[0] / 2) + real_center[1]),
             # ]
 
-            results = shift_and_calculate_cross_correlation(shift)
-            third_center = (results["xc"], results["yc"])
-            third_masked_data = np.array(corrected_data * mask, dtype=np.int32)
+            #results = shift_and_calculate_cross_correlation(shift)
+            #third_center = (results["xc"], results["yc"])
+            #third_masked_data = np.array(corrected_data * mask, dtype=np.int32)
+
             f = h5py.File(f"{args.output}_{i}.h5", "w")
 
             if args.output:
                 for key in results:
                     f.create_dataset(key, data=results[key])
-
                 f.create_dataset("first_center", data=first_center)
                 f.create_dataset("second_center", data=second_center)
-                f.create_dataset("third_center", data=third_center)
+                #f.create_dataset("third_center", data=third_center)
                 f.create_dataset("first_masked_data", data=first_masked_data)
                 f.create_dataset("second_masked_data", data=second_masked_data)
-                f.create_dataset("third_masked_data", data=third_masked_data)
+                #f.create_dataset("third_masked_data", data=third_masked_data)
                 f.create_dataset("first_pol_array", data=pol_array_first)
                 f.create_dataset("second_pol_array", data=pol_array_second)
                 f.close()
+
+            
             print("Third approximation", results["xc"], results["yc"])
 
             ## Display plots
@@ -827,7 +871,7 @@ def main():
             yr = real_center[1]
             fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
             pos1 = ax1.imshow(first_masked_data, vmax=7, cmap="jet")
-            ax1.scatter(xr, yr, color="lime", label=f"xds:({xr},{yr})")
+            ax1.scatter(xr, yr, color="lime", label=f"reference:({xr},{yr})")
             ax1.scatter(
                 first_center[0],
                 first_center[1],
@@ -839,7 +883,7 @@ def main():
             ax1.legend()
 
             pos2 = ax2.imshow(second_masked_data, vmax=7, cmap="jet")
-            ax2.scatter(xr, yr, color="lime", label=f"xds:({xr},{yr})")
+            ax2.scatter(xr, yr, color="lime", label=f"reference:({xr},{yr})")
             ax2.scatter(
                 second_center[0],
                 second_center[1],
@@ -851,7 +895,7 @@ def main():
             ax2.legend()
 
             pos3 = ax3.imshow(data * mask, vmax=30, cmap="jet")
-            ax3.scatter(xr, yr, color="lime", label=f"xds:({xr},{yr})")
+            ax3.scatter(xr, yr, color="lime", label=f"reference:({xr},{yr})")
             ax3.scatter(
                 results["xc"],
                 results["yc"],
@@ -864,7 +908,7 @@ def main():
             fig.colorbar(pos3, ax=ax3, shrink=0.6)
             ax3.legend()
 
-            plt.savefig(f"/home/rodria/Desktop/test/third/lyso_{i}.png")
+            plt.savefig(f"/home/rodria/Desktop/f2x/third/lyso_{i}.png")
             plt.close()
             # plt.show()
 
@@ -891,7 +935,7 @@ def main():
                     index[0],
                     index[1],
                     color="lime",
-                    label=f"xds:({real_center[0]},{real_center[1]})",
+                    label=f"reference:({real_center[0]},{real_center[1]})",
                 )
                 ax1.scatter(
                     results["index"][1],
@@ -902,9 +946,9 @@ def main():
                 ax1.set_title("Autocorrelation matrix")
                 fig.colorbar(pos1, ax=ax1, shrink=0.6)
                 ax1.legend()
-                plt.savefig(f"/home/rodria/Desktop/test/cc_map/lyso_{i}.png")
+                plt.savefig(f"/home/rodria/Desktop/f2x/cc_map/lyso_{i}.png")
                 plt.close()
-
+            """
 
 if __name__ == "__main__":
     main()

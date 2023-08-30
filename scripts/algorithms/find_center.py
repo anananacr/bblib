@@ -548,6 +548,7 @@ def main():
         ref_image = []
         for i in range(0, len(paths[:])):
 
+
             file_name = paths[i][:-1]
 
             frame_number = i

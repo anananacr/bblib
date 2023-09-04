@@ -361,7 +361,7 @@ def quadratic(x, a, b, c):
     return a * x**2 + b * x + c
 
 
-def open_fwhm_map(lines: list, label: str = None):
+def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step:int):
     """
     Open FWHM/R grid search optmization plot, fit projections in both axis to get the point of maximum sharpness of the radial average.
     Parameters
@@ -381,29 +381,44 @@ def open_fwhm_map(lines: list, label: str = None):
                 merged_dict[key] = [value]
 
     # Create a figure with three subplots
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 10))
 
     # Extract x, y, and z from merged_dict
 
     x = np.array(merged_dict["xc"]).reshape((n, n))[0]
     y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
-    z = np.array(merged_dict["fwhm_over_radius"]).reshape((n, n))
+    z = np.array(merged_dict["fwhm"]).reshape((n, n))
+    r = np.array(merged_dict["r_squared"]).reshape((n, n))
 
     index_y, index_x = np.where(z == np.min(z))
     pos1 = ax1.imshow(z, cmap="rainbow")
-    step = 10
+    step = 5
     n = z.shape[0]
-    ax1.set_xticks(np.arange(0, n, step, dtype=int))
-    ax1.set_yticks(np.arange(0, n, step, dtype=int))
+    ax1.set_xticks(np.arange(0, n , step, dtype=int))
+    ax1.set_yticks(np.arange(0, n , step, dtype=int))
     step = step * (abs(x[0] - x[1]))
-    ax1.set_xticklabels(np.arange(x[0], x[-1] + step, step, dtype=int))
-    ax1.set_yticklabels(np.arange(y[0], y[-1] + step, step, dtype=int))
+    ax1.set_xticklabels(np.arange(x[0], x[-1]+step, step, dtype=int))
+    ax1.set_yticklabels(np.arange(y[0], y[-1]+step, step, dtype=int))
 
     ax1.set_ylabel("yc [px]")
     ax1.set_xlabel("xc [px]")
-    ax1.set_title("FWHM/R")
-    proj_x = np.sum(z, axis=0) / z.shape[0]
-    x = np.arange(x[0], x[-1] + 1, 1)
+    ax1.set_title("FWHM")
+
+    pos2 = ax2.imshow(r, cmap="rainbow")
+    step = 5
+    n = z.shape[0]
+    ax2.set_xticks(np.arange(0, n , step, dtype=int))
+    ax2.set_yticks(np.arange(0, n , step, dtype=int))
+    step = step * (abs(x[0] - x[1]))
+    ax2.set_xticklabels(np.arange(x[0], x[-1]+step, step, dtype=int))
+    ax2.set_yticklabels(np.arange(y[0], y[-1]+step, step, dtype=int))
+
+    ax2.set_ylabel("yc [px]")
+    ax2.set_xlabel("xc [px]")
+    ax2.set_title("R²")
+
+    proj_x = np.sum(z, axis=0)
+    x = np.arange(x[0], x[-1]+pixel_step, pixel_step)
 
     popt = np.polyfit(x, proj_x, 2)
     residuals = proj_x - quadratic(x, *popt)
@@ -413,21 +428,22 @@ def open_fwhm_map(lines: list, label: str = None):
 
     x_fit = np.arange(x[0], x[-1] + 0.1, 0.1)
     y_fit = quadratic(x_fit, *popt)
-    ax2.plot(
+    ax3.plot(
         x_fit,
         y_fit,
         "r",
         label=f"quadratic fit:\nR²: {round(r_squared,5)}, Xc: {round((-1*popt[1])/(2*popt[0]))}",
     )
-    ax2.scatter(x, proj_x, color="b")
-    ax2.set_ylabel("Average FWHM/R")
-    ax2.set_xlabel("xc [px]")
-    ax2.set_title("FWHM/R projection in x")
-    ax2.legend()
-    print(f"xc {round((-1*popt[1])/(2*popt[0]))}")
+    ax3.scatter(x, proj_x, color="b")
+    ax3.set_ylabel("Average FWHM")
+    ax3.set_xlabel("xc [px]")
+    ax3.set_title("FWHM projection in x")
+    ax3.legend()
+    xc = round((-1 * popt[1]) / (2 * popt[0]))
+    #print(f"xc {round((-1*popt[1])/(2*popt[0]))}")
 
-    proj_y = np.sum(z, axis=1) / z.shape[1]
-    x = np.arange(y[0], y[-1] + 1, 1)
+    proj_y = np.sum(z, axis=1)
+    x = np.arange(y[0], y[-1]+pixel_step, pixel_step)
     popt = np.polyfit(x, proj_y, 2)
     residuals = proj_y - quadratic(x, *popt)
     ss_res = np.sum(residuals**2)
@@ -436,29 +452,125 @@ def open_fwhm_map(lines: list, label: str = None):
 
     x_fit = np.arange(y[0], y[-1] + 0.1, 0.1)
     y_fit = quadratic(x_fit, *popt)
-    ax3.plot(
+    ax4.plot(
         y_fit,
         x_fit,
         "r",
         label=f"quadratic fit:\nR²: {round(r_squared,5)}, Yc: {round((-1*popt[1])/(2*popt[0]))}",
     )
-    ax3.scatter(proj_y, x, color="b")
-    ax3.set_xlabel("Average FWHM/R")
-    ax3.set_ylabel("yc [px]")
-    ax3.set_title("FWHM/R projection in y")
-    ax3.legend()
-    print(f"yc {round((-1*popt[1])/(2*popt[0]))}")
+    ax4.scatter(proj_y, x, color="b")
+    ax4.set_xlabel("Average FWHM")
+    ax4.set_ylabel("yc [px]")
+    ax4.set_title("FWHM projection in y")
+    ax4.legend()
+    yc = round((-1 * popt[1]) / (2 * popt[0]))
+    #print(f"yc {round((-1*popt[1])/(2*popt[0]))}")
 
     fig.colorbar(pos1, ax=ax1, shrink=0.6)
+    fig.colorbar(pos2, ax=ax2, shrink=0.6)
 
     # Display the figure
 
-    plt.show()
-    # plt.savefig(f'/home/rodria/Desktop/20230814/fwhm_map/lyso_{label}.png')
-    # plt.close()
+    # plt.show()
+    plt.savefig(f"{output_folder}/plots/fwhm_map/{label}.png")
+    plt.close()
+    if r_squared>0.98:
+        return xc, yc
+    else:
+        return False
+
+def open_fwhm_map_global_min(lines: list, output_folder: str, label: str, pixel_step:int):
+    """
+    Open FWHM/R grid search optmization plot, fit projections in both axis to get the point of maximum sharpness of the radial average.
+    Parameters
+    ----------
+    lines: list
+        Output of grid search for FWHM/R optmization, each line should contain a dictionary contaning entries for xc, yc and fwhm_over_radius.
+    """
+    n = int(math.sqrt(len(lines)))
+
+    merged_dict = {}
+    for dictionary in lines[:]:
+
+        for key, value in dictionary.items():
+            if key in merged_dict:
+                merged_dict[key].append(value)
+            else:
+                merged_dict[key] = [value]
+
+    # Create a figure with three subplots
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 10))
+
+    # Extract x, y, and z from merged_dict
+
+    x = np.array(merged_dict["xc"]).reshape((n, n))[0]
+    y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
+    z = np.array(merged_dict["fwhm"], dtype=np.float64).reshape((n, n))
+    r = np.array(merged_dict["r_squared"]).reshape((n, n))
+
+    pos1 = ax1.imshow(z, cmap="rainbow")
+    step = 4
+    n = z.shape[0]
+    ax1.set_xticks(np.arange(0, n, step, dtype=int))
+    ax1.set_yticks(np.arange(0, n, step, dtype=int))
+    step = step * (abs(x[0] - x[1]))
+    ax1.set_xticklabels(np.arange(x[0], x[-1], step, dtype=int))
+    ax1.set_yticklabels(np.arange(y[0], y[-1], step, dtype=int))
+
+    ax1.set_ylabel("yc [px]")
+    ax1.set_xlabel("xc [px]")
+    ax1.set_title("FWHM")
+
+    pos2 = ax2.imshow(r, cmap="rainbow")
+    step = 4
+    n = z.shape[0]
+    ax2.set_xticks(np.arange(0, n , step, dtype=int))
+    ax2.set_yticks(np.arange(0, n , step, dtype=int))
+    step = step * (abs(x[0] - x[1]))
+    ax2.set_xticklabels(np.arange(x[0], x[-1], step, dtype=int))
+    ax2.set_yticklabels(np.arange(y[0], y[-1], step, dtype=int))
+
+    ax2.set_ylabel("yc [px]")
+    ax2.set_xlabel("xc [px]")
+    ax2.set_title("R²")
+
+    proj_x = np.sum(z, axis=0)
+    x = np.arange(x[0], x[-1]+pixel_step, pixel_step)
+    index_x=np.unravel_index(np.argmin(proj_x, axis=None), proj_x.shape) 
+    #print(index_x)
+    xc=x[index_x]
+    ax3.scatter(x, proj_x, color="b")
+    ax3.scatter(xc, proj_x[index_x], color="r", label=f"xc: {xc}")
+    ax3.set_ylabel("Average FWHM")
+    ax3.set_xlabel("xc [px]")
+    ax3.set_title("FWHM projection in x")
+    ax3.legend()
+
+    proj_y = np.sum(z, axis=1)
+    x = np.arange(y[0], y[-1]+pixel_step, pixel_step)
+    index_y=np.unravel_index(np.argmin(proj_y, axis=None), proj_y.shape) 
+    yc=x[index_y]
+    ax4.scatter(proj_y, x, color="b")
+    ax4.scatter(proj_y[index_y], yc, color="r", label=f"yc: {yc}")
+    ax4.set_xlabel("Average FWHM")
+    ax4.set_ylabel("yc [px]")
+    ax4.set_title("FWHM projection in y")
+    ax4.legend()
 
 
-def fit_fwhm(lines: list) -> Tuple[int]:
+    fig.colorbar(pos1, ax=ax1, shrink=0.6)
+    fig.colorbar(pos2, ax=ax2, shrink=0.6)
+
+    # Display the figure
+
+    # plt.show()
+    plt.savefig(f"{output_folder}/plots/fwhm_map/{label}.png")
+    plt.close()
+    return xc, yc
+
+
+
+def fit_fwhm(lines: list, pixel_step:int) -> Tuple[int]:
     """
     Find minimum of FWHM/R grid search. Fits projections in both axis to get the point of maximum sharpness of the radial average, that will correspond to the center of diffraction.
     Parameters

@@ -18,8 +18,8 @@ for i in $(seq $START 1 $END); do
     echo >> $SLURMFILE
     echo "#SBATCH --chdir   $PWD" >> $SLURMFILE
     echo "#SBATCH --job-name  $JNAME" >> $SLURMFILE
-    echo "#SBATCH --output    $ROOT/${NAME}-%N-%j.out" >> $SLURMFILE
-    echo "#SBATCH --error     $ROOT/${NAME}-%N-%j.err" >> $SLURMFILE
+    echo "#SBATCH --output    $ROOT/error/${NAME}-%N-%j.out" >> $SLURMFILE
+    echo "#SBATCH --error     $ROOT/error/${NAME}-%N-%j.err" >> $SLURMFILE
     echo "#SBATCH --nice=0" >> $SLURMFILE
     echo "#SBATCH --mincpus=48" >> $SLURMFILE
     echo "#SBATCH --mem=4G" >> $SLURMFILE

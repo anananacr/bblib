@@ -98,7 +98,10 @@ def main():
 
     file_format = get_format(args.input)
     output_folder = args.output
-    label = output_folder.split("/")[-1] +"_"+ ((args.input).split("/")[-1]).split(".")[-1][3:]
+    label = "hit_"+output_folder.split("/")[-1]
+
+    print(label)
+
     hit_log=[]
 
     if file_format == "lst":
@@ -139,6 +142,6 @@ def main():
             f.create_dataset("hit", data=hit_log)
             f.create_dataset("id", data=paths)
             f.close()
-        
+
 if __name__== "__main__":
     main()

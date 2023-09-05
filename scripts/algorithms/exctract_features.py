@@ -72,7 +72,7 @@ def exctract_features(file_name: str) -> list:
         average_bg_2,
         median_bg_2,
         std_bg_2,
-        var_bg_2,
+        var_bg_2
     ]
 
 

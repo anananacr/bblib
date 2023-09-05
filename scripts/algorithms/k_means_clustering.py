@@ -43,7 +43,7 @@ def main():
     for i in range(col):
         norm_factor=np.max(reduced_data[:,i])
         norm_data[:,i]=norm_data[:,i]//norm_factor
-    kmeans = KMeans(n_clusters=2).fit(reduced_data)
+    kmeans = KMeans(n_clusters=3).fit(reduced_data)
     labels=kmeans.labels_
 
     # Obtain labels for each point in mesh. Use last trained model.
@@ -52,11 +52,16 @@ def main():
     files = open(args.input, "r")
     paths = files.readlines()
     files.close()
-
+    for i in range(3):
+        f=open(f"{args.output}/lists/cluster_{i}.lst","w")
+        f.close()
+    
     for idx,i in enumerate(Z):
         cmd=f"cp {paths[idx][:-1]} {args.output}/cluster_{i}"
-        #print(cmd)
         sub.call(cmd, shell=True)
+        f=open(f"{args.output}/lists/cluster_{i}.lst","a+")
+        f.write(f"{paths[idx]}")
+        f.close()
     
 
 if __name__ == "__main__":

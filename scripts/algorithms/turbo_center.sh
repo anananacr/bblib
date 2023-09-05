@@ -24,7 +24,7 @@ for i in $(seq $START 1 $END); do
     echo "#SBATCH --mincpus=48" >> $SLURMFILE
     echo "#SBATCH --mem=4G" >> $SLURMFILE
     echo >> $SLURMFILE
-    command="./find_center.py -i ${ROOT}/${INPUT}/lists/split_${INPUT}.lst${i} -m  ${ROOT}/${INPUT}/lists/mask_f2x.lst -o ${ROOT}/${INPUT} -g ${ROOT}/geom/${INPUT}/pilatus6M_219mm.geom;"
+    command="./find_center.py -i ${ROOT}/${INPUT}/lists/split_hit_${INPUT}.lst${i} -m  ${ROOT}/${INPUT}/lists/mask_f2x.lst -o ${ROOT}/${INPUT} -g ${ROOT}/geom/${INPUT}/pilatus6M_219mm.geom;"
     echo $command >> $SLURMFILE
     echo "chmod a+rw $PWD" >> $SLURMFILE
     sbatch $SLURMFILE

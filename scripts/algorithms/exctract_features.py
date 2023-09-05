@@ -109,13 +109,11 @@ def main():
         with pool:
             features_exctraction = pool.map(exctract_features, paths)
         features=np.array(features_exctraction).reshape((n,-1))
-        
-           
+
         if args.output:
             np.save(f"{output_folder}/{label}", features)
             
-        
-
+    
 
 if __name__ == "__main__":
     main()

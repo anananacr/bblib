@@ -4,6 +4,7 @@ from typing import List, Optional, Callable, Tuple, Any, Dict
 import fabio
 import sys
 from datetime import datetime
+
 sys.path.append("/home/rodria/software/vdsCsPadMaskMaker/new-versions/")
 import geometry_funcs as gf
 import argparse
@@ -32,7 +33,7 @@ from scipy import signal
 import subprocess as sub
 import h5py
 
-MinPeaks=25
+MinPeaks = 25
 global pf8_info
 
 pf8_info = PF8Info(
@@ -53,10 +54,10 @@ def select_best_center(coordinates: list) -> list:
     fwhm_summary = []
     fwhm_over_radius_summary = []
     r_squared_summary = []
-    good_coordinates=[]
-    directions_summary=[]
-    movement=["+x", "-x", "+y", "-y", "0"]
-    for idx,i in enumerate(coordinates):
+    good_coordinates = []
+    directions_summary = []
+    movement = ["+x", "-x", "+y", "-y", "0"]
+    for idx, i in enumerate(coordinates):
         # Update center for pf8 with the last calculated center
         # print(pf8_info)
         pf8_info.modify_radius(i[0], i[1])
@@ -86,7 +87,7 @@ def select_best_center(coordinates: list) -> list:
         pf8_mask = only_peaks_mask * mask
 
         x, y = azimuthal_average(corrected_data, center=i, mask=pf8_mask)
-        
+
         ## Define background peak region
         x_min = 100
         x_max = 450
@@ -108,54 +109,57 @@ def select_best_center(coordinates: list) -> list:
 
         ## Divide by radius of the peak to get shasrpness ratio
         fwhm_over_radius = fwhm / popt[1]
-        #print(r_squared)
+        # print(r_squared)
         if r_squared > 0.85:
             good_coordinates.append(i)
             fwhm_summary.append(fwhm)
             fwhm_over_radius_summary.append(fwhm_over_radius)
             r_squared_summary.append(r_squared)
             directions_summary.append(movement[idx])
-    #print(good_coordinates)
-    #print(np.array(fwhm_summary))
-    sorted_candidates = sorted(list(zip(fwhm_summary, good_coordinates, r_squared_summary, directions_summary)),key=lambda x: x[0])
-    fwhm_summary, good_coordinates, r_squared_summary, match_directions=zip(*sorted_candidates)
-    if (match_directions[0][-1]=="y" and match_directions[1][-1]=="x"):
-        xc=good_coordinates[1][0]
-        yc=good_coordinates[0][1]
-        results=calculate_fwhm((xc,yc))
-        combined_fwhm=results["fwhm"]
-        combined_fwhm_r_sq=results["r_squared"]
-        if combined_fwhm<fwhm_summary[0]:
-            best_center=[xc,yc]
-            best_fwhm=combined_fwhm
-            best_fwhm_r_squared=combined_fwhm_r_sq
-        else:
-            best_center=list(good_coordinates[0])
-            best_fwhm=fwhm_summary[0]
-            best_fwhm_r_squared=r_squared_summary[0]
-    elif (match_directions[0][-1]=="x" and match_directions[1][-1]=="y"):
-        xc=good_coordinates[0][0]
-        yc=good_coordinates[1][1]
-        combined_fwhm=calculate_fwhm((xc,yc))["fwhm"]
-        if combined_fwhm<fwhm_summary[0]:
-            best_center=[xc,yc]
-            best_fwhm=combined_fwhm
-            best_fwhm_r_squared=combined_fwhm_r_sq
-        else:
-            best_center=list(good_coordinates[0])
-            best_fwhm=fwhm_summary[0]
-            best_fwhm_r_squared=r_squared_summary[0]
-    else:
-        best_center=list(good_coordinates[0])
-        best_fwhm=fwhm_summary[0]
-        best_fwhm_r_squared=r_squared_summary[0]
-
-    #print(best_center)
-    return (
-        best_center,
-        best_fwhm,
-        best_fwhm_r_squared
+    # print(good_coordinates)
+    # print(np.array(fwhm_summary))
+    sorted_candidates = sorted(
+        list(
+            zip(fwhm_summary, good_coordinates, r_squared_summary, directions_summary)
+        ),
+        key=lambda x: x[0],
     )
+    fwhm_summary, good_coordinates, r_squared_summary, match_directions = zip(
+        *sorted_candidates
+    )
+    if match_directions[0][-1] == "y" and match_directions[1][-1] == "x":
+        xc = good_coordinates[1][0]
+        yc = good_coordinates[0][1]
+        results = calculate_fwhm((xc, yc))
+        combined_fwhm = results["fwhm"]
+        combined_fwhm_r_sq = results["r_squared"]
+        if combined_fwhm < fwhm_summary[0]:
+            best_center = [xc, yc]
+            best_fwhm = combined_fwhm
+            best_fwhm_r_squared = combined_fwhm_r_sq
+        else:
+            best_center = list(good_coordinates[0])
+            best_fwhm = fwhm_summary[0]
+            best_fwhm_r_squared = r_squared_summary[0]
+    elif match_directions[0][-1] == "x" and match_directions[1][-1] == "y":
+        xc = good_coordinates[0][0]
+        yc = good_coordinates[1][1]
+        combined_fwhm = calculate_fwhm((xc, yc))["fwhm"]
+        if combined_fwhm < fwhm_summary[0]:
+            best_center = [xc, yc]
+            best_fwhm = combined_fwhm
+            best_fwhm_r_squared = combined_fwhm_r_sq
+        else:
+            best_center = list(good_coordinates[0])
+            best_fwhm = fwhm_summary[0]
+            best_fwhm_r_squared = r_squared_summary[0]
+    else:
+        best_center = list(good_coordinates[0])
+        best_fwhm = fwhm_summary[0]
+        best_fwhm_r_squared = r_squared_summary[0]
+
+    # print(best_center)
+    return (best_center, best_fwhm, best_fwhm_r_squared)
 
 
 def direct_search_fwhm(initial_center: list) -> Dict[str, int]:
@@ -163,38 +167,41 @@ def direct_search_fwhm(initial_center: list) -> Dict[str, int]:
     r = 0.9
     initial_step = 40
     step = initial_step
-    last_center=initial_center
-    next_center=initial_center
-    center_pos_summary=[next_center]
+    last_center = initial_center
+    next_center = initial_center
+    center_pos_summary = [next_center]
     r_squared_summary = []
     fwhm_summary = []
-    distance_x=1
-    distance_y=1
-    
-    max_iter=30
-    n_iter=0
+    distance_x = 1
+    distance_y = 1
 
-    while step>0 and n_iter<max_iter:
-        #and distance_x > 0.5 and distance_y>0.5
-        
+    max_iter = 30
+    n_iter = 0
+
+    while step > 0 and n_iter < max_iter:
+        # and distance_x > 0.5 and distance_y>0.5
+
         coordinates = [
             (next_center[0] + step, next_center[1]),
             (next_center[0] - step, next_center[1]),
-            (next_center[0], next_center[1]+ step),
-            (next_center[0], next_center[1]- step),
+            (next_center[0], next_center[1] + step),
+            (next_center[0], next_center[1] - step),
             (next_center[0], next_center[1]),
         ]
-        #print(coordinates)
+        # print(coordinates)
         next_center, fwhm, r_squared = select_best_center(coordinates)
         center_pos_summary.append(next_center)
         fwhm_summary.append(fwhm)
         r_squared_summary.append(r_squared)
         step *= r
         step = int(step)
-        distance_x, distance_y = (next_center[0] - last_center[0], next_center[1] - last_center[1])
-        last_center=next_center.copy()
-        #print(distance_x,distance_y)
-        n_iter+=1
+        distance_x, distance_y = (
+            next_center[0] - last_center[0],
+            next_center[1] - last_center[1],
+        )
+        last_center = next_center.copy()
+        # print(distance_x,distance_y)
+        n_iter += 1
 
     final_center = next_center
 
@@ -212,9 +219,9 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
     # print(pf8_info)
     pf8_info.modify_radius(center_to_radial_average[0], center_to_radial_average[1])
     pf8_info._bad_pixel_map = mask
-    pf8_info.minimum_snr=5
-    pf8_info.min_pixel_count=1
-    
+    pf8_info.minimum_snr = 5
+    pf8_info.min_pixel_count = 1
+
     # Update geom and recorrect polarization
     updated_geom = f"{args.geom[:-5]}_{label}_{frame_number}_fwhm_{center_to_radial_average[0]}_{center_to_radial_average[1]}.geom"
     cmd = f"cp {args.geom} {updated_geom}"
@@ -241,14 +248,14 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
     x, y = azimuthal_average(
         corrected_data, center=center_to_radial_average, mask=pf8_mask
     )
-    x_all=x.copy()
-    y_all=y.copy()
+    x_all = x.copy()
+    y_all = y.copy()
     # Plot all radial average
     if plot_flag:
         fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
         plt.plot(x, y)
-    r_squared=1
-    fwhm_r_sq_collection=[]
+    r_squared = 1
+    fwhm_r_sq_collection = []
 
     """
     ## Define background peak region
@@ -289,7 +296,7 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
     ## Estimation of initial parameters
     mean = sum(x * y) / sum(y)
     sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
-    try:   
+    try:
         popt, pcov = curve_fit(gaussian, x, y, p0=[max(y), mean, sigma])
         residuals = y - gaussian(x, *popt)
         ss_res = np.sum(residuals**2)
@@ -303,8 +310,8 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
         fwhm = 800
         fwhm_over_radius = 800
         r_squared = 0
-        popt=[max(y), mean, sigma]
-        
+        popt = [max(y), mean, sigma]
+
     fwhm_r_sq_collection.append((fwhm, fwhm_over_radius, r_squared, popt))
     """
     ## Chip background
@@ -360,8 +367,7 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
     """
     fwhm_r_sq_collection.append((fwhm, fwhm_over_radius, r_squared, popt))
     fwhm_r_sq_collection.sort(key=lambda x: x[2], reverse=True)
-    fwhm, fwhm_over_radius, r_squared, popt=fwhm_r_sq_collection[0]
-    
+    fwhm, fwhm_over_radius, r_squared, popt = fwhm_r_sq_collection[0]
 
     ## Display plots
     if plot_flag:
@@ -392,7 +398,6 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
         "r_squared": r_squared,
         "pf8_mask": pf8_mask,
     }
-
 
 
 def main():
@@ -482,8 +487,12 @@ def main():
     output_folder = args.output
     global label
 
-    label = output_folder.split("/")[-1] +"_"+ ((args.input).split("/")[-1]).split(".")[-1][3:]
-    #print(label)
+    label = (
+        output_folder.split("/")[-1]
+        + "_"
+        + ((args.input).split("/")[-1]).split(".")[-1][3:]
+    )
+    # print(label)
     global plot_flag
     plot_flag = False
 
@@ -492,33 +501,33 @@ def main():
             check = H5_name + clen
             myCmd = os.popen("h5ls " + check).read()
             if "NOT" in myCmd:
-                #print("Error: no clen from .h5 file")
+                # print("Error: no clen from .h5 file")
                 clen_v = 0.0
             else:
                 f = h5py.File(H5_name, "r")
                 clen_v = f[clen][()] * (1e-3)  # f[clen].value * (1e-3)
                 f.close()
                 pol_bool = True
-                #print("Take into account polarisation")
+                # print("Take into account polarisation")
         else:
             clen_v = float(clen)
             pol_bool = True
-            #print("Take into account polarisation")
+            # print("Take into account polarisation")
 
         if dist_m is not None:
             dist_m += clen_v
         else:
-            #print("Error: no coffset in geometry file. It is considered as 0.")
+            # print("Error: no coffset in geometry file. It is considered as 0.")
             dist_m = 0.0
-        #print("CLEN, COFSET", clen, dist_m)
+        # print("CLEN, COFSET", clen, dist_m)
 
         dist = dist_m * res
 
     if file_format == "lst":
         ref_image = []
         for i in range(0, len(paths[:])):
-        #for i in range(0, 1):
-            
+            # for i in range(0, 1):
+
             file_name = paths[i][:-1]
             if len(mask_paths) > 0:
                 mask_file_name = mask_paths[0][:-1]
@@ -532,7 +541,7 @@ def main():
 
             frame_number = i
             print(file_name)
-            now=datetime.now()
+            now = datetime.now()
             print(f"Current begin time = {now}")
             if len(table_real_center) > 0:
                 real_center = table_real_center[i]
@@ -569,7 +578,7 @@ def main():
             if not mask_sym_file_name and not mask_file_name:
                 mask_sym = np.ones(data.shape)
             elif not mask_sym_file_name and mask_file_name:
-                #mask_sym = (mask*mask[-1::-1]).copy()
+                # mask_sym = (mask*mask[-1::-1]).copy()
                 mask_sym = mask.copy()
             else:
                 if get_format(mask_sym_file_name) == "cbf":
@@ -597,13 +606,13 @@ def main():
                 asic_ny=mask.shape[0],
                 nasics_x=1,
                 nasics_y=1,
-                )
+            )
             pf8_info._bad_pixel_map = mask_sym
             pf8_info.modify_radius(
                 int(mask_sym.shape[1] / 2), int(mask_sym.shape[0] / 2)
             )
-            pf8_info.minimum_snr=7
-            pf8_info.min_pixel_count=2
+            pf8_info.minimum_snr = 7
+            pf8_info.min_pixel_count = 2
             pf8 = PF8(pf8_info)
 
             peak_list = pf8.get_peaks_pf8(data=data)
@@ -611,7 +620,7 @@ def main():
                 np.array(peak_list["ss"], dtype=int),
                 np.array(peak_list["fs"], dtype=int),
             )
-            if peak_list["num_peaks"]>=MinPeaks:
+            if peak_list["num_peaks"] >= MinPeaks:
                 # Mask Bragg  peaks
                 only_peaks_mask = mask_peaks(mask_sym, indices, bragg=0)
                 pf8_mask = only_peaks_mask * mask_sym
@@ -686,16 +695,15 @@ def main():
                 plt.close()
                 ## Second aproximation of the direct beam
                 # Direct search method
-                #results=direct_search_fwhm(list(first_center))
-                #xc=results["xc"]
-                #yc=results["yc"]
-                #second_center = (xc, yc)
-                #print("Second approximation", xc, yc)
+                # results=direct_search_fwhm(list(first_center))
+                # xc=results["xc"]
+                # yc=results["yc"]
+                # second_center = (xc, yc)
+                # print("Second approximation", xc, yc)
 
-                
-                #Brute force manner
+                # Brute force manner
                 ## Grid search of sharpness of the azimutal average
-                pixel_step=4
+                pixel_step = 4
                 xx, yy = np.meshgrid(
                     np.arange(xc - 52, xc + 53, pixel_step, dtype=int),
                     np.arange(yc - 52, yc + 53, pixel_step, dtype=int),
@@ -705,10 +713,12 @@ def main():
                 with pool:
                     fwhm_summary = pool.map(calculate_fwhm, coordinates)
                 ## Display plots
-                xc, yc = open_fwhm_map_global_min(fwhm_summary, output_folder, f"{label}_{i}", pixel_step)
-                last_center=(xc,yc)
+                xc, yc = open_fwhm_map_global_min(
+                    fwhm_summary, output_folder, f"{label}_{i}", pixel_step
+                )
+                last_center = (xc, yc)
 
-                pixel_step=1
+                pixel_step = 1
                 xx, yy = np.meshgrid(
                     np.arange(xc - 10, xc + 11, pixel_step, dtype=int),
                     np.arange(yc - 10, yc + 11, pixel_step, dtype=int),
@@ -718,24 +728,24 @@ def main():
                 with pool:
                     fwhm_summary = pool.map(calculate_fwhm, coordinates)
                 ## Display plots
-                fit = open_fwhm_map(fwhm_summary,  output_folder, f"fine_{label}_{i}", pixel_step)
+                fit = open_fwhm_map(
+                    fwhm_summary, output_folder, f"fine_{label}_{i}", pixel_step
+                )
                 if not fit:
                     xc, yc = last_center
                 else:
-                    xc, yc= fit
+                    xc, yc = fit
 
                 second_center = (xc, yc)
                 print("Second approximation", xc, yc)
 
                 plot_flag = True
-                _= calculate_fwhm((xc + 10, yc + 10))
-                _= calculate_fwhm((xc -10, yc -10))
-                results= calculate_fwhm((xc, yc))
-                
+                _ = calculate_fwhm((xc + 10, yc + 10))
+                _ = calculate_fwhm((xc - 10, yc - 10))
+                results = calculate_fwhm((xc, yc))
 
                 plot_flag = False
-                
-                
+
                 # Second mask peaks
                 # Update geom and recorrect polarization
                 updated_geom = f"{args.geom[:-5]}_{label}_{i}_v2.geom"
@@ -805,18 +815,20 @@ def main():
                 plt.savefig(f"{args.output}/plots/second/{label}_{i}.png")
                 plt.close()
                 # plt.show()
-                
+
                 ## Clean geom directory
                 updated_geom = f"{args.geom[:-5]}_{label}_{i}_v2.geom"
                 cmd = f"cp {updated_geom} {output_folder}"
                 sub.call(cmd, shell=True)
                 cmd = f"rm {output_folder}/../geom/{label[:-3]}/*{label}*.geom"
                 sub.call(cmd, shell=True)
-                cmd = f"mv {output_folder}/*v2.geom {output_folder}/../geom/{label[:-3]}"
+                cmd = (
+                    f"mv {output_folder}/*v2.geom {output_folder}/../geom/{label[:-3]}"
+                )
                 sub.call(cmd, shell=True)
 
                 if args.output:
-                    f = h5py.File(f"{output_folder}/{label}_{i}.h5", "w")
+                    f = h5py.File(f"{output_folder}/h5_files/{label}_{i}.h5", "w")
                     f.create_dataset("hit", data=1)
                     f.create_dataset("raw_data", data=data.astype(np.int32))
                     f.create_dataset("first_center", data=first_center)
@@ -830,12 +842,13 @@ def main():
                     f.close()
             else:
                 if args.output:
-                    f = h5py.File(f"{output_folder}/{label}_{i}.h5", "w")
+                    f = h5py.File(f"{output_folder}/h5_files/{label}_{i}.h5", "w")
                     f.create_dataset("hit", data=0)
                     f.create_dataset("raw_data", data=data.astype(np.int32))
                     f.close()
-            now=datetime.now()
+            now = datetime.now()
             print(f"Current end time = {now}")
-            
-if __name__== "__main__":
+
+
+if __name__ == "__main__":
     main()

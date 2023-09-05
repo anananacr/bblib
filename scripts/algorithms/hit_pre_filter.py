@@ -5,14 +5,12 @@ import fabio
 from datetime import datetime
 import argparse
 import numpy as np
-from utils import (
-    get_format
-)
-from models import PF8, PF8Info 
+from utils import get_format
+from models import PF8, PF8Info
 import h5py
 import multiprocessing
 
-MinPeaks=15
+MinPeaks = 15
 global pf8_info
 
 pf8_info = PF8Info(
@@ -26,8 +24,9 @@ pf8_info = PF8Info(
     max_res=1200,
 )
 
-def is_a_hit(file_name:str)->bool:
-    file_name=file_name[:-1]
+
+def is_a_hit(file_name: str) -> bool:
+    file_name = file_name[:-1]
     if get_format(file_name) == "cbf":
         data = np.array(fabio.open(f"{file_name}").data)
     elif get_format(file_name) == "h":
@@ -46,21 +45,20 @@ def is_a_hit(file_name:str)->bool:
         asic_ny=mask.shape[0],
         nasics_x=1,
         nasics_y=1,
-        )
-    pf8_info._bad_pixel_map = mask
-    pf8_info.modify_radius(
-        int(mask.shape[1] / 2), int(mask.shape[0] / 2)
     )
+    pf8_info._bad_pixel_map = mask
+    pf8_info.modify_radius(int(mask.shape[1] / 2), int(mask.shape[0] / 2))
     pf8 = PF8(pf8_info)
     peak_list = pf8.get_peaks_pf8(data=data)
     indices = (
         np.array(peak_list["ss"], dtype=int),
         np.array(peak_list["fs"], dtype=int),
     )
-    if peak_list["num_peaks"]>=MinPeaks:
+    if peak_list["num_peaks"] >= MinPeaks:
         return True
     else:
         return False
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -98,11 +96,11 @@ def main():
 
     file_format = get_format(args.input)
     output_folder = args.output
-    label = "hit_"+output_folder.split("/")[-1]
+    label = "hit_" + output_folder.split("/")[-1]
 
     print(label)
 
-    hit_log=[]
+    hit_log = []
 
     if file_format == "lst":
         if len(mask_paths) > 0:
@@ -126,16 +124,16 @@ def main():
                 mask = np.array(mask, dtype=np.int32)
                 f.close()
 
-        for i in range(0, len(paths[:]),500):          
-            file_name_chunk = paths[i:i+500]
-            
+        for i in range(0, len(paths[:]), 500):
+            file_name_chunk = paths[i : i + 500]
+
             pool = multiprocessing.Pool()
             with pool:
                 result_is_a_hit = pool.map(is_a_hit, file_name_chunk)
-            
-            hit_log+=result_is_a_hit
 
-        hit_log=np.array(hit_log, dtype=int)
+            hit_log += result_is_a_hit
+
+        hit_log = np.array(hit_log, dtype=int)
 
         if args.output:
             f = h5py.File(f"{output_folder}/{label}.h5", "w")
@@ -143,5 +141,6 @@ def main():
             f.create_dataset("id", data=paths)
             f.close()
 
-if __name__== "__main__":
+
+if __name__ == "__main__":
     main()

@@ -5,9 +5,7 @@ import fabio
 from datetime import datetime
 import argparse
 import numpy as np
-from utils import (
-    get_format
-)
+from utils import get_format
 import h5py
 
 
@@ -31,29 +29,25 @@ def main():
 
     output_folder = args.output
 
-    label = "split_hit_"+output_folder.split("/")[-1]
+    label = "split_hit_" + output_folder.split("/")[-1]
     print(label)
-    
-    
+
     f = h5py.File(f"{args.input}", "r")
     hit = np.array(f["hit"])
     raw_id = np.array(f["id"], dtype=str)
     f.close()
 
-    raw_id=raw_id[np.where(hit==1)]
+    raw_id = raw_id[np.where(hit == 1)]
 
-    idx=0
+    idx = 0
 
-
-    for idx,i in enumerate(raw_id):
-        if idx%200==0:
-            n="{:02d}".format(1+int(idx/200))
-            g=open(f"{args.output}/lists/{label}.lst{n}", "w")
+    for idx, i in enumerate(raw_id):
+        if idx % 200 == 0:
+            n = "{:02d}".format(1 + int(idx / 200))
+            g = open(f"{args.output}/lists/{label}.lst{n}", "w")
         g.write(i)
     g.close()
-     
-    
-    
-            
-if __name__== "__main__":
+
+
+if __name__ == "__main__":
     main()

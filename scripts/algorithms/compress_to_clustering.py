@@ -5,17 +5,13 @@ import fabio
 from datetime import datetime
 import argparse
 import numpy as np
-from utils import (
-    get_format
-)
+from utils import get_format
 from PIL import Image
 import h5py
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Compress hit diffraction patterns."
-    )
+    parser = argparse.ArgumentParser(description="Compress hit diffraction patterns.")
     parser.add_argument(
         "-i",
         "--input",
@@ -48,11 +44,9 @@ def main():
                 data = np.array(f["data"])
                 f.close()
 
-            im = Image.fromarray(data*25.5).convert("L")
-            im.save(f"{output_folder}/compressed/{label}_{i}.png", dpi=[300,300])
-            
-            
-            
-            
-if __name__== "__main__":
+            im = Image.fromarray(data * 25.5).convert("L")
+            im.save(f"{output_folder}/compressed/{label}_{i}.png", dpi=[300, 300])
+
+
+if __name__ == "__main__":
     main()

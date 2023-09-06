@@ -18,15 +18,18 @@ for i in $(seq $START 1 $END); do
     echo >> $SLURMFILE
     echo "#SBATCH --chdir   $PWD" >> $SLURMFILE
     echo "#SBATCH --job-name  $JNAME" >> $SLURMFILE
+    echo "#SBATCH --requeue" >> $SLURMFILE
     echo "#SBATCH --output    $ROOT/error/${NAME}-%N-%j.out" >> $SLURMFILE
     echo "#SBATCH --error     $ROOT/error/${NAME}-%N-%j.err" >> $SLURMFILE
     echo "#SBATCH --nice=0" >> $SLURMFILE
     echo "#SBATCH --mincpus=48" >> $SLURMFILE
     echo "#SBATCH --mem=4G" >> $SLURMFILE
+    echo "#SBATCH --mail-type=ALL" >> $SLURMFILE
+    echo "#SBATCH --mail-user=errodriguesana@gmail.com" >> $SLURMFILE
     echo >> $SLURMFILE
     command="./find_center.py -i ${ROOT}/${INPUT}/lists/split_hit_${INPUT}.lst${i} -m  ${ROOT}/${INPUT}/lists/mask_f2x.lst -o ${ROOT}/${INPUT} -g ${ROOT}/geom/${INPUT}/pilatus6M_219mm.geom;"
     echo $command >> $SLURMFILE
     echo "chmod a+rw $PWD" >> $SLURMFILE
-    sbatch $SLURMFILE
+    sbatch $SLURMFILE 
     mv $SLURMFILE ${ROOT}/shell
 done

@@ -752,6 +752,8 @@ def main():
                 cmd = f"cp {args.geom} {updated_geom}"
                 sub.call(cmd, shell=True)
                 update_corner_in_geom(updated_geom, xc, yc)
+                cmd = f"cp {updated_geom} {output_folder}/final_geom "
+                sub.call(cmd, shell=True)
                 x_map, y_map, det_dict = gf.pixel_maps_from_geometry_file(
                     updated_geom, return_dict=True
                 )

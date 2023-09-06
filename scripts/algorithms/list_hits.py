@@ -42,8 +42,8 @@ def main():
     idx = 0
 
     for idx, i in enumerate(raw_id):
-        if idx % 200 == 0:
-            n = "{:02d}".format(1 + int(idx / 200))
+        if idx % 50 == 0:
+            n = "{:02d}".format(1 + int(idx / 50))
             g = open(f"{args.output}/lists/{label}.lst{n}", "w")
         g.write(i)
     g.close()

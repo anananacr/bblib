@@ -37,12 +37,14 @@ def main():
     args = parser.parse_args()
 
     data = np.load(f'{args.numpy_input}')
-    reduced_data=data[:6000,:]
+    reduced_data=data[:10000,:]
     norm_data=reduced_data.copy()
     row,col=reduced_data.shape
     for i in range(col):
         norm_factor=np.max(reduced_data[:,i])
-        norm_data[:,i]=norm_data[:,i]//norm_factor
+        if norm_factor>0:
+            norm_data[:,i]=norm_data[:,i]//norm_factor
+
     kmeans = KMeans(n_clusters=3).fit(reduced_data)
     labels=kmeans.labels_
 

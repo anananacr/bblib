@@ -33,7 +33,7 @@ from scipy import signal
 import subprocess as sub
 import h5py
 
-MinPeaks = 25
+MinPeaks = 15
 global pf8_info
 
 pf8_info = PF8Info(
@@ -552,7 +552,7 @@ def main():
                 data = np.array(fabio.open(f"{file_name}").data)
             elif get_format(file_name) == "h":
                 f = h5py.File(f"{file_name}", "r")
-                data = np.array(f["data"][4801])
+                data = np.array(f["raw_data"])
                 f.close()
 
             if not mask_file_name:
@@ -621,6 +621,27 @@ def main():
                 np.array(peak_list["fs"], dtype=int),
             )
             if peak_list["num_peaks"] >= MinPeaks:
+                ## Peak search including more peaks
+                pf8_info.pf8_detector_info = dict(
+                asic_nx=mask.shape[1],
+                asic_ny=mask.shape[0],
+                nasics_x=1,
+                nasics_y=1,
+                )
+                pf8_info._bad_pixel_map = mask_sym
+                pf8_info.modify_radius(
+                int(mask_sym.shape[1] / 2), int(mask_sym.shape[0] / 2)
+                )
+                pf8_info.minimum_snr = 5
+                pf8_info.min_pixel_count = 1
+                pf8 = PF8(pf8_info)
+
+                peak_list = pf8.get_peaks_pf8(data=data)
+                indices = (
+                    np.array(peak_list["ss"], dtype=int),
+                    np.array(peak_list["fs"], dtype=int),
+                )
+
                 # Mask Bragg  peaks
                 only_peaks_mask = mask_peaks(mask_sym, indices, bragg=0)
                 pf8_mask = only_peaks_mask * mask_sym
@@ -708,6 +729,10 @@ def main():
                     np.arange(xc - 52, xc + 53, pixel_step, dtype=int),
                     np.arange(yc - 52, yc + 53, pixel_step, dtype=int),
                 )
+                #xx, yy = np.meshgrid(
+                #    np.arange(xc - 52, xc + 53, pixel_step, dtype=int),
+                #    np.arange(yc - 101 -30, yc + 101 -30, 2*pixel_step, dtype=int),
+                #)
                 coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
                 pool = multiprocessing.Pool()
                 with pool:

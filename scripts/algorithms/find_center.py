@@ -291,6 +291,11 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
     ## Chip background
     x_min = 200
     x_max = 350
+
+    ## Lyso water ring
+    # x_min = 200
+    # x_max = 400
+
     x = x_all[x_min:x_max]
     y = y_all[x_min:x_max]
     ## Estimation of initial parameters
@@ -607,10 +612,8 @@ def main():
                 nasics_x=1,
                 nasics_y=1,
             )
-            pf8_info._bad_pixel_map = mask_sym
-            pf8_info.modify_radius(
-                int(mask_sym.shape[1] / 2), int(mask_sym.shape[0] / 2)
-            )
+            pf8_info._bad_pixel_map = mask
+            pf8_info.modify_radius(int(mask.shape[1] / 2), int(mask.shape[0] / 2))
             pf8_info.minimum_snr = 7
             pf8_info.min_pixel_count = 2
             pf8 = PF8(pf8_info)
@@ -623,14 +626,14 @@ def main():
             if peak_list["num_peaks"] >= MinPeaks:
                 ## Peak search including more peaks
                 pf8_info.pf8_detector_info = dict(
-                asic_nx=mask.shape[1],
-                asic_ny=mask.shape[0],
-                nasics_x=1,
-                nasics_y=1,
+                    asic_nx=mask_sym.shape[1],
+                    asic_ny=mask_sym.shape[0],
+                    nasics_x=1,
+                    nasics_y=1,
                 )
                 pf8_info._bad_pixel_map = mask_sym
                 pf8_info.modify_radius(
-                int(mask_sym.shape[1] / 2), int(mask_sym.shape[0] / 2)
+                    int(mask_sym.shape[1] / 2), int(mask_sym.shape[0] / 2)
                 )
                 pf8_info.minimum_snr = 5
                 pf8_info.min_pixel_count = 1
@@ -714,6 +717,7 @@ def main():
                 # plt.show()
                 plt.savefig(f"{args.output}/plots/pol/{label}_{i}.png")
                 plt.close()
+
                 ## Second aproximation of the direct beam
                 # Direct search method
                 # results=direct_search_fwhm(list(first_center))
@@ -723,16 +727,14 @@ def main():
                 # print("Second approximation", xc, yc)
 
                 # Brute force manner
+
                 ## Grid search of sharpness of the azimutal average
-                pixel_step = 4
+                pixel_step = 6
                 xx, yy = np.meshgrid(
-                    np.arange(xc - 52, xc + 53, pixel_step, dtype=int),
-                    np.arange(yc - 52, yc + 53, pixel_step, dtype=int),
+                    np.arange(xc - 30, xc + 31, pixel_step, dtype=int),
+                    np.arange(yc - 30 - 30, yc + 31 - 30, pixel_step, dtype=int),
                 )
-                #xx, yy = np.meshgrid(
-                #    np.arange(xc - 52, xc + 53, pixel_step, dtype=int),
-                #    np.arange(yc - 101 -30, yc + 101 -30, 2*pixel_step, dtype=int),
-                #)
+
                 coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
                 pool = multiprocessing.Pool()
                 with pool:
@@ -743,10 +745,10 @@ def main():
                 )
                 last_center = (xc, yc)
 
-                pixel_step = 1
+                pixel_step = 2
                 xx, yy = np.meshgrid(
-                    np.arange(xc - 10, xc + 11, pixel_step, dtype=int),
-                    np.arange(yc - 10, yc + 11, pixel_step, dtype=int),
+                    np.arange(xc - 20, xc + 21, pixel_step, dtype=int),
+                    np.arange(yc - 20, yc + 21, pixel_step, dtype=int),
                 )
                 coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
                 pool = multiprocessing.Pool()
@@ -765,8 +767,8 @@ def main():
                 print("Second approximation", xc, yc)
 
                 plot_flag = True
-                _ = calculate_fwhm((xc + 10, yc + 10))
-                _ = calculate_fwhm((xc - 10, yc - 10))
+                # _ = calculate_fwhm((xc + 10, yc + 10))
+                # _ = calculate_fwhm((xc - 10, yc - 10))
                 results = calculate_fwhm((xc, yc))
 
                 plot_flag = False
@@ -836,7 +838,7 @@ def main():
                 ax2.scatter(
                     xc, yc, color="blueviolet", label=f"calculated center:({xc},{yc})"
                 )
-                ax2.set_title("Second approximation: FWHM/R minimization")
+                ax2.set_title("Second approximation: FWHM minimization")
                 fig.colorbar(pos2, ax=ax2, shrink=0.6)
                 ax2.legend()
                 plt.savefig(f"{args.output}/plots/second/{label}_{i}.png")
@@ -857,12 +859,9 @@ def main():
                 if args.output:
                     f = h5py.File(f"{output_folder}/h5_files/{label}_{i}.h5", "w")
                     f.create_dataset("hit", data=1)
-                    f.create_dataset("raw_data", data=data.astype(np.int32))
+                    f.create_dataset("id", data=file_name)
                     f.create_dataset("first_center", data=first_center)
                     f.create_dataset("second_center", data=second_center)
-                    f.create_dataset("first_masked_data", data=first_masked_data)
-                    f.create_dataset("second_masked_data", data=second_masked_data)
-                    f.create_dataset("first_pol_array", data=pol_array_first)
                     f.create_dataset("second_pol_array", data=pol_array_second)
                     f.create_dataset("fwhm_min", data=results["fwhm"])
                     f.create_dataset("r_squared_fwhm_min", data=results["r_squared"])
@@ -871,7 +870,6 @@ def main():
                 if args.output:
                     f = h5py.File(f"{output_folder}/h5_files/{label}_{i}.h5", "w")
                     f.create_dataset("hit", data=0)
-                    f.create_dataset("raw_data", data=data.astype(np.int32))
                     f.close()
             now = datetime.now()
             print(f"Current end time = {now}")

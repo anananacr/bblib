@@ -72,13 +72,14 @@ def extract_features(file_name: str) -> list:
         average_bg_2,
         median_bg_2,
         std_bg_2,
-        var_bg_2
+        var_bg_2,
     ]
+
 
 def extract_histogram(file_name: str) -> list:
     im = Image.open(file_name[:-1])
     data = np.asarray(im)
-    values, _=np.histogram(data, bins=255)
+    values, _ = np.histogram(data, bins=255)
     return values
 
 
@@ -107,19 +108,18 @@ def main():
     output_folder = args.output
     label = output_folder.split("/")[-1]
     file_format = get_format(args.input)
-    n=len(paths)
+    n = len(paths)
 
     if file_format == "lst":
 
         pool = multiprocessing.Pool()
         with pool:
             features_extraction = pool.map(extract_histogram, paths)
-        features=np.array(features_extraction).reshape((n,-1))
+        features = np.array(features_extraction).reshape((n, -1))
 
         if args.output:
             np.save(f"{output_folder}/{label}", features)
-        
-    
+
 
 if __name__ == "__main__":
     main()

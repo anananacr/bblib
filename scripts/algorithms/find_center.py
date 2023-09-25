@@ -89,8 +89,8 @@ def select_best_center(coordinates: list) -> list:
         x, y = azimuthal_average(corrected_data, center=i, mask=pf8_mask)
 
         ## Define background peak region
-        x_min = 100
-        x_max = 450
+        x_min = 200
+        x_max = 350
         x = x[x_min:x_max]
         y = y[x_min:x_max]
 
@@ -110,14 +110,14 @@ def select_best_center(coordinates: list) -> list:
         ## Divide by radius of the peak to get shasrpness ratio
         fwhm_over_radius = fwhm / popt[1]
         # print(r_squared)
-        if r_squared > 0.85:
+        if r_squared > 0:
             good_coordinates.append(i)
             fwhm_summary.append(fwhm)
             fwhm_over_radius_summary.append(fwhm_over_radius)
             r_squared_summary.append(r_squared)
             directions_summary.append(movement[idx])
-    # print(good_coordinates)
-    # print(np.array(fwhm_summary))
+    #print(good_coordinates)
+    #print(np.array(fwhm_summary))
     sorted_candidates = sorted(
         list(
             zip(fwhm_summary, good_coordinates, r_squared_summary, directions_summary)
@@ -144,7 +144,9 @@ def select_best_center(coordinates: list) -> list:
     elif match_directions[0][-1] == "x" and match_directions[1][-1] == "y":
         xc = good_coordinates[0][0]
         yc = good_coordinates[1][1]
-        combined_fwhm = calculate_fwhm((xc, yc))["fwhm"]
+        results = calculate_fwhm((xc, yc))
+        combined_fwhm = results["fwhm"]
+        combined_fwhm_r_sq = results["r_squared"]
         if combined_fwhm < fwhm_summary[0]:
             best_center = [xc, yc]
             best_fwhm = combined_fwhm
@@ -164,9 +166,7 @@ def select_best_center(coordinates: list) -> list:
 
 def direct_search_fwhm(initial_center: list) -> Dict[str, int]:
 
-    r = 0.9
-    initial_step = 40
-    step = initial_step
+    step = 15
     last_center = initial_center
     next_center = initial_center
     center_pos_summary = [next_center]
@@ -175,10 +175,10 @@ def direct_search_fwhm(initial_center: list) -> Dict[str, int]:
     distance_x = 1
     distance_y = 1
 
-    max_iter = 30
+    max_iter = 100
     n_iter = 0
 
-    while step > 0 and n_iter < max_iter:
+    while n_iter < max_iter and step>0:
         # and distance_x > 0.5 and distance_y>0.5
 
         coordinates = [
@@ -186,31 +186,35 @@ def direct_search_fwhm(initial_center: list) -> Dict[str, int]:
             (next_center[0] - step, next_center[1]),
             (next_center[0], next_center[1] + step),
             (next_center[0], next_center[1] - step),
-            (next_center[0], next_center[1]),
+            (next_center[0], next_center[1] )
         ]
         # print(coordinates)
         next_center, fwhm, r_squared = select_best_center(coordinates)
         center_pos_summary.append(next_center)
-        fwhm_summary.append(fwhm)
-        r_squared_summary.append(r_squared)
-        step *= r
-        step = int(step)
+        fwhm_summary.append(round(fwhm, 10))
+        r_squared_summary.append(round(r_squared, 10))
         distance_x, distance_y = (
             next_center[0] - last_center[0],
             next_center[1] - last_center[1],
         )
+        if next_center==last_center and next_center==center_pos_summary[-2]:
+            step-=1
+        if next_center!=last_center:
+            step=15
         last_center = next_center.copy()
-        # print(distance_x,distance_y)
+        # print(distance_x,distance_y)   
         n_iter += 1
 
-    final_center = next_center
+    fwhm_summary=np.array(fwhm_summary).reshape((n_iter,))
+    
+    final_center =  next_center
 
     return {
         "xc": final_center[0],
         "yc": final_center[1],
         "center_pos_summary": center_pos_summary,
         "fwhm_summary": fwhm_summary,
-        "r_squared_summary": r_squared_summary,
+        "r_squared_summary": np.array(r_squared_summary).reshape((n_iter,)),
     }
 
 
@@ -531,7 +535,7 @@ def main():
     if file_format == "lst":
         ref_image = []
         for i in range(0, len(paths[:])):
-            # for i in range(0, 1):
+        #for i in range(0, 1):
 
             file_name = paths[i][:-1]
             if len(mask_paths) > 0:
@@ -719,16 +723,12 @@ def main():
                 plt.close()
 
                 ## Second aproximation of the direct beam
-                # Direct search method
-                # results=direct_search_fwhm(list(first_center))
-                # xc=results["xc"]
-                # yc=results["yc"]
-                # second_center = (xc, yc)
-                # print("Second approximation", xc, yc)
+                
 
                 # Brute force manner
 
                 ## Grid search of sharpness of the azimutal average
+                
                 pixel_step = 6
                 xx, yy = np.meshgrid(
                     np.arange(xc - 30, xc + 31, pixel_step, dtype=int),
@@ -744,7 +744,17 @@ def main():
                     fwhm_summary, output_folder, f"{label}_{i}", pixel_step
                 )
                 last_center = (xc, yc)
+                """
 
+                # Direct search method
+                results_direct=direct_search_fwhm(list(last_center))
+                xc=results_direct["xc"]
+                yc=results_direct["yc"]
+                second_center = (xc, yc)
+                print("Second approximation", xc, yc)
+
+                ### Fine brute force
+                """
                 pixel_step = 2
                 xx, yy = np.meshgrid(
                     np.arange(xc - 20, xc + 21, pixel_step, dtype=int),
@@ -765,11 +775,11 @@ def main():
 
                 second_center = (xc, yc)
                 print("Second approximation", xc, yc)
-
+                
                 plot_flag = True
                 # _ = calculate_fwhm((xc + 10, yc + 10))
                 # _ = calculate_fwhm((xc - 10, yc - 10))
-                results = calculate_fwhm((xc, yc))
+                results= calculate_fwhm((xc, yc))
 
                 plot_flag = False
 
@@ -855,16 +865,17 @@ def main():
                     f"mv {output_folder}/*v2.geom {output_folder}/../geom/{label[:-3]}"
                 )
                 sub.call(cmd, shell=True)
-
                 if args.output:
                     f = h5py.File(f"{output_folder}/h5_files/{label}_{i}.h5", "w")
                     f.create_dataset("hit", data=1)
                     f.create_dataset("id", data=file_name)
                     f.create_dataset("first_center", data=first_center)
                     f.create_dataset("second_center", data=second_center)
-                    f.create_dataset("second_pol_array", data=pol_array_second)
                     f.create_dataset("fwhm_min", data=results["fwhm"])
                     f.create_dataset("r_squared_fwhm_min", data=results["r_squared"])
+                    f.create_dataset("center_pos_summary", data=results_direct["center_pos_summary"])
+                    f.create_dataset("fwhm_summary", data=results_direct["fwhm_summary"])
+                    f.create_dataset("r_squared_summary", data=results_direct["r_squared_summary"])
                     f.close()
             else:
                 if args.output:

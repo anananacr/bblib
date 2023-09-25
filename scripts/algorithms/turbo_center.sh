@@ -6,9 +6,9 @@ END=$3
 ROOT=/asap3/petra3/gpfs/p09/2023/data/11016750/processed/rodria
 
 for i in $(seq $START 1 $END); do
-    LABEL=center_${i}
-    JNAME="center-p09_${i}"
-    NAME="center-p09_${i}"
+    LABEL=direct_${i}
+    JNAME="direct_${i}"
+    NAME="direct_${i}"
     SLURMFILE="${NAME}_${INPUT}.sh"
     echo "#!/bin/sh" > $SLURMFILE
     echo >> $SLURMFILE

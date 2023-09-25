@@ -50,7 +50,6 @@ pf8_info = PF8Info(
 RealCenter = [1255, 1158]
 
 
-
 def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
     # Update center for pf8 with the last calculated center
     # print(pf8_info)
@@ -254,7 +253,7 @@ def main():
     if file_format == "lst":
         ref_image = []
         for i in range(0, len(paths[:])):
-        #for i in range(0, 1):
+            # for i in range(0, 1):
 
             file_name = paths[i][:-1]
             if len(mask_paths) > 0:
@@ -442,12 +441,11 @@ def main():
                 plt.close()
 
                 ## Second aproximation of the direct beam
-                
 
                 # Brute force manner
 
                 ## Grid search of sharpness of the azimutal average
-                
+
                 pixel_step = 6
                 xx, yy = np.meshgrid(
                     np.arange(xc - 30, xc + 31, pixel_step, dtype=int),
@@ -463,9 +461,9 @@ def main():
                     fwhm_summary, output_folder, f"{label}_{i}", pixel_step
                 )
                 last_center = (xc, yc)
-                
+
                 ### Fine brute force
-                
+
                 pixel_step = 2
                 xx, yy = np.meshgrid(
                     np.arange(xc - 20, xc + 21, pixel_step, dtype=int),
@@ -486,11 +484,11 @@ def main():
 
                 second_center = (xc, yc)
                 print("Second approximation", xc, yc)
-                
+
                 plot_flag = True
                 # _ = calculate_fwhm((xc + 10, yc + 10))
                 # _ = calculate_fwhm((xc - 10, yc - 10))
-                results= calculate_fwhm((xc, yc))
+                results = calculate_fwhm((xc, yc))
 
                 plot_flag = False
 
@@ -584,9 +582,15 @@ def main():
                     f.create_dataset("second_center", data=second_center)
                     f.create_dataset("fwhm_min", data=results["fwhm"])
                     f.create_dataset("r_squared_fwhm_min", data=results["r_squared"])
-                    f.create_dataset("center_pos_summary", data=results_direct["center_pos_summary"])
-                    f.create_dataset("fwhm_summary", data=results_direct["fwhm_summary"])
-                    f.create_dataset("r_squared_summary", data=results_direct["r_squared_summary"])
+                    f.create_dataset(
+                        "center_pos_summary", data=results_direct["center_pos_summary"]
+                    )
+                    f.create_dataset(
+                        "fwhm_summary", data=results_direct["fwhm_summary"]
+                    )
+                    f.create_dataset(
+                        "r_squared_summary", data=results_direct["r_squared_summary"]
+                    )
                     f.close()
             else:
                 if args.output:

@@ -90,11 +90,30 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
     if plot_flag:
         fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
         plt.plot(x, y)
+    
     r_squared = 1
-    fwhm_r_sq_collection = []
-    fwhm_r_sq_collection.append((fwhm, fwhm_over_radius, r_squared, popt))
-    fwhm_r_sq_collection.sort(key=lambda x: x[2], reverse=True)
-    fwhm, fwhm_over_radius, r_squared, popt = fwhm_r_sq_collection[0]
+    fwhm = 800
+    fwhm_over_radius = 800
+
+    ## Define background peak region
+    x_min = 150
+    x_max = 400
+    x = x[x_min:x_max]
+    y = y[x_min:x_max]
+    ## Estimation of initial parameters
+    mean = sum(x * y) / sum(y)
+    sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
+
+    try:
+        popt, pcov = curve_fit(gaussian, x, y, p0=[max(y), mean, sigma])
+        residuals = y - gaussian(x, *popt)
+        ss_res = np.sum(residuals**2)
+        ss_tot = np.sum((y - np.mean(y)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        ## Calculation of FWHM
+        fwhm = popt[2] * math.sqrt(8 * np.log(2))
+        ## Divide by radius of the peak to get shasrpness ratio
+        fwhm_over_radius = fwhm / popt[1]
 
     ## Display plots
     if plot_flag:
@@ -123,7 +142,6 @@ def calculate_fwhm(center_to_radial_average: tuple) -> Dict[str, int]:
         "fwhm": fwhm,
         "fwhm_over_radius": fwhm_over_radius,
         "r_squared": r_squared,
-        "pf8_mask": pf8_mask,
     }
 
 
@@ -582,15 +600,6 @@ def main():
                     f.create_dataset("second_center", data=second_center)
                     f.create_dataset("fwhm_min", data=results["fwhm"])
                     f.create_dataset("r_squared_fwhm_min", data=results["r_squared"])
-                    f.create_dataset(
-                        "center_pos_summary", data=results_direct["center_pos_summary"]
-                    )
-                    f.create_dataset(
-                        "fwhm_summary", data=results_direct["fwhm_summary"]
-                    )
-                    f.create_dataset(
-                        "r_squared_summary", data=results_direct["r_squared_summary"]
-                    )
                     f.close()
             else:
                 if args.output:

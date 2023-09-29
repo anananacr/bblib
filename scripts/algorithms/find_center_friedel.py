@@ -39,8 +39,7 @@ pf8_info = PF8Info(
     max_res=200
 )
 
-
-def take_pair_with_minimum_distance(a:list,b:list)->list:
+def take_pairs_with_minimum_distance(a,b):
     permutations = list(itertools.permutations(b))
     distances=[]
     pairs=[]
@@ -50,9 +49,12 @@ def take_pair_with_minimum_distance(a:list,b:list)->list:
         distances.append(d)
         pairs.append(p)
     distances=np.array(distances)
+    minimum_distance=np.min(distances)
     pairs=np.array(pairs)
-    index = np.unravel_index(np.argmin(distances, axis=None), distances.shape)
-    return pairs[index]
+    index = np.where(distances<minimum_distance+2)
+    coordinates = list(zip(index[0], index[1]))
+    pairs_list=[pairs[i]for i in coordinates]
+    return pairs_list
 
 def sort_by_minimum_distance(a:list,b:list)->list:
     permutations = list(itertools.permutations(b))
@@ -265,9 +267,12 @@ def main():
                 inverted_peaks_y=[-1*k for k in peaks_list_y]
                 inverted_peaks=list(zip(inverted_peaks_x, inverted_peaks_y))
 
-                peak_0, peak_1= take_pair_with_minimum_distance(peaks, inverted_peaks)
-                shift_x=peak_0[0]-peak_1[0]
-                shift_y=peak_0[1]-peak_1[1]
+                pairs_list= take_pairs_with_minimum_distance(peaks, inverted_peaks)
+                
+                shifts_list=[[peak_0[0]-peak_1[0],peak_0[1]-peak_1[1]] for peak_0, peak_1 in pairs_list]
+                shifts_list.sort(key= lambda x:abs(x[0])+abs(x[1]))
+                shift_x, shift_y=shifts_list[0]
+                
                 print('shift', shift_x, shift_y)
                 xc=DetectorCenter[0]+shift_x/2
                 yc=DetectorCenter[1]+shift_y/2

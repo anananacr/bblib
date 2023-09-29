@@ -43,7 +43,7 @@ def main():
             try:
                 f = h5py.File(f"{i[:-1]}", "r")
                 center = np.array(f["refined_center"])
-                if center[1]>1153 and center[1]<1161 and center[0]<1255 and center[0]>1252:
+                if center[1]>1144 and center[1]<1167 and center[0]<1266 and center[0]>1245:
                     center_x.append(center[0])
                     center_y.append(center[1])       
                 else:
@@ -55,8 +55,8 @@ def main():
             except:
                 print("OS", i[:-1])
     print(len(center_x))
-    xedges = np.arange(min(center_x),max(center_x),0.2)
-    yedges = np.arange(min(center_y),max(center_y),0.4)
+    xedges = np.arange(min(center_x),max(center_x),1)
+    yedges = np.arange(min(center_y),max(center_y),1)
     
     H, xedges, yedges = np.histogram2d(center_x, center_y, bins=(xedges,yedges))
     H = H.T

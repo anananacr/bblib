@@ -25,19 +25,34 @@ import matplotlib.pyplot as plt
 import subprocess as sub
 import h5py
 
-MinPeaks = 20
+MinPeaks = 8
 global pf8_info
 
 pf8_info = PF8Info(
     max_num_peaks=10000,
-    adc_threshold=10,
-    minimum_snr=7,
+    adc_threshold=5,
+    minimum_snr=5,
     min_pixel_count=2,
     max_pixel_count=10,
     local_bg_radius=3,
     min_res=0,
     max_res=200
 )
+
+
+def take_pair_with_minimum_distance(a:list,b:list)->list:
+    permutations = list(itertools.permutations(b))
+    distances=[]
+    pairs=[]
+    for permutation in permutations:
+        d=[math.sqrt((a[idx][0]-i[0])**2+(a[idx][1]-i[1])**2) for idx,i in enumerate(list(permutation))]
+        p=[[(a[idx][0], a[idx][1]),(i[0], i[1])] for idx,i in enumerate(list(permutation))]
+        distances.append(d)
+        pairs.append(p)
+    distances=np.array(distances)
+    pairs=np.array(pairs)
+    index = np.unravel_index(np.argmin(distances, axis=None), distances.shape)
+    return pairs[index]
 
 def sort_by_minimum_distance(a:list,b:list)->list:
     permutations = list(itertools.permutations(b))
@@ -119,10 +134,10 @@ def main():
     res = preamb["res"]
     clen = preamb["clen"]
     dist = 0.0
-    print('Det',det_dict)
+    #print('Det',det_dict)
     global DetectorCenter
     DetectorCenter=[-1*det_dict['0']['corner_x'],-1*det_dict['0']['corner_y']]
-    print(DetectorCenter)
+    #print(DetectorCenter)
     output_folder = args.output
 
     label = (
@@ -160,7 +175,7 @@ def main():
     if file_format == "lst":
         ref_image = []
         for i in range(0, len(paths[:])):
-            # for i in range(0, 1):
+        #for i in range(0, 3):
 
             file_name = paths[i][:-1]
             if len(mask_paths) > 0:
@@ -236,25 +251,26 @@ def main():
             if peaks_list['num_peaks']>MinPeaks:
                 now = datetime.now()
                 print(f"Current begin time = {now}")
-                ## Sort inverted peaks list and minimize the total distance
 
                 peaks_list_x=[k-DetectorCenter[0] for k in peaks_list['fs']]
                 peaks_list_y=[k-DetectorCenter[1] for k in peaks_list['ss']]
                 peaks=list(zip(peaks_list_x, peaks_list_y))
 
                 peaks.sort(key=lambda x: math.sqrt(x[0]**2+x[1]**2))
-
-                peaks_list_x = [x for x,y in peaks[:10]]
-                peaks_list_y = [y for x,y in peaks[:10]]
+                peaks_list_x = [x for x,y in peaks[:8]]
+                peaks_list_y = [y for x,y in peaks[:8]]
                 peaks=list(zip(peaks_list_x, peaks_list_y))
 
                 inverted_peaks_x=[-1*k for k in peaks_list_x]
                 inverted_peaks_y=[-1*k for k in peaks_list_y]
                 inverted_peaks=list(zip(inverted_peaks_x, inverted_peaks_y))
 
-                #print('peaks',peaks)
-                #print('inv_peaks',inverted_peaks)
-                sorted_inverted_peaks=sort_by_minimum_distance(peaks, inverted_peaks)
+                peak_0, peak_1= take_pair_with_minimum_distance(peaks, inverted_peaks)
+                shift_x=peak_0[0]-peak_1[0]
+                shift_y=peak_0[1]-peak_1[1]
+                print('shift', shift_x, shift_y)
+                xc=DetectorCenter[0]+shift_x/2
+                yc=DetectorCenter[1]+shift_y/2
 
                 ## Grid search of shifts around the detector center
                 pixel_step = 0.2
@@ -264,18 +280,19 @@ def main():
                 )
 
                 coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
-                coordinates_anchor_peaks=[[peaks, sorted_inverted_peaks, shift] for shift in coordinates]
+                coordinates_anchor_peaks=[[[(peak_0[0], peak_0[1])], [(peak_1[0], peak_1[1])], shift] for shift in coordinates]
 
                 distance_summary=[]
                 for shift in coordinates_anchor_peaks:
                     distance_summary.append(shift_inverted_peaks_and_calculate_minimum_distance(shift))
 
                 ## Display plots
-                xc, yc = open_distance_map_global_min(
+                _, _ = open_distance_map_global_min(
                     distance_summary, output_folder, f"{label}_{i}", pixel_step
                 )
                 refined_center=(xc,yc)
-                print(refined_center)
+                print('center',refined_center)
+                
                 fig, ax = plt.subplots(1, 1, figsize=(8, 8))
                 pos = ax.imshow(corrected_data*mask, vmax=50, cmap="cividis")
                 ax.scatter(DetectorCenter[0], DetectorCenter[1], color="lime", marker="+", s=150 ,label=f"Initial center:({DetectorCenter[0]},{DetectorCenter[1]})")
@@ -287,7 +304,6 @@ def main():
                     s=25,
                     label=f"Refined center:({refined_center[0]}, {refined_center[1]})",
                 )
-
                 ax.set_xlim(400, 2000)
                 ax.set_ylim(400, 2000)
                 plt.title("Center refinement: autocorrelation of Friedel pairs")
@@ -297,31 +313,69 @@ def main():
                 # plt.show()
                 plt.close()
 
+
+                original_peaks_x=[np.round(k+DetectorCenter[0]) for k in peaks_list_x]
+                original_peaks_y=[np.round(k+DetectorCenter[1]) for k in peaks_list_y]
+                inverted_non_shifted_peaks_x=[np.round(k+DetectorCenter[0]) for k in inverted_peaks_x]
+                inverted_non_shifted_peaks_y=[np.round(k+DetectorCenter[1]) for k in inverted_peaks_y]
+                inverted_shifted_peaks_x=[np.round(k+DetectorCenter[0]+shift_x) for k in inverted_peaks_x]
+                inverted_shifted_peaks_y=[np.round(k+DetectorCenter[1]+shift_y) for k in inverted_peaks_y]
+
+                ## Check pairs allignement
+                fig, ax = plt.subplots(1,1, figsize=(8, 8))
+                pos=ax.imshow(data*mask, vmax=50, cmap='cividis')
+                ax.scatter(original_peaks_x, original_peaks_y, facecolor="none", edgecolor="red", label='original peaks')
+                ax.scatter(inverted_non_shifted_peaks_x, inverted_non_shifted_peaks_y, facecolor="none", edgecolor="lime", label='inverted peaks')
+                ax.scatter(inverted_shifted_peaks_x, inverted_shifted_peaks_y, facecolor="none", edgecolor="blue", label='inverted shifted peaks')
+                ax.set_xlim(1000, 1500)
+                ax.set_ylim(900, 1400)
+                plt.title("Bragg peaks allignement")
+                fig.colorbar(pos, shrink=0.6)
+                ax.legend()
+                plt.savefig(f"{args.output}/plots/peaks/{label}_{i}.png")
+                # plt.show()
+                plt.close()
+
                 # Update geom 
-                updated_geom = f"{args.geom[:-5]}_{label}_{i}_v2.geom"
+                updated_geom = f"{args.geom[:-5]}_{label}_{i}_v1.geom"
                 cmd = f"cp {args.geom} {updated_geom}"
                 sub.call(cmd, shell=True)
                 update_corner_in_geom(updated_geom, xc, yc)
                 cmd = f"cp {updated_geom} {output_folder}/final_geom "
                 sub.call(cmd, shell=True)
                 ## Clean geom directory
-                updated_geom = f"{args.geom[:-5]}_{label}_{i}_v2.geom"
+                updated_geom = f"{args.geom[:-5]}_{label}_{i}_v1.geom"
                 cmd = f"cp {updated_geom} {output_folder}"
                 sub.call(cmd, shell=True)
                 root_directory = os.path.dirname(args.geom)
-                print(root_directory)
                 cmd = f"rm {root_directory}/*{label}*.geom"
                 sub.call(cmd, shell=True)
                 cmd = (
-                    f"mv {output_folder}/*v2.geom {root_directory}"
+                    f"mv {output_folder}/*v1.geom {root_directory}"
                 )
                 sub.call(cmd, shell=True)
+
+
+                original_peaks_x=[k+DetectorCenter[0] for k in peaks_list_x]
+                original_peaks_y=[k+DetectorCenter[1] for k in peaks_list_y]
+                inverted_non_shifted_peaks_x=[k+DetectorCenter[0] for k in inverted_peaks_x]
+                inverted_non_shifted_peaks_y=[k+DetectorCenter[1] for k in inverted_peaks_y]
+                inverted_shifted_peaks_x=[k+DetectorCenter[0]+shift_x for k in inverted_peaks_x]
+                inverted_shifted_peaks_y=[k+DetectorCenter[1]+shift_y for k in inverted_peaks_y]
+
 
                 if args.output:
                     f = h5py.File(f"{output_folder}/h5_files/{label}_{i}.h5", "w")
                     f.create_dataset("hit", data=1)
                     f.create_dataset("id", data=file_name)
                     f.create_dataset("refined_center", data=refined_center)
+                    f.create_dataset("original_peaks_x", data=original_peaks_x)
+                    f.create_dataset("original_peaks_y", data=original_peaks_y)
+                    f.create_dataset("inverted_peaks_x", data=inverted_non_shifted_peaks_x)
+                    f.create_dataset("inverted_peaks_y", data=inverted_non_shifted_peaks_y)
+                    f.create_dataset("shifted_peaks_x", data=inverted_shifted_peaks_x)
+                    f.create_dataset("shifted_peaks_y", data=inverted_shifted_peaks_y)
+                    
 
                 now = datetime.now()
                 print(f"Current end time = {now}")

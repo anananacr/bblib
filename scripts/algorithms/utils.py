@@ -392,26 +392,26 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
 
     index_y, index_x = np.where(z == np.min(z))
     pos1 = ax1.imshow(z, cmap="rainbow")
-    step = 2
+    step = 5
     n = z.shape[0]
-    ax1.set_xticks(np.arange(step, n, step, dtype=int))
-    ax1.set_yticks(np.arange(step, n, step, dtype=int))
+    ax1.set_xticks(np.arange(0, n, step, dtype=int))
+    ax1.set_yticks(np.arange(0, n, step, dtype=int))
     step = step * (abs(x[0] - x[1]))
-    ax1.set_xticklabels(np.arange(x[0], x[-1], step, dtype=int))
-    ax1.set_yticklabels(np.arange(y[0], y[-1], step, dtype=int))
+    ax1.set_xticklabels(np.arange(x[0], x[-1]+step, step, dtype=int))
+    ax1.set_yticklabels(np.arange(y[0], y[-1]+step, step, dtype=int))
 
     ax1.set_ylabel("yc [px]")
     ax1.set_xlabel("xc [px]")
     ax1.set_title("FWHM")
 
     pos2 = ax2.imshow(r, cmap="rainbow")
-    step = 2
+    step = 5
     n = z.shape[0]
-    ax2.set_xticks(np.arange(step, n, step, dtype=int))
-    ax2.set_yticks(np.arange(step, n, step, dtype=int))
+    ax2.set_xticks(np.arange(0, n, step, dtype=int))
+    ax2.set_yticks(np.arange(0, n, step, dtype=int))
     step = step * (abs(x[0] - x[1]))
-    ax2.set_xticklabels(np.arange(x[0], x[-1], step, dtype=int))
-    ax2.set_yticklabels(np.arange(y[0], y[-1], step, dtype=int))
+    ax2.set_xticklabels(np.arange(x[0], x[-1]+step, step, dtype=int))
+    ax2.set_yticklabels(np.arange(y[0], y[-1]+step, step, dtype=int))
 
     ax2.set_ylabel("yc [px]")
     ax2.set_xlabel("xc [px]")
@@ -453,14 +453,14 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
     x_fit = np.arange(y[0], y[-1] + 0.1, 0.1)
     y_fit = quadratic(x_fit, *popt)
     ax4.plot(
-        y_fit,
         x_fit,
+        y_fit,
         "r",
         label=f"quadratic fit:\nR²: {round(r_squared,5)}, Yc: {round((-1*popt[1])/(2*popt[0]))}",
     )
-    ax4.scatter(proj_y, x, color="b")
-    ax4.set_xlabel("Average FWHM")
-    ax4.set_ylabel("yc [px]")
+    ax4.scatter(x,proj_y, color="b")
+    ax4.set_ylabel("Average FWHM")
+    ax4.set_xlabel("yc [px]")
     ax4.set_title("FWHM projection in y")
     ax4.legend()
     yc = round((-1 * popt[1]) / (2 * popt[0]))
@@ -474,7 +474,7 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
     # plt.show()
     plt.savefig(f"{output_folder}/plots/fwhm_map/{label}.png")
     plt.close()
-    if r_squared > 0.98:
+    if r_squared > 0.7:
         return xc, yc
     else:
         return False
@@ -512,26 +512,26 @@ def open_fwhm_map_global_min(
     r = np.array(merged_dict["r_squared"]).reshape((n, n))
 
     pos1 = ax1.imshow(z, cmap="rainbow")
-    step = 2
+    step = 5
     n = z.shape[0]
-    ax1.set_xticks(np.arange(step, n, step, dtype=int))
-    ax1.set_yticks(np.arange(step, n, step, dtype=int))
+    ax1.set_xticks(np.arange(0, n, step, dtype=int))
+    ax1.set_yticks(np.arange(0, n, step, dtype=int))
     step = step * (abs(x[0] - x[1]))
-    ax1.set_xticklabels(np.arange(x[0], x[-1], step, dtype=int))
-    ax1.set_yticklabels(np.arange(y[0], y[-1], step, dtype=int))
+    ax1.set_xticklabels(np.arange(x[0], x[-1]+step, step, dtype=int))
+    ax1.set_yticklabels(np.arange(y[0], y[-1]+step, step, dtype=int))
 
     ax1.set_ylabel("yc [px]")
     ax1.set_xlabel("xc [px]")
     ax1.set_title("FWHM")
 
     pos2 = ax2.imshow(r, cmap="rainbow")
-    step = 2
+    step = 5
     n = z.shape[0]
-    ax2.set_xticks(np.arange(step, n, step, dtype=int))
-    ax2.set_yticks(np.arange(step, n, step, dtype=int))
+    ax2.set_xticks(np.arange(0, n, step, dtype=int))
+    ax2.set_yticks(np.arange(0, n, step, dtype=int))
     step = step * (abs(x[0] - x[1]))
-    ax2.set_xticklabels(np.arange(x[0], x[-1], step, dtype=int))
-    ax2.set_yticklabels(np.arange(y[0], y[-1], step, dtype=int))
+    ax2.set_xticklabels(np.arange(x[0], x[-1]+step, step, dtype=int))
+    ax2.set_yticklabels(np.arange(y[0], y[-1]+step, step, dtype=int))
 
     ax2.set_ylabel("yc [px]")
     ax2.set_xlabel("xc [px]")
@@ -553,10 +553,10 @@ def open_fwhm_map_global_min(
     x = np.arange(y[0], y[-1] + pixel_step, pixel_step)
     index_y = np.unravel_index(np.argmin(proj_y, axis=None), proj_y.shape)
     yc = x[index_y]
-    ax4.scatter(proj_y, x, color="b")
-    ax4.scatter(proj_y[index_y], yc, color="r", label=f"yc: {yc}")
-    ax4.set_xlabel("Average FWHM")
-    ax4.set_ylabel("yc [px]")
+    ax4.scatter(x,proj_y, color="b")
+    ax4.scatter(yc,proj_y[index_y], color="r", label=f"yc: {yc}")
+    ax4.set_ylabel("Average FWHM")
+    ax4.set_xlabel("yc [px]")
     ax4.set_title("FWHM projection in y")
     ax4.legend()
 

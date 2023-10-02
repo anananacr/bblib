@@ -32,7 +32,7 @@ pf8_info = PF8Info(
     max_num_peaks=10000,
     adc_threshold=5,
     minimum_snr=5,
-    min_pixel_count=2,
+    min_pixel_count=1,
     max_pixel_count=10,
     local_bg_radius=3,
     min_res=0,
@@ -73,9 +73,9 @@ def shift_inverted_peaks_and_calculate_minimum_distance(peaks_and_shift:list)->D
 
     return {
         'shift_x': shift[0],
-        'xc': shift[0]/2+DetectorCenter[0],
+        'xc': (shift[0]/2) + DetectorCenter[0],
         'shift_y': shift[1],
-        'yc': shift[1]/2+ DetectorCenter[1],
+        'yc': (shift[1]/2) + DetectorCenter[1],
         'd':distance
     }
 
@@ -139,7 +139,7 @@ def main():
     #print('Det',det_dict)
     global DetectorCenter
     DetectorCenter=[-1*det_dict['0']['corner_x'],-1*det_dict['0']['corner_y']]
-    #print(DetectorCenter)
+    print(DetectorCenter)
     output_folder = args.output
 
     label = (
@@ -259,8 +259,8 @@ def main():
                 peaks=list(zip(peaks_list_x, peaks_list_y))
 
                 peaks.sort(key=lambda x: math.sqrt(x[0]**2+x[1]**2))
-                peaks_list_x = [x for x,y in peaks[:8]]
-                peaks_list_y = [y for x,y in peaks[:8]]
+                peaks_list_x = [x for x,y in peaks[:10]]
+                peaks_list_y = [y for x,y in peaks[:10]]
                 peaks=list(zip(peaks_list_x, peaks_list_y))
 
                 inverted_peaks_x=[-1*k for k in peaks_list_x]
@@ -269,13 +269,14 @@ def main():
 
                 pairs_list= take_pairs_with_minimum_distance(peaks, inverted_peaks)
                 
-                shifts_list=[[peak_0[0]-peak_1[0],peak_0[1]-peak_1[1]] for peak_0, peak_1 in pairs_list]
+                shifts_list=[[peak_0[0]-peak_1[0],peak_0[1]-peak_1[1], peak_0, peak_1] for peak_0, peak_1 in pairs_list]
                 shifts_list.sort(key= lambda x:abs(x[0])+abs(x[1]))
-                shift_x, shift_y=shifts_list[0]
-                
+                shift_x, shift_y=shifts_list[0][:2]
+                peak_0=shifts_list[0][2]
+                peak_1=shifts_list[0][3]
                 print('shift', shift_x, shift_y)
-                xc=DetectorCenter[0]+shift_x/2
-                yc=DetectorCenter[1]+shift_y/2
+                xc=DetectorCenter[0]+(shift_x/2)
+                yc=DetectorCenter[1]+(shift_y/2)
 
                 ## Grid search of shifts around the detector center
                 pixel_step = 0.2
@@ -295,7 +296,7 @@ def main():
                 _, _ = open_distance_map_global_min(
                     distance_summary, output_folder, f"{label}_{i}", pixel_step
                 )
-                refined_center=(xc,yc)
+                refined_center=(np.around(xc,1),np.around(yc,1))
                 print('center',refined_center)
                 
                 fig, ax = plt.subplots(1, 1, figsize=(8, 8))
@@ -310,7 +311,7 @@ def main():
                     label=f"Refined center:({refined_center[0]}, {refined_center[1]})",
                 )
                 ax.set_xlim(400, 2000)
-                ax.set_ylim(400, 2000)
+                ax.set_ylim(2000,400)
                 plt.title("Center refinement: autocorrelation of Friedel pairs")
                 fig.colorbar(pos, shrink=0.6)
                 ax.legend()
@@ -333,7 +334,7 @@ def main():
                 ax.scatter(inverted_non_shifted_peaks_x, inverted_non_shifted_peaks_y, facecolor="none", edgecolor="lime", label='inverted peaks')
                 ax.scatter(inverted_shifted_peaks_x, inverted_shifted_peaks_y, facecolor="none", edgecolor="blue", label='inverted shifted peaks')
                 ax.set_xlim(1000, 1500)
-                ax.set_ylim(900, 1400)
+                ax.set_ylim(1400, 900)
                 plt.title("Bragg peaks allignement")
                 fig.colorbar(pos, shrink=0.6)
                 ax.legend()

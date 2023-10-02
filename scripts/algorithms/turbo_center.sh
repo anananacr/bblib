@@ -13,7 +13,7 @@ for i in $(seq $START 1 $END); do
     echo "#!/bin/sh" > $SLURMFILE
     echo >> $SLURMFILE
     echo "#SBATCH --partition=allcpu,cfel" >> $SLURMFILE  # Set your partition here
-    echo "#SBATCH --time=0-04:00:00" >> $SLURMFILE
+    echo "#SBATCH --time=0-08:00:00" >> $SLURMFILE
     echo "#SBATCH --nodes=1" >> $SLURMFILE
     echo >> $SLURMFILE
     echo "#SBATCH --chdir   $PWD" >> $SLURMFILE
@@ -33,7 +33,7 @@ for i in $(seq $START 1 $END); do
     echo "module load maxwell python/3.7" >> $SLURMFILE
     echo "source /home/rodria/scripts/p09/env-p09/bin/activate" >> $SLURMFILE
     echo >> $SLURMFILE
-    command="./find_center.py -i ${ROOT}/${INPUT}/lists/split_hit_${INPUT}.lst${i} -m  ${ROOT}/${INPUT}/lists/mask_f2x.lst -o ${ROOT}/${INPUT} -g ${ROOT}/geom/${INPUT}/pilatus6M_219mm.geom;"
+    command="./find_center_friedel.py -i ${ROOT}/${INPUT}/lists/split_hit_${INPUT}.lst${i} -m  ${ROOT}/${INPUT}/lists/mask_f2x.lst -o ${ROOT}/${INPUT} -g ${ROOT}/geom/${INPUT}/pilatus6M_219mm.geom;"
     echo $command >> $SLURMFILE
     echo "chmod a+rw $PWD" >> $SLURMFILE
     sbatch $SLURMFILE 

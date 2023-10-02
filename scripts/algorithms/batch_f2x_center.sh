@@ -20,4 +20,4 @@ module load mpi/openmpi-x86_64
 module load maxwell python/3.7
 source /home/rodria/scripts/p09/env-p09/bin/activate
 cp /gpfs/cfel/user/rodria/processed/p09/11016750/geom/pilatus6M_219mm.geom ${ROOT}/geom/f2x_D_01_01
-./find_center.py -i ${ROOT}/f2x_D_01_01/lists/split_hit_f2x_D_01_01.lst01 -m  ${ROOT}/f2x_D_01_01/lists/mask_f2x.lst -o ${ROOT}/f2x_D_01_01 -g ${ROOT}/geom/f2x_D_01_01/pilatus6M_219mm.geom;
+./find_center_friedel.py -i ${ROOT}/f2x_D_01_01/lists/split_hit_f2x_D_01_01.lst01 -m  ${ROOT}/f2x_D_01_01/lists/mask_f2x.lst -o ${ROOT}/f2x_D_01_01 -g ${ROOT}/geom/f2x_D_01_01/pilatus6M_219mm.geom;

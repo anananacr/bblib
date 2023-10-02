@@ -5,9 +5,10 @@ import fabio
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
-from utils import get_format
-import statistics
+from utils import get_format, gaussian
 import h5py
+import math
+from scipy.optimize import curve_fit
 
 
 def main():
@@ -35,46 +36,102 @@ def main():
     label = "center_distribution_" + output_folder.split("/")[-1]
 
     print(label)
-
-    fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-    ax1.set_title("Calculated direct beam position")
-    ax1.set_xlabel("Direct beam position in x (px)")
-    ax1.set_ylabel("Direct beam position in y (px)")
     center_x = []
     center_y = []
+    x_min=1252.0
+    x_max=1255.5
+    y_min=1153.0
+    y_max=1161.0
+    
     if file_format == "lst":
         for i in paths:
             try:
                 f = h5py.File(f"{i[:-1]}", "r")
-                center = np.array(f["second_center"])
-                center_x.append(center[0])
-                center_y.append(center[1])
+                center = np.array(f["refined_center"])
+                if center[1]>y_min and center[1]<y_max and center[0]<x_max and center[0]>x_min:
+                    center_x.append(center[0])
+                    center_y.append(center[1])       
+                else:
+                    id=np.array(f["id"])
+                    print(id)
                 f.close()
             except KeyError:
                 print(i[:-1])
             except:
                 print("OS", i[:-1])
+    print(len(center_x))
+   
+    bins=0.1
 
-            ax1.scatter(center[0], center[1], c="b", s=20)
-    median_x = statistics.median(center_x)
-    median_y = statistics.median(center_y)
-    mean_x = statistics.mean(center_x)
-    mean_y = statistics.mean(center_y)
-    ax1.scatter(
-        median_x,
-        median_y,
-        c="r",
-        marker="X",
-        s=50,
-        label=f"median :{median_x, median_y}",
-    )
-    ax1.scatter(
-        mean_x, mean_y, c="g", marker="s", s=50, label=f"mean :{mean_x, mean_y}"
-    )
-    fig.legend()
-    # plt.show()
+    xedges = np.arange(x_min,x_max,bins)
+    yedges = np.arange(y_min,y_max, bins)
+    
+    H, xedges, yedges = np.histogram2d(center_x, center_y, bins=(xedges,yedges))
+    H = H.T
+    
+    fig = plt.figure(figsize=(20, 5))
+    ax = fig.add_subplot(131, title='Detector center distribution (pixel)')
+    X, Y = np.meshgrid(xedges, yedges)
+    pos = ax.pcolormesh(X, Y, H)
+    fig.colorbar(pos)
+
+    ax1 = fig.add_subplot(132, title='Projection in  x (pixel)')
+    proj_x = np.sum(H, axis=0)
+    #bins=abs(xedges[1]-xedges[0])
+    x = np.arange(xedges[0], xedges[-1], bins)
+    y=proj_x
+
+    mean = sum(x * y) / sum(y)
+    sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
+    popt, pcov = curve_fit(gaussian, x, y, p0=[max(y), mean, sigma])
+    residuals = y - gaussian(x, *popt)
+    ss_res = np.sum(residuals**2)
+    ss_tot = np.sum((y - np.mean(y)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    ## Calculation of FWHM
+    fwhm = popt[2] * math.sqrt(8 * np.log(2))
+    ## Divide by radius of the peak to get shasrpness ratio
+
+    x_fit = np.arange(xedges[0], xedges[-1], 0.01)
+    y_fit = gaussian(x_fit, *popt)
+    ax1.plot(x_fit,y_fit,"r:",label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM : {round(fwhm,3)}")
+
+    ax1.scatter(x, proj_x, color="b")
+    ax1.set_ylabel("Counts")
+    ax1.set_xlabel("xc [px]")
+    ax1.legend()
+
+    ax = fig.add_subplot(133, title='Projection in  y (pixel)')
+    proj_y = np.sum(H, axis=1)
+    #bins=abs(yedges[1]-yedges[0])
+    x = np.arange(yedges[0], yedges[-1],bins)
+    y=proj_y
+
+    mean = sum(x * y) / sum(y)
+    sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
+
+
+    popt, pcov = curve_fit(gaussian, x, y, p0=[max(y), mean, sigma])
+    residuals = y - gaussian(x, *popt)
+    ss_res = np.sum(residuals**2)
+    ss_tot = np.sum((y - np.mean(y)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    ## Calculation of FWHM
+    fwhm = popt[2] * math.sqrt(8 * np.log(2))
+    ## Divide by radius of the peak to get shasrpness ratio
+
+    x_fit = np.arange(yedges[0], yedges[-1], 0.01)
+    y_fit = gaussian(x_fit, *popt)
+
+    ax.plot(x_fit, y_fit, "r:", label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM : {round(fwhm,3)}")
+
+    ax.scatter(x,proj_y, color="b")
+    ax.set_ylabel("Counts")
+    ax.set_xlabel("yc [px]")
+    ax.legend()
+    #plt.show()
+
     plt.savefig(f"{args.output}/plots/{label}.png")
-    plt.close()
 
 
 if __name__ == "__main__":

@@ -38,12 +38,17 @@ def main():
     print(label)
     center_x = []
     center_y = []
+    x_min=1252.0
+    x_max=1255.5
+    y_min=1153.0
+    y_max=1161.0
+    
     if file_format == "lst":
         for i in paths:
             try:
                 f = h5py.File(f"{i[:-1]}", "r")
                 center = np.array(f["refined_center"])
-                if center[1]>1144 and center[1]<1167 and center[0]<1266 and center[0]>1245:
+                if center[1]>y_min and center[1]<y_max and center[0]<x_max and center[0]>x_min:
                     center_x.append(center[0])
                     center_y.append(center[1])       
                 else:
@@ -55,8 +60,11 @@ def main():
             except:
                 print("OS", i[:-1])
     print(len(center_x))
-    xedges = np.arange(min(center_x),max(center_x),1)
-    yedges = np.arange(min(center_y),max(center_y),1)
+   
+    bins=0.1
+
+    xedges = np.arange(x_min,x_max,bins)
+    yedges = np.arange(y_min,y_max, bins)
     
     H, xedges, yedges = np.histogram2d(center_x, center_y, bins=(xedges,yedges))
     H = H.T
@@ -69,14 +77,12 @@ def main():
 
     ax1 = fig.add_subplot(132, title='Projection in  x (pixel)')
     proj_x = np.sum(H, axis=0)
-    bins=abs(xedges[1]-xedges[0])
+    #bins=abs(xedges[1]-xedges[0])
     x = np.arange(xedges[0], xedges[-1], bins)
     y=proj_x
 
     mean = sum(x * y) / sum(y)
     sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
-
-    
     popt, pcov = curve_fit(gaussian, x, y, p0=[max(y), mean, sigma])
     residuals = y - gaussian(x, *popt)
     ss_res = np.sum(residuals**2)
@@ -86,7 +92,7 @@ def main():
     fwhm = popt[2] * math.sqrt(8 * np.log(2))
     ## Divide by radius of the peak to get shasrpness ratio
 
-    x_fit = np.arange(xedges[0], xedges[-1], 0.1)
+    x_fit = np.arange(xedges[0], xedges[-1], 0.01)
     y_fit = gaussian(x_fit, *popt)
     ax1.plot(x_fit,y_fit,"r:",label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM : {round(fwhm,3)}")
 
@@ -97,8 +103,8 @@ def main():
 
     ax = fig.add_subplot(133, title='Projection in  y (pixel)')
     proj_y = np.sum(H, axis=1)
-    bins=abs(yedges[1]-yedges[0])
-    x = np.arange(yedges[0], yedges[-1], bins)
+    #bins=abs(yedges[1]-yedges[0])
+    x = np.arange(yedges[0], yedges[-1],bins)
     y=proj_y
 
     mean = sum(x * y) / sum(y)
@@ -114,7 +120,7 @@ def main():
     fwhm = popt[2] * math.sqrt(8 * np.log(2))
     ## Divide by radius of the peak to get shasrpness ratio
 
-    x_fit = np.arange(yedges[0], yedges[-1], 0.1)
+    x_fit = np.arange(yedges[0], yedges[-1], 0.01)
     y_fit = gaussian(x_fit, *popt)
 
     ax.plot(x_fit, y_fit, "r:", label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM : {round(fwhm,3)}")
@@ -123,9 +129,9 @@ def main():
     ax.set_ylabel("Counts")
     ax.set_xlabel("yc [px]")
     ax.legend()
-    plt.show()
+    #plt.show()
 
-    #plt.savefig(f"{args.output}/plots/{label}.png")
+    plt.savefig(f"{args.output}/plots/{label}.png")
 
 
 if __name__ == "__main__":

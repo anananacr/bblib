@@ -24,6 +24,9 @@ import math
 import matplotlib.pyplot as plt
 import subprocess as sub
 import h5py
+from scipy.fft import fft, fftfreq
+from scipy.signal import find_peaks
+
 
 MinPeaks = 8
 global pf8_info
@@ -32,13 +35,28 @@ pf8_info = PF8Info(
     max_num_peaks=10000,
     adc_threshold=5,
     minimum_snr=5,
-    min_pixel_count=1,
+    min_pixel_count=2,
     max_pixel_count=10,
     local_bg_radius=3,
     min_res=0,
-    max_res=200
+    max_res=250
 )
 
+def get_peaks_on_quadrant(peaks: list, n: int)->list:
+    peaks_on_quadrants=[]
+    for i in peaks:
+        if i[0]>=0:
+            if i[1]>=0 and n==1:
+                peaks_on_quadrants.append(i)
+            elif i[1]<0 and n==4:
+                peaks_on_quadrants.append(i)
+        else:
+            if i[1]>=0 and n==2:
+                peaks_on_quadrants.append(i)
+            elif i[1]<0 and n==3:
+                peaks_on_quadrants.append(i)
+    return peaks_on_quadrants
+    
 def take_pairs_with_minimum_distance(a,b):
     permutations = list(itertools.permutations(b))
     distances=[]
@@ -51,10 +69,27 @@ def take_pairs_with_minimum_distance(a,b):
     distances=np.array(distances)
     minimum_distance=np.min(distances)
     pairs=np.array(pairs)
-    index = np.where(distances<minimum_distance+2)
+    index = np.where(distances<=minimum_distance+10)
     coordinates = list(zip(index[0], index[1]))
-    pairs_list=[pairs[i]for i in coordinates]
+    pairs_list=[list(pairs[i]) for i in coordinates]
     return pairs_list
+
+def remove_repeated_items(pairs_list: list) -> list:
+    x_vector=[]
+    y_vector=[]
+    unique_pairs=[]
+    
+    for pair in pairs_list:
+        peak_0, peak_1 = pair
+        x =peak_0[0]- peak_1[0]
+        y =peak_0[1]- peak_1[1]
+        if x not in x_vector and y not in y_vector:
+            x_vector.append(x)
+            y_vector.append(y)
+            unique_pairs.append((peak_0, peak_1))
+
+    return unique_pairs
+
 
 def sort_by_minimum_distance(a:list,b:list)->list:
     permutations = list(itertools.permutations(b))
@@ -69,7 +104,7 @@ def sort_by_minimum_distance(a:list,b:list)->list:
 def shift_inverted_peaks_and_calculate_minimum_distance(peaks_and_shift:list)->Dict[str,float]:
     peaks_list, inverted_peaks, shift = peaks_and_shift
     shifted_inverted_peaks = [(x+shift[0], y+shift[1]) for x,y in inverted_peaks]
-    distance = calculate_distance(peaks_list, shifted_inverted_peaks)
+    distance = calculate_pair_distance(peaks_list, shifted_inverted_peaks)
 
     return {
         'shift_x': shift[0],
@@ -79,9 +114,32 @@ def shift_inverted_peaks_and_calculate_minimum_distance(peaks_and_shift:list)->D
         'd':distance
     }
 
-def calculate_distance(peaks_list:list, shifted_peaks_list:list)-> float:
+def calculate_pair_distance(peaks_list:list, shifted_peaks_list:list)-> float:
     d = [math.sqrt((peaks_list[idx][0]-i[0])**2+(peaks_list[idx][1]-i[1])**2) for idx,i in enumerate(shifted_peaks_list)]
     return sum(d)
+
+def select_closest_peaks(peaks_list: list, inverted_peaks:list) -> list:
+    peaks=[]
+    for i in inverted_peaks:
+        radius=1
+        found_peak=False
+        while not found_peak and radius<=10:
+            found_peak=find_a_peak_in_the_surrounding(peaks_list, i,radius)
+            radius+=1
+        if found_peak:
+            peaks.append((found_peak, i))
+    peaks=remove_repeated_items(peaks)
+    return peaks
+
+def find_a_peak_in_the_surrounding(peaks_list: list, inverted_peak:list, radius: int) -> list:
+    cut_peaks_list=[]
+    cut_peaks_list=[(peak, math.sqrt((peak[0]-inverted_peak[0])**2+(peak[1]-inverted_peak[1])**2)) for peak in peaks_list if math.sqrt((peak[0]-inverted_peak[0])**2+(peak[1]-inverted_peak[1])**2)<=radius]
+    cut_peaks_list.sort(key=lambda x: x[1])
+
+    if cut_peaks_list==[]:
+        return False
+    else:
+        return cut_peaks_list[0][0]
 
 def main():
     parser = argparse.ArgumentParser(
@@ -131,14 +189,26 @@ def main():
     x_map, y_map, det_dict = gf.pixel_maps_from_geometry_file(
         args.geom, return_dict=True
     )
+    #plt.imshow(y_map)
+    #plt.show()
+    print(det_dict)
+    y_minimum: int = (
+        2 * int(min(abs(y_map.max()), abs(y_map.min()))) + 2
+    )
+    x_minimum: int = (
+        2 * int(max(abs(x_map.max()), abs(x_map.min()))) + 2
+    )
+    visual_img_shape: Tuple[int, int] = (y_minimum, x_minimum)
+    _img_center_x: int = int(visual_img_shape[1] / 2)
+    _img_center_y: int = int(visual_img_shape[0] / 2)
+
     preamb, dim_info = gf.read_geometry_file_preamble(args.geom)
     dist_m = preamb["coffset"]
     res = preamb["res"]
     clen = preamb["clen"]
     dist = 0.0
-    #print('Det',det_dict)
     global DetectorCenter
-    DetectorCenter=[-1*det_dict['0']['corner_x'],-1*det_dict['0']['corner_y']]
+    DetectorCenter=[_img_center_x, _img_center_y]
     print(DetectorCenter)
     output_folder = args.output
 
@@ -177,7 +247,7 @@ def main():
     if file_format == "lst":
         ref_image = []
         for i in range(0, len(paths[:])):
-        #for i in range(0, 3):
+        #for i in range(0, 20):
 
             file_name = paths[i][:-1]
             if len(mask_paths) > 0:
@@ -222,7 +292,7 @@ def main():
             corrected_data, pol_array_first = correct_polarization(
                 x_map, y_map, clen_v, data, mask=mask
             )
-            
+            """
             fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
             pos1 = ax1.imshow(data * mask, vmax=50, cmap="jet")
             pos2 = ax2.imshow(corrected_data * mask, vmax=50, cmap="jet")
@@ -234,9 +304,9 @@ def main():
             fig.colorbar(pos2, shrink=0.6, ax=ax2)
             fig.colorbar(pos3, shrink=0.6, ax=ax3)
             # plt.show()
-            plt.savefig(f"{args.output}/plots/pol/{label}_{i}.png")
+            #plt.savefig(f"{args.output}/plots/pol/{label}_{i}.png")
             plt.close()
-            
+            """
             ## Peakfinder8 detector information and bad_pixel_map
 
             pf8_info.pf8_detector_info = dict(
@@ -256,46 +326,47 @@ def main():
 
                 peaks_list_x=[k-DetectorCenter[0] for k in peaks_list['fs']]
                 peaks_list_y=[k-DetectorCenter[1] for k in peaks_list['ss']]
-                peaks=list(zip(peaks_list_x, peaks_list_y))
 
-                peaks.sort(key=lambda x: math.sqrt(x[0]**2+x[1]**2))
-                peaks_list_x = [x for x,y in peaks[:10]]
-                peaks_list_y = [y for x,y in peaks[:10]]
+                peaks=list(zip(peaks_list_x, peaks_list_y))
+                peaks_list_x=[]
+                peaks_list_y=[]
+                for k in range(1,5):
+                    peaks_on_quadrant=get_peaks_on_quadrant(peaks,k)
+                    peaks_on_quadrant.sort(key=lambda x: math.sqrt(x[0]**2+x[1]**2))
+                    peaks_on_quadrant_x=[x for x,y in peaks_on_quadrant[:]]
+                    peaks_on_quadrant_y=[y for x,y in peaks_on_quadrant[:]]
+                    peaks_list_x += peaks_on_quadrant_x
+                    peaks_list_y += peaks_on_quadrant_y
+
                 peaks=list(zip(peaks_list_x, peaks_list_y))
 
                 inverted_peaks_x=[-1*k for k in peaks_list_x]
                 inverted_peaks_y=[-1*k for k in peaks_list_y]
                 inverted_peaks=list(zip(inverted_peaks_x, inverted_peaks_y))
-
-                pairs_list= take_pairs_with_minimum_distance(peaks, inverted_peaks)
+                pairs_list = select_closest_peaks(peaks, inverted_peaks)
+                print('List of pairs', pairs_list)
                 
-                shifts_list=[[peak_0[0]-peak_1[0],peak_0[1]-peak_1[1], peak_0, peak_1] for peak_0, peak_1 in pairs_list]
-                shifts_list.sort(key= lambda x:abs(x[0])+abs(x[1]))
-                shift_x, shift_y=shifts_list[0][:2]
-                peak_0=shifts_list[0][2]
-                peak_1=shifts_list[0][3]
-                print('shift', shift_x, shift_y)
-                xc=DetectorCenter[0]+(shift_x/2)
-                yc=DetectorCenter[1]+(shift_y/2)
-
                 ## Grid search of shifts around the detector center
                 pixel_step = 0.2
                 xx, yy = np.meshgrid(
-                    np.arange(-30,30.2, pixel_step, dtype=float),
-                    np.arange(-30,30.2, pixel_step, dtype=float)
+                    np.arange(-20,20.2, pixel_step, dtype=float),
+                    np.arange(-20,20.2, pixel_step, dtype=float)
                 )
-
                 coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
-                coordinates_anchor_peaks=[[[(peak_0[0], peak_0[1])], [(peak_1[0], peak_1[1])], shift] for shift in coordinates]
-
+                peaks_0=[x for x,y in pairs_list]
+                peaks_1=[y for x,y in pairs_list]
+                coordinates_anchor_peaks=[[peaks_0, peaks_1, shift] for shift in coordinates]
                 distance_summary=[]
                 for shift in coordinates_anchor_peaks:
                     distance_summary.append(shift_inverted_peaks_and_calculate_minimum_distance(shift))
-
                 ## Display plots
-                _, _ = open_distance_map_global_min(
+                xc, yc = open_distance_map_global_min(
                     distance_summary, output_folder, f"{label}_{i}", pixel_step
                 )
+                refined_center=(np.around(xc,1),np.around(yc,1))
+                shift_x=2*(xc-DetectorCenter[0])
+                shift_y=2*(yc-DetectorCenter[1])
+
                 refined_center=(np.around(xc,1),np.around(yc,1))
                 print('center',refined_center)
                 
@@ -330,11 +401,18 @@ def main():
                 ## Check pairs allignement
                 fig, ax = plt.subplots(1,1, figsize=(8, 8))
                 pos=ax.imshow(data*mask, vmax=50, cmap='cividis')
-                ax.scatter(original_peaks_x, original_peaks_y, facecolor="none", edgecolor="red", label='original peaks')
-                ax.scatter(inverted_non_shifted_peaks_x, inverted_non_shifted_peaks_y, facecolor="none", edgecolor="lime", label='inverted peaks')
-                ax.scatter(inverted_shifted_peaks_x, inverted_shifted_peaks_y, facecolor="none", edgecolor="blue", label='inverted shifted peaks')
-                ax.set_xlim(1000, 1500)
-                ax.set_ylim(1400, 900)
+                ax.scatter(original_peaks_x, original_peaks_y, facecolor="none", s=80, marker='s',edgecolor="red", label='original peaks')
+                ax.scatter(inverted_non_shifted_peaks_x, inverted_non_shifted_peaks_y, s=80, facecolor="none", marker='D', edgecolor="dodgerblue", label='inverted peaks')
+                ax.scatter(inverted_shifted_peaks_x, inverted_shifted_peaks_y, facecolor="none",  s=50,marker= 'D', edgecolor="lime", label='shift of inverted peaks')
+                if peaks_0!=[]:
+                    peaks_x=[x+DetectorCenter[0] for x,y in peaks_0]
+                    peaks_x+=[-1*x+DetectorCenter[0] for x,y in peaks_1]
+                    peaks_y=[y+DetectorCenter[1] for x,y in peaks_0]
+                    peaks_y+=[-1*y+DetectorCenter[1] for x,y in peaks_1]
+                    ax.scatter(peaks_x, peaks_y, facecolor="none",  s=150,marker= '*', edgecolor="magenta", label='friedel pair')
+
+                ax.set_xlim(900, 1600)
+                ax.set_ylim(1500, 800)
                 plt.title("Bragg peaks allignement")
                 fig.colorbar(pos, shrink=0.6)
                 ax.legend()
@@ -385,6 +463,6 @@ def main():
 
                 now = datetime.now()
                 print(f"Current end time = {now}")
-
+                
 if __name__ == "__main__":
     main()

@@ -10,6 +10,7 @@ import h5py
 import math
 from scipy.optimize import curve_fit
 
+DetectorCenter = [1253.5,1157]
 
 def main():
     parser = argparse.ArgumentParser(description="Plot calculated center distribution.")
@@ -38,22 +39,24 @@ def main():
     print(label)
     center_x = []
     center_y = []
-    x_min=1252.0
-    x_max=1255.5
-    y_min=1153.0
-    y_max=1161.0
+    x_min=1251
+    x_max=1261
+    y_min=1154
+    y_max=1164
+
+    
     
     if file_format == "lst":
         for i in paths:
             try:
                 f = h5py.File(f"{i[:-1]}", "r")
                 center = np.array(f["refined_center"])
+                error=math.sqrt((center[0]-DetectorCenter[0])**2+(center[1]-DetectorCenter[1])**2)
                 if center[1]>y_min and center[1]<y_max and center[0]<x_max and center[0]>x_min:
                     center_x.append(center[0])
                     center_y.append(center[1])       
-                else:
-                    id=np.array(f["id"])
-                    print(id)
+                if error>5 and error<6:
+                    print(i[:-1])
                 f.close()
             except KeyError:
                 print(i[:-1])
@@ -98,7 +101,7 @@ def main():
 
     ax1.scatter(x, proj_x, color="b")
     ax1.set_ylabel("Counts")
-    ax1.set_xlabel("xc [px]")
+    ax1.set_xlabel("Detector center in x (pixel)")
     ax1.legend()
 
     ax = fig.add_subplot(133, title='Projection in  y (pixel)')
@@ -127,11 +130,12 @@ def main():
 
     ax.scatter(x,proj_y, color="b")
     ax.set_ylabel("Counts")
-    ax.set_xlabel("yc [px]")
+    ax.set_xlabel("Detector center in y (pixel)")
     ax.legend()
-    #plt.show()
+    
+    plt.show()
 
-    plt.savefig(f"{args.output}/plots/{label}.png")
+    plt.savefig(f"{args.output}/plots/{label}_mid.png")
 
 
 if __name__ == "__main__":

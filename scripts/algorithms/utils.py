@@ -603,7 +603,7 @@ def open_distance_map_global_min(
     z = np.array(merged_dict["d"], dtype=np.float64).reshape((n, n))
     
     pos1 = ax1.imshow(z, cmap="rainbow")
-    step = 30
+    step = 20
     n = z.shape[0]
     ax1.set_xticks(np.arange(0, n, step, dtype=float))
     ax1.set_yticks(np.arange(0, n, step, dtype=float))
@@ -616,9 +616,9 @@ def open_distance_map_global_min(
     ax1.set_title("Distance [px]")
 
     proj_x = np.sum(z, axis=0)
-    print('proj',len(proj_x))
+    #print('proj',len(proj_x))
     x = np.arange(x[0], x[-1]+pixel_step, pixel_step)
-    print('x',len(x))
+    #print('x',len(x))
     index_x = np.unravel_index(np.argmin(proj_x, axis=None), proj_x.shape)
     # print(index_x)
     xc = round(x[index_x],1)

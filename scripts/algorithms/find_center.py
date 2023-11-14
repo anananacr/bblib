@@ -14,38 +14,45 @@ from utils import (
     mask_peaks,
     center_of_mass,
     azimuthal_average,
-    gaussian,
-    open_fwhm_map,
-    open_fwhm_map_global_min,
-    fit_fwhm,
-    shift_image_by_n_pixels,
-    get_center_theory,
-    correct_polarization,
-    update_corner_in_geom,
+    open_fwhm_map_global_min
 )
-import pandas as pd
 from models import PF8, PF8Info
 from scipy.optimize import curve_fit
-import multiprocessing
 import math
 import matplotlib.pyplot as plt
 from scipy import signal
 import subprocess as sub
 import h5py
 
-MinPeaks = 15
+MinPeaks = 10
 global pf8_info
 
 pf8_info = PF8Info(
     max_num_peaks=10000,
-    adc_threshold=5,
-    minimum_snr=7,
+    adc_threshold=0,
+    minimum_snr=4,
     min_pixel_count=2,
     max_pixel_count=10,
-    local_bg_radius=3,
+    local_bg_radius=4,
     min_res=0,
-    max_res=1200
+    max_res=600
 )
+PixelResolution=1/(75*1e-3)
+DetectorCenter=[514,256]
+
+BeamSweepingParam = {
+    "detector_center": DetectorCenter,
+    "pixel_resolution": PixelResolution,
+    "min_peaks": MinPeaks,
+    "pf8_max_num_peaks": PF8Config.max_num_peaks,
+    "pf8_adc_threshold": PF8Config.adc_threshold,
+    "pf8_minimum_snr": PF8Config.minimum_snr,
+    "pf8_min_pixel_count": PF8Config.min_pixel_count,
+    "pf8_max_pixel_count": PF8Config.max_pixel_count,
+    "pf8_local_bg_radius": PF8Config.local_bg_radius,
+    "pf8_min_res": PF8Config.min_res,
+    "pf8_max_res": PF8Config.max_res
+}
 
 def calculate_fwhm(data_and_coordinates: tuple) -> Dict[str, int]:
     corrected_data, mask, center_to_radial_average = data_and_coordinates
@@ -55,9 +62,9 @@ def calculate_fwhm(data_and_coordinates: tuple) -> Dict[str, int]:
     x_all = x.copy()
     y_all = y.copy()
     # Plot all radial average
-    if plot_flag:
-        fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
-        plt.plot(x, y)
+    #if plot_flag:
+    #    fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
+    #    plt.plot(x, y)
     
     ## Define background peak region
     x_min = 200
@@ -97,12 +104,12 @@ def calculate_fwhm(data_and_coordinates: tuple) -> Dict[str, int]:
             label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM : {round(fwhm,3)}",
         )
         plt.title("Azimuthal integration")
-        plt.xlim(0, 1200)
-        plt.ylim(0, round(popt[0])+2)
-        plt.legend()
-        plt.savefig(
-            f"{args.output}/plots/gaussian_fit/{label}_{frame_number}_{center_to_radial_average[0]}_{center_to_radial_average[1]}.png"
-        )
+        #plt.xlim(0, 1200)
+        #plt.ylim(0, round(popt[0])+2)
+        #plt.legend()
+        #plt.savefig(
+        #    f"{args.scratch}/plots/gaussian_fit/{label}_{frame_number}_{center_to_radial_average[0]}_{center_to_radial_average[1]}.png"
+        #)
         # plt.show()
         plt.close()
 
@@ -130,13 +137,6 @@ def main():
     parser.add_argument(
         "-m", "--mask", type=str, action="store", help="path to list of mask files .lst"
     )
-    parser.add_argument(
-        "-m_sym",
-        "--mask_sym",
-        type=str,
-        action="store",
-        help="path to list of symmetric mask files .lst",
-    )
 
     parser.add_argument(
         "-g",
@@ -146,9 +146,11 @@ def main():
         help="CrystFEL geometry filename",
     )
 
-
     parser.add_argument(
         "-o", "--output", type=str, action="store", help="path to output data files"
+    )
+    parser.add_argument(
+        "-s", "--scratch", type=str, action="store", help="path to output data files"
     )
 
     global args
@@ -169,9 +171,8 @@ def main():
     else:
         mask_paths = []
 
-
     file_format = get_format(args.input)
-    
+
     ### Extract geometry file
     x_map, y_map, det_dict = gf.pixel_maps_from_geometry_file(
         args.geom, return_dict=True
@@ -181,10 +182,6 @@ def main():
     res = preamb["res"]
     clen = preamb["clen"]
     dist = 0.0
-    #print('Det',det_dict)
-    global DetectorCenter
-    DetectorCenter=[-1*det_dict['0']['corner_x'],-1*det_dict['0']['corner_y']]
-    #print(DetectorCenter)
     output_folder = args.output
     global label
     label = (
@@ -218,87 +215,58 @@ def main():
             dist_m = 0.0
         # print("CLEN, COFSET", clen, dist_m)
         dist = dist_m * res
+    
+    
 
     if file_format == "lst":
-        ref_image = []
         for i in range(0, len(paths[:])):
-        #for i in range(0, 3):
+            hit_list=[]
+            initial_center_list=[]
+            center_list=[]
+            shift_x_mm_list=[]
+            shift_y_mm_list=[]
 
-            file_name = paths[i][:-1]
-            if len(mask_paths) > 0:
-                mask_file_name = mask_paths[0][:-1]
-            else:
-                mask_file_name = False
+            run_label=(os.path.dirname(i)).split('/')[-1]
+            # create run folder in processed folder, scratch_cc centered and fwhm_map
+            file_label=os.path.basename(i).split('.')[0]
 
-            frame_number = i
-            print(file_name)
-                        
-            initial_center = DetectorCenter
+            if not os.path.exists(run_label):
+                cmd=f"mkdir {args.output}/centered/{run_label}; mkdir {args.scratch}/center_refinement/plots/centered/{run_label}; mkdir {args.scratch}/center_refinement/plots/fwhm_map/{run_label}"
+                sub.process(cmd, shell=True)
 
-            if get_format(file_name) == "cbf":
-                data = np.array(fabio.open(f"{file_name}").data)
-            elif get_format(file_name) == "h":
+            file_name = paths[i][:-1]     
+
+            if get_format(file_name) == "h":
                 f = h5py.File(f"{file_name}", "r")
-                data = np.array(f["raw_data"])
-                f.close()
+                data = f["entry/data/data"]
 
-            if not mask_file_name:
-                mask = np.ones(data.shape)
-            else:
-                if get_format(mask_file_name) == "cbf":
-                    xds_mask = np.array(fabio.open(f"{mask_file_name}").data)
-                    # Mask of defective pixels
-                    xds_mask[np.where(xds_mask <= 0)] = 0
-                    xds_mask[np.where(xds_mask > 0)] = 1
-                    # Mask hot pixels
-                    xds_mask[np.where(data > 1e5)] = 0
-                    mask = xds_mask
-                elif get_format(mask_file_name) == "h":
-                    f = h5py.File(f"{mask_file_name}", "r")
-                    mask = np.array(f["data/data"])
-                    mask = np.array(mask, dtype=np.int32)
-                    # Mask of defective pixels
-                    mask[np.where(data < 0)] = 0
-                    # Mask hot pixels
-                    mask[np.where(data > 1e5)] = 0
-                    f.close()
-
+            mask=np.ones(data.shape[1:3])
             ## Polarization correction factor
-            corrected_data, pol_array_first = correct_polarization(
-                x_map, y_map, clen_v, data, mask=mask
-            )
-            
-            fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
-            pos1 = ax1.imshow(data * mask, vmax=50, cmap="cividis")
-            pos2 = ax2.imshow(corrected_data * mask, vmax=50, cmap="cividis")
-            pos3 = ax3.imshow(pol_array_first, vmin=0.7, vmax=1, cmap="cividis")
-            ax1.set_title("Original data")
-            ax2.set_title("Polarization corrected data")
-            ax3.set_title("Polarization array")
-            fig.colorbar(pos1, shrink=0.6, ax=ax1)
-            fig.colorbar(pos2, shrink=0.6, ax=ax2)
-            fig.colorbar(pos3, shrink=0.6, ax=ax3)
-            # plt.show()
-            plt.savefig(f"{args.output}/plots/pol/{label}_{i}.png")
-            plt.close()
-            
-            ## Peakfinder8 detector information and bad_pixel_map
 
-            pf8_info.pf8_detector_info = dict(
-                asic_nx=mask.shape[1],
-                asic_ny=mask.shape[0],
-                nasics_x=1,
-                nasics_y=1,
-            )
-            pf8_info._bad_pixel_map = mask
-            pf8_info.modify_radius(DetectorCenter[0], DetectorCenter[1])
-            pf8 = PF8(pf8_info)
-            peaks_list = pf8.get_peaks_pf8(data=corrected_data)
+            for frame_index range(len(data.shape[0])):
+                frame=np.array(data[frame_index])
+                #first_center=center_of_mass(frame, mask)
+                #create_pixel_maps(frame.shape, first_center)
+                #corrected_data, pol_array_first = correct_polarization(
+                #    x_map, y_map, clen_v, frame, mask=mask
+                #)
+                corrected_data=frame
+                #fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+                #pos1 = ax1.imshow(frame * mask, vmax=50, cmap="cividis")
+                #pos2 = ax2.imshow(corrected_data * mask, vmax=50, cmap="cividis")
+                #pos3 = ax3.imshow(pol_array_first, vmin=0.7, vmax=1, cmap="cividis")
+                #ax1.set_title("Original data")
+                #ax2.set_title("Polarization corrected data")
+                #ax3.set_title("Polarization array")
+                #fig.colorbar(pos1, shrink=0.6, ax=ax1)
+                #fig.colorbar(pos2, shrink=0.6, ax=ax2)
+                #fig.colorbar(pos3, shrink=0.6, ax=ax3)
+                # plt.show()
+                #plt.savefig(f"{args.output}/plots/pol/{label}_{i}.png")
+                #plt.close()
 
-            if peaks_list["num_peaks"] >= MinPeaks:
-                first_center=center_of_mass(corrected_data, mask)
+                ## Peakfinder8 detector information and bad_pixel_map
 
-                ## Peak search including more peaks
                 pf8_info.pf8_detector_info = dict(
                     asic_nx=mask.shape[1],
                     asic_ny=mask.shape[0],
@@ -306,107 +274,103 @@ def main():
                     nasics_y=1,
                 )
                 pf8_info._bad_pixel_map = mask
-                pf8_info.modify_radius(
-                    int(first_center[0]), int(first_center[1])
-                )
-                pf8_info.minimum_snr = 5
-                pf8_info.min_pixel_count = 1
+                first_center=center_of_mass(corrected_data, mask)
+                initial_center_list.append(first_center)
+                pf8_info.modify_radius(first_center[0], first_center[1])
                 pf8 = PF8(pf8_info)
-
                 peaks_list = pf8.get_peaks_pf8(data=corrected_data)
-                indices = (
-                    np.array(peaks_list["ss"], dtype=int),
-                    np.array(peaks_list["fs"], dtype=int),
-                )
 
-                # Mask Bragg  peaks
-                only_peaks_mask = mask_peaks(mask, indices, bragg=0)
-                pf8_mask = only_peaks_mask * mask
+                if peaks_list["num_peaks"] >= MinPeaks:
+                    hit_list.append(frame)
+                    ## Peak search including more peaks
+                    pf8_info.pf8_detector_info = dict(
+                        asic_nx=mask.shape[1],
+                        asic_ny=mask.shape[0],
+                        nasics_x=1,
+                        nasics_y=1,
+                    )
+                    pf8_info._bad_pixel_map = mask
+                    pf8_info.modify_radius(
+                        int(first_center[0]), int(first_center[1])
+                    )
+                    pf8_info.minimum_snr = 5
+                    pf8_info.min_pixel_count = 1
+                    pf8 = PF8(pf8_info)
+
+                    peaks_list = pf8.get_peaks_pf8(data=corrected_data)
+                    indices = (
+                        np.array(peaks_list["ss"], dtype=int),
+                        np.array(peaks_list["fs"], dtype=int),
+                    )
+
+                    # Mask Bragg  peaks
+                    only_peaks_mask = mask_peaks(mask, indices, bragg=0)
+                    pf8_mask = only_peaks_mask * mask
+
+                    # Brute force manner
+                    ## Grid search of sharpness of the azimutal average
+
+                    pixel_step = 1
+                    xx, yy = np.meshgrid(
+                        np.arange(first_center[0] - 20, first_center[0] + 21, pixel_step, dtype=int),
+                        np.arange(first_center[1] - 20, first_center[1] + 21, pixel_step, dtype=int)
+                    )
+
+                    coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
+                    coordinates_anchor_data=[(corrected_data, pf8_mask, shift) for shift in coordinates]
+
+                    for k in coordinates_anchor_data:
+                        fwhm_summary.append(calculate_fwhm(coordinates_anchor_data))
+
+                    ## Display plots
+                    xc, yc = open_fwhm_map_global_min(
+                        fwhm_summary, f"{args.scratch}/center_refinement/plots/fwhm_map/{run_label}/{file_label}_{frame_index}", pixel_step
+                    )
+
+                    refined_center = (int(np.round(xc)), int(np.round(yc)))
+                    center_list.append(refined_center)
+                    detector_shift_x = (refined_center[0]-DetectorCenter[0])/PixelResolution
+                    detector_shift_y = (refined_center[1]-DetectorCenter[1])/PixelResolution
+                    shift_x_mm_list.append(detector_shift_x)
+                    shift_y_mm_list.append(detector_shift_y)
+
+                    #plot_flag = True
+                    #results = calculate_fwhm((corrected_data, pf8_mask,(xc, yc)))
+                    #plot_flag = False
+
+                    ## Display plots
+                    xr = DetectorCenter[0]
+                    yr = DetectorCenter[1]
+
+                    fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
+                    pos1 = ax1.imshow(corrected_data, vmax=50, cmap="cividis")
+                    ax1.scatter(xr, yr, color="lime", label=f"Detector center:({xr},{yr})")
+                    ax1.scatter(
+                        xc, yc, color="red", label=f"Refined center:({xc},{yc})"
+                    )
+                    ax1.set_title("Center refinement: FWHM minimization")
+                    fig.colorbar(pos1, ax=ax1, shrink=0.6)
+                    #ax1.set_xlim(400, 2000)
+                    #ax1.set_ylim(400, 2000)
+                    ax1.legend()
+                    plt.savefig(f"{args.scratch}/plots/centered/{run_label}/{file_label}_{frame_index}.png")
+                    plt.close()
                 
-                # Brute force manner
-                ## Grid search of sharpness of the azimutal average
-                """
-                pixel_step = 1
-                xx, yy = np.meshgrid(
-                    np.arange(DetectorCenter[0] - 10, DetectorCenter[0] + 11, pixel_step, dtype=int),
-                    np.arange(DetectorCenter[1] - 10, DetectorCenter[1] + 11, pixel_step, dtype=int)
-                )
-                """
-                
-                pixel_step = 1
-                xx, yy = np.meshgrid(
-                    np.arange(first_center[0] +10 - 15, first_center[0] +10 + 16, pixel_step, dtype=int),
-                    np.arange(first_center[1] - 30 - 15, first_center[1] -30 + 16, pixel_step, dtype=int)
-                )
-
-                coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
-                coordinates_anchor_data=[(corrected_data, pf8_mask, shift) for shift in coordinates]
-
-                pool = multiprocessing.Pool()
-                with pool:
-                    fwhm_summary = pool.map(calculate_fwhm, coordinates_anchor_data)
-                
-                ## Display plots
-                xc, yc = open_fwhm_map_global_min(
-                    fwhm_summary, output_folder, f"{label}_{i}", pixel_step
-                )
-                last_center = (xc, yc)
-
-                fit = open_fwhm_map(
-                    fwhm_summary, output_folder, f"fine_{label}_{i}", pixel_step
-                )
-                if not fit:
-                    xc, yc = last_center
-                else:
-                    xc, yc = fit
-
-                refined_center = (xc, yc)
-                print("Second approximation", xc, yc)
-
-                plot_flag = True
-                results = calculate_fwhm((corrected_data, pf8_mask,(xc, yc)))
-                plot_flag = False
-
-                # Second mask peaks
-                # Update geom and move to final geometry files folder
-                updated_geom = f"{args.geom[:-5]}_{label}_{i}_v1.geom"
-                cmd = f"cp {args.geom} {updated_geom}"
-                sub.call(cmd, shell=True)
-                update_corner_in_geom(updated_geom, xc, yc)
-                cmd = f"cp {updated_geom} {output_folder}/final_geom "
-                sub.call(cmd, shell=True)
-                
-                ## Display plots
-                xr = DetectorCenter[0]
-                yr = DetectorCenter[1]
-
-                fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
-                pos1 = ax1.imshow(corrected_data, vmax=50, cmap="cividis")
-                ax1.scatter(xr, yr, color="lime", label=f"Initial center:({xr},{yr})")
-                ax1.scatter(
-                    xc, yc, color="red", label=f"Refined center:({xc},{yc})"
-                )
-                ax1.set_title("Center refinement: FWHM minimization")
-                fig.colorbar(pos1, ax=ax1, shrink=0.6)
-                ax1.set_xlim(400, 2000)
-                ax1.set_ylim(400, 2000)
-                ax1.legend()
-                plt.savefig(f"{args.output}/plots/centered/{label}_{i}.png")
-                plt.close()
-                # plt.show()
-                
-                if args.output:
-                    f = h5py.File(f"{output_folder}/h5_files/{label}_{i}.h5", "w")
-                    f.create_dataset("hit", data=1)
-                    f.create_dataset("id", data=file_name)
-                    f.create_dataset("first_center", data=first_center)
-                    f.create_dataset("refined_center", data=refined_center)
-                    f.create_dataset("fwhm_min", data=results["fwhm"])
-                    f.create_dataset("r_squared_fwhm_min", data=results["r_squared"])
-                    f.close()
-                
-            now = datetime.now()
-            print(f"Current end time = {now}")
+            f.close()
+            
+            f = h5py.File(f"{args.output}/centered/{run_label}/{file_label}.h5", "w")
+            grp = f.create_group("data")
+            grp.create_dataset("data", data=hit_list)
+            grp = f.create_group("shots")
+            grp.create_dataset("shift_x_mm", data=shift_x_mm_list)
+            grp.create_dataset("shift_y_mm", data=shift_y_mm_list)
+            grp = f.create_group("beam_sweeping_config")
+            for key, value in BeamSweepingParam.items():
+                grp.create_dataset(key, data=value)
+            grp.create_dataset('initial_center', data=initial_center_list)
+            grp.create_dataset("refined_center", data=center_list)
+            
+            f.close()
 
 
 if __name__ == "__main__":

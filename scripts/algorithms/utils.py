@@ -481,7 +481,7 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
 
 
 def open_fwhm_map_global_min(
-    lines: list, output_folder: str, label: str, pixel_step: int
+    lines: list, output_file: str, pixel_step: int
 ):
     """
     Open FWHM grid search optmization plot, fit projections in both axis to get the point of maximum sharpness of the radial average.
@@ -514,11 +514,18 @@ def open_fwhm_map_global_min(
     pos1 = ax1.imshow(z, cmap="rainbow")
     step = 5
     n = z.shape[0]
+
     ax1.set_xticks(np.arange(0, n, step, dtype=int))
     ax1.set_yticks(np.arange(0, n, step, dtype=int))
-    step = step * (abs(x[0] - x[1]))
-    ax1.set_xticklabels(np.arange(x[0], x[-1]+step, step, dtype=int))
-    ax1.set_yticklabels(np.arange(y[0], y[-1]+step, step, dtype=int))
+
+    ticks_len=(np.arange(0, n, step)).shape[0]
+    step = round(step * (abs(x[0] - x[1])), 1)
+    ax1.set_xticklabels(
+        np.linspace(round(x[0], 1), round(x[-1] + step, 1), ticks_len, dtype=int), rotation=45
+    )
+    ax1.set_yticklabels(
+        np.linspace(round(y[0], 1), round(y[-1] + step, 1), ticks_len, dtype=int)
+    )
 
     ax1.set_ylabel("yc [px]")
     ax1.set_xlabel("xc [px]")
@@ -527,11 +534,18 @@ def open_fwhm_map_global_min(
     pos2 = ax2.imshow(r, cmap="rainbow")
     step = 5
     n = z.shape[0]
+
     ax2.set_xticks(np.arange(0, n, step, dtype=int))
     ax2.set_yticks(np.arange(0, n, step, dtype=int))
-    step = step * (abs(x[0] - x[1]))
-    ax2.set_xticklabels(np.arange(x[0], x[-1]+step, step, dtype=int))
-    ax2.set_yticklabels(np.arange(y[0], y[-1]+step, step, dtype=int))
+
+    ticks_len=(np.arange(0, n, step)).shape[0]
+    step = round(step * (abs(x[0] - x[1])), 1)
+    ax2.set_xticklabels(
+        np.linspace(round(x[0], 1), round(x[-1] + step, 1), ticks_len, dtype=int), rotation=45
+    )
+    ax2.set_yticklabels(
+        np.linspace(round(y[0], 1), round(y[-1] + step, 1), ticks_len, dtype=int)
+    )
 
     ax2.set_ylabel("yc [px]")
     ax2.set_xlabel("xc [px]")
@@ -566,7 +580,7 @@ def open_fwhm_map_global_min(
     # Display the figure
 
     # plt.show()
-    plt.savefig(f"{output_folder}/plots/fwhm_map/{label}.png")
+    plt.savefig(f"{output_file}.png")
     plt.close()
     return xc, yc
 

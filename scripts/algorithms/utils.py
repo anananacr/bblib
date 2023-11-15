@@ -12,7 +12,7 @@ sys.path.append("/home/rodria/software/vdsCsPadMaskMaker/new-versions/")
 from maskMakerGUI import pMakePolarisationArray as make_polarization_array_fast
 import geometry_funcs as gf
 
-Res = 172 * 1e-6
+Res = 75 * 1e-6
 cspad_psana_shape = (1, 1, 1475, 1679)
 
 
@@ -391,8 +391,8 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
     r = np.array(merged_dict["r_squared"]).reshape((n, n))
 
     index_y, index_x = np.where(z == np.min(z))
-    pos1 = ax1.imshow(z, cmap="rainbow")
-    step = 5
+    pos1 = ax1.imshow(z, cmap="plasma")
+    step = 10
     n = z.shape[0]
     ax1.set_xticks(np.arange(0, n, step, dtype=int))
     ax1.set_yticks(np.arange(0, n, step, dtype=int))
@@ -404,8 +404,8 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
     ax1.set_xlabel("xc [px]")
     ax1.set_title("FWHM")
 
-    pos2 = ax2.imshow(r, cmap="rainbow")
-    step = 5
+    pos2 = ax2.imshow(r, cmap="plasma")
+    step = 10
     n = z.shape[0]
     ax2.set_xticks(np.arange(0, n, step, dtype=int))
     ax2.set_yticks(np.arange(0, n, step, dtype=int))
@@ -511,8 +511,8 @@ def open_fwhm_map_global_min(
     z = np.array(merged_dict["fwhm"], dtype=np.float64).reshape((n, n))
     r = np.array(merged_dict["r_squared"]).reshape((n, n))
 
-    pos1 = ax1.imshow(z, cmap="rainbow")
-    step = 5
+    pos1 = ax1.imshow(z, cmap="plasma")
+    step = 10
     n = z.shape[0]
 
     ax1.set_xticks(np.arange(0, n, step, dtype=int))
@@ -531,8 +531,8 @@ def open_fwhm_map_global_min(
     ax1.set_xlabel("xc [px]")
     ax1.set_title("FWHM")
 
-    pos2 = ax2.imshow(r, cmap="rainbow")
-    step = 5
+    pos2 = ax2.imshow(r, cmap="plasma")
+    step = 10
     n = z.shape[0]
 
     ax2.set_xticks(np.arange(0, n, step, dtype=int))
@@ -551,7 +551,7 @@ def open_fwhm_map_global_min(
     ax2.set_xlabel("xc [px]")
     ax2.set_title("R²")
 
-    proj_x = np.sum(z, axis=0)
+    proj_x = np.sum(z, axis=0) // n
     x = np.arange(x[0], x[-1] + pixel_step, pixel_step)
     index_x = np.unravel_index(np.argmin(proj_x, axis=None), proj_x.shape)
     # print(index_x)
@@ -563,7 +563,7 @@ def open_fwhm_map_global_min(
     ax3.set_title("FWHM projection in x")
     ax3.legend()
 
-    proj_y = np.sum(z, axis=1)
+    proj_y = np.sum(z, axis=1) // n
     x = np.arange(y[0], y[-1] + pixel_step, pixel_step)
     index_y = np.unravel_index(np.argmin(proj_y, axis=None), proj_y.shape)
     yc = x[index_y]
@@ -942,3 +942,27 @@ def fill_gaps(data: np.ndarray, center: tuple, mask: np.ndarray) -> np.ndarray:
 
         filled_data[i] = np.mean(ave_y[index])
     return filled_data
+
+def circle_mask(data:np.ndarray, center:tuple, radius:int) ->np.ndarray:
+    """
+    Make a  ring mask for the data
+
+    Parameters
+    ----------
+    data: np.ndarray
+        Image in which mask will be shaped
+    radius: int
+        Outer radius of the mask
+   
+    Returns
+    ----------
+    mask: np.ndarray
+    """
+
+    bin_size = bin
+    a = data.shape[0]
+    b = data.shape[1]
+    
+    [X, Y] = np.meshgrid(np.arange(b) - center[0], np.arange(a) - center[1])
+    R = np.sqrt(np.square(X) + np.square(Y))
+    return (np.greater(R, radius)).astype(np.int32) 

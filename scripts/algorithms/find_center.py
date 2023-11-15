@@ -281,8 +281,6 @@ def main():
                 sub.call(cmd, shell=True)
                 cmd = f"mkdir {args.scratch}/center_refinement/plots/fwhm_map/{split_path[-2]}/; mkdir {args.scratch}/center_refinement/plots/fwhm_map/{run_label};"
                 sub.call(cmd, shell=True)
-                cmd = f"  "
-                sub.call(cmd, shell=True)
 
             file_name = paths[i][:-1]
 

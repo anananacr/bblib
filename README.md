@@ -5,9 +5,9 @@ Using Python 3.7.13
 
 :loudspeaker: :warning: :construction: Work in progress :loudspeaker: :warning: :construction:
 
-### Beam sweeping
+## Beam sweeping
 
-## Calculate the direct beam postion of each frame based on FWHM minimization of the background peak
+### Calculate the direct beam postion of each frame based on FWHM minimization of the background peak
 
 Raw folder: raw/run_label/scan_type/run_label_scan_type_data_*.h5
 lst files: each dataset should be splitted in split_run_label_scan_type.lst**

@@ -3,6 +3,8 @@
 INPUT=$1
 START=$2
 END=$3
+
+## SET HERE YOUR PATHS
 ROOT=/asap3/petra3/gpfs/p09/2023/data/11019087/processed/rodria
 SCRATCH=/asap3/petra3/gpfs/p09/2023/data/11019087/scratch_cc/rodria
 

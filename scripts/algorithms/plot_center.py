@@ -10,7 +10,8 @@ import h5py
 import math
 from scipy.optimize import curve_fit
 
-DetectorCenter = [1253.5,1157]
+DetectorCenter = [1253.5, 1157]
+
 
 def main():
     parser = argparse.ArgumentParser(description="Plot calculated center distribution.")
@@ -39,23 +40,29 @@ def main():
     print(label)
     center_x = []
     center_y = []
-    x_min=1251
-    x_max=1261
-    y_min=1154
-    y_max=1164
+    x_min = 1251
+    x_max = 1261
+    y_min = 1154
+    y_max = 1164
 
-    
-    
     if file_format == "lst":
         for i in paths:
             try:
                 f = h5py.File(f"{i[:-1]}", "r")
                 center = np.array(f["refined_center"])
-                error=math.sqrt((center[0]-DetectorCenter[0])**2+(center[1]-DetectorCenter[1])**2)
-                if center[1]>y_min and center[1]<y_max and center[0]<x_max and center[0]>x_min:
+                error = math.sqrt(
+                    (center[0] - DetectorCenter[0]) ** 2
+                    + (center[1] - DetectorCenter[1]) ** 2
+                )
+                if (
+                    center[1] > y_min
+                    and center[1] < y_max
+                    and center[0] < x_max
+                    and center[0] > x_min
+                ):
                     center_x.append(center[0])
-                    center_y.append(center[1])       
-                if error>5 and error<6:
+                    center_y.append(center[1])
+                if error > 5 and error < 6:
                     print(i[:-1])
                 f.close()
             except KeyError:
@@ -63,32 +70,32 @@ def main():
             except:
                 print("OS", i[:-1])
     print(len(center_x))
-   
-    bins=0.1
 
-    xedges = np.arange(x_min,x_max,bins)
-    yedges = np.arange(y_min,y_max, bins)
-    
-    H, xedges, yedges = np.histogram2d(center_x, center_y, bins=(xedges,yedges))
+    bins = 0.1
+
+    xedges = np.arange(x_min, x_max, bins)
+    yedges = np.arange(y_min, y_max, bins)
+
+    H, xedges, yedges = np.histogram2d(center_x, center_y, bins=(xedges, yedges))
     H = H.T
-    
+
     fig = plt.figure(figsize=(20, 5))
-    ax = fig.add_subplot(131, title='Detector center distribution (pixel)')
+    ax = fig.add_subplot(131, title="Detector center distribution (pixel)")
     X, Y = np.meshgrid(xedges, yedges)
     pos = ax.pcolormesh(X, Y, H)
     fig.colorbar(pos)
 
-    ax1 = fig.add_subplot(132, title='Projection in  x (pixel)')
+    ax1 = fig.add_subplot(132, title="Projection in  x (pixel)")
     proj_x = np.sum(H, axis=0)
-    #bins=abs(xedges[1]-xedges[0])
+    # bins=abs(xedges[1]-xedges[0])
     x = np.arange(xedges[0], xedges[-1], bins)
-    y=proj_x
+    y = proj_x
 
     mean = sum(x * y) / sum(y)
     sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
     popt, pcov = curve_fit(gaussian, x, y, p0=[max(y), mean, sigma])
     residuals = y - gaussian(x, *popt)
-    ss_res = np.sum(residuals**2)
+    ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y - np.mean(y)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
     ## Calculation of FWHM
@@ -97,26 +104,30 @@ def main():
 
     x_fit = np.arange(xedges[0], xedges[-1], 0.01)
     y_fit = gaussian(x_fit, *popt)
-    ax1.plot(x_fit,y_fit,"r:",label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM : {round(fwhm,3)}")
+    ax1.plot(
+        x_fit,
+        y_fit,
+        "r:",
+        label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM : {round(fwhm,3)}",
+    )
 
     ax1.scatter(x, proj_x, color="b")
     ax1.set_ylabel("Counts")
     ax1.set_xlabel("Detector center in x (pixel)")
     ax1.legend()
 
-    ax = fig.add_subplot(133, title='Projection in  y (pixel)')
+    ax = fig.add_subplot(133, title="Projection in  y (pixel)")
     proj_y = np.sum(H, axis=1)
-    #bins=abs(yedges[1]-yedges[0])
-    x = np.arange(yedges[0], yedges[-1],bins)
-    y=proj_y
+    # bins=abs(yedges[1]-yedges[0])
+    x = np.arange(yedges[0], yedges[-1], bins)
+    y = proj_y
 
     mean = sum(x * y) / sum(y)
     sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
 
-
     popt, pcov = curve_fit(gaussian, x, y, p0=[max(y), mean, sigma])
     residuals = y - gaussian(x, *popt)
-    ss_res = np.sum(residuals**2)
+    ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y - np.mean(y)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
     ## Calculation of FWHM
@@ -126,13 +137,18 @@ def main():
     x_fit = np.arange(yedges[0], yedges[-1], 0.01)
     y_fit = gaussian(x_fit, *popt)
 
-    ax.plot(x_fit, y_fit, "r:", label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM : {round(fwhm,3)}")
+    ax.plot(
+        x_fit,
+        y_fit,
+        "r:",
+        label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM : {round(fwhm,3)}",
+    )
 
-    ax.scatter(x,proj_y, color="b")
+    ax.scatter(x, proj_y, color="b")
     ax.set_ylabel("Counts")
     ax.set_xlabel("Detector center in y (pixel)")
     ax.legend()
-    
+
     plt.show()
 
     plt.savefig(f"{args.output}/plots/{label}_mid.png")

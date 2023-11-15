@@ -8,10 +8,12 @@ Using Python 3.7.13
 ## Beam sweeping
 
 ### Calculate the direct beam postion of each frame based on FWHM minimization of the background peak
+scripts in scripts/algorithms
 
 Raw folder: raw/run_label/scan_type/run_label_scan_type_data_*.h5
 lst files: each dataset should be splitted in split_run_label_scan_type.lst**
 index of lst files are integer and it will submit a slurm job for each lst index from initial_index to end_index
+
 
 ./turbo_center.sh split_run_label_scan_type initial_index end_index
 

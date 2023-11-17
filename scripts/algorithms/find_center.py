@@ -33,14 +33,16 @@ MinPeaks = 10
 
 PF8Config = PF8Info(
     max_num_peaks=10000,
-    adc_threshold=0,
-    minimum_snr=7,
+    adc_threshold=10,
+    minimum_snr=4,
     min_pixel_count=1,
-    max_pixel_count=30,
+    max_pixel_count=10,
     local_bg_radius=4,
     min_res=0,
-    max_res=1200,
+    max_res=1200
 )
+
+PlotsFlag = True
 
 # Set here pixel resolution in mm to correct from the DetectorCenter taken from the geometry file.
 
@@ -50,17 +52,19 @@ PixelResolution = 1 / (75 * 1e-3)
 AutoFlag = False
 
 # Set here the pixel coordinates that defines the central box where the FWHM minimization search will look for the direct beam position
-ForceCenter = [587, 400]
+#ForceCenter = [587, 400]
+ForceCenter = [643, 398]
 
 # Set here the maximum number of pixels from ForceCenter to define region where the FWHM minimization search will look for the direct beam position
-OutlierDistance = 80
+#OutlierDistance = 80
+OutlierDistance = 20
 
 # Should be masked in the mask file but I had to improvise in the first day
 BadPixelValue = 4e9
 
 # Look for the background peak region, for this you have to know exactly well one position use ForceCenter and OulierDistance short and get the peak region from the azimuthal integration plot
-MinPeakRegion = 200
-MaxPeakRegion = 350
+MinPeakRegion = 52
+MaxPeakRegion = 92
 
 # Here I am creating a dictionary to save all beam sweeping parameters in the hdf5 output file
 BeamSweepingParam = {
@@ -77,7 +81,7 @@ BeamSweepingParam = {
     "min_peak_region": MinPeakRegion,
     "max_peak_region": MaxPeakRegion,
     "bad_pixel_value": BadPixelValue,
-    "auto_flag": AutoFlag,
+    "auto_flag": AutoFlag
 }
 
 
@@ -289,9 +293,9 @@ def main():
                 data = f["entry/data"]["data"]
             ## Polarization correction factor
 
-            for frame_index in range(data.shape[0]):
-                ## I only look a few images of the run to tweak parameters
-                # for frame_index in range(4):
+            #for frame_index in range(data.shape[0]):
+                ## I only look a few images of the run to debug
+            for frame_index in range(3):
 
                 frame = np.array(data[frame_index])
                 ### Skipping polarization for now. I don't know to handle the polarization at the moment ask Oleksandrs help after the beamtime
@@ -351,7 +355,7 @@ def main():
                 PF8Config.modify_radius(first_center[0], first_center[1])
                 pf8 = PF8(PF8Config)
                 peaks_list = pf8.get_peaks_pf8(data=corrected_data)
-
+                n_hits=0
                 ## Minimum peaks rejection the frame will not be saved in processed
                 if peaks_list["num_peaks"] >= MinPeaks:
                     ## Save frame if it is a hit. This requires a lot of memory, bad way of do it. I have to fix after the beamtime.
@@ -421,7 +425,7 @@ def main():
                     xc, yc = open_fwhm_map_global_min(
                         fwhm_summary,
                         f"{args.scratch}/center_refinement/plots/fwhm_map/{run_label}/{file_label}_{frame_index}",
-                        pixel_step,
+                        pixel_step, PlotsFlag
                     )
 
                     ## Here you get the direct beam position in detector coordinates. Is it right to call this? Ask Oleksandr.
@@ -444,59 +448,76 @@ def main():
                     plot_flag = False
 
                     ## Display plots to check peaksearch and where the refined center converged in relation to the first_center.
-                    xr = first_center[0]
-                    yr = first_center[1]
+                    if PlotsFlag:
+                        xr = first_center[0]
+                        yr = first_center[1]
 
-                    fig, ax1 = plt.subplots(1, 1, figsize=(6, 6))
-                    pos1 = ax1.imshow(corrected_data * mask, vmax=20, cmap="cividis")
-                    ax1.scatter(
-                        xr, yr, color="blue", label=f"Detector center:({xr},{yr})"
-                    )
-                    ax1.scatter(
-                        xc, yc, color="red", label=f"Refined center:({xc},{yc})"
-                    )
-                    ax1.scatter(
-                        indices[1],
-                        indices[0],
-                        facecolor="none",
-                        s=60,
-                        marker="s",
-                        edgecolor="lime",
-                        label="original peaks",
-                    )
-                    ax1.set_title("Center refinement: FWHM minimization")
-                    fig.colorbar(pos1, ax=ax1, shrink=0.6)
-                    # ax1.set_xlim(400, 2000)
-                    # ax1.set_ylim(400, 2000)
-                    # ax1.legend()
-                    plt.savefig(
-                        f"{args.scratch}/center_refinement/plots/centered/{run_label}/{file_label}_{frame_index}.png"
-                    )
-                    plt.close()
+                        fig, ax1 = plt.subplots(1, 1, figsize=(6, 6))
+                        pos1 = ax1.imshow(corrected_data * mask, vmax=20, cmap="cividis")
+                        ax1.scatter(
+                            xr, yr, color="blue", label=f"Detector center:({xr},{yr})"
+                        )
+                        ax1.scatter(
+                            xc, yc, color="red", label=f"Refined center:({xc},{yc})"
+                        )
+                        ax1.scatter(
+                            indices[1],
+                            indices[0],
+                            facecolor="none",
+                            s=60,
+                            marker="s",
+                            edgecolor="lime",
+                            label="original peaks",
+                        )
+                        ax1.set_title("Center refinement: FWHM minimization")
+                        fig.colorbar(pos1, ax=ax1, shrink=0.6)
+                        # ax1.set_xlim(400, 2000)
+                        # ax1.set_ylim(400, 2000)
+                        # ax1.legend()
+                        plt.savefig(
+                            f"{args.scratch}/center_refinement/plots/centered/{run_label}/{file_label}_{frame_index}.png"
+                        )
+                        plt.close()
+                        n_hits+=1
 
             # Don't forget to close the file. Should I do in a safer way? Ask Marina and Oleksandr.
             f.close()
+            print(n_hits)
+            shift_x_mm=np.array(shift_x_mm_list)
+            shift_y_mm=np.array(shift_y_mm_list)
 
             # Save the hdf5 files as it is in the raw folder. I have to sit with Marina and Oleksandr and come up with what should be the best way to pass things for CrystFEL and if the paths make sense for them.
-            f = h5py.File(f"{args.output}/centered/{run_label}/{file_label}.h5", "w")
+            with h5py.File(f"{args.output}/centered/{run_label}/{file_label}.h5", "w") as f:
+                ## Here comes everything needed to pass to CrystFEL. Is it missing something? Ask Marina
+                entry = f.create_group("entry")
+                entry.attrs["NX_class"]="NXentry"
+                grp_data = entry.create_group("data")
+                grp_data.attrs["NX_class"]="NXdata"
+                #grp_data.create_dataset("data", data=hit_list, compression="gzip")
+                grp_data.create_dataset("data", data=hit_list)
 
-            ## Here comes everything needed to pass to CrystFEL. Is it missing something? Ask Oleksandr
+                """
+                grp_shots = entry.create_group("shots") # gabriel
+                grp_shots.create_dataset("shift_x_mm", data=shift_x_mm,chunks=(3))
+                grp_shots.create_dataset("shift_y_mm", data=shift_y_mm,chunks=(3))
+                """
+                for frame_index in range(3):  
+                    grp_frame = entry.create_group(f"{frame_index+1}")
+                    grp_frame.attrs["NX_class"]="NXdata"
+                    #grp_frame.create_dataset("shift_x_mm", data=np.float32(shift_x_mm[frame_index]))
+                    grp_shots=grp_frame.create_group("shots")
+                    grp_shots.attrs["NX_class"]="NXdata"
+                    grp_shots.create_dataset("shift_x_mm", data=np.float32(50*(frame_index+1)))
+                    grp_shots.create_dataset("shift_y_mm", data=np.float32(shift_y_mm[frame_index]))
+                
+                ## Here comes all parameters needed for the beam sweeping. Is it good as it is right now ?? Ask Marina
+                grp_config = f.create_group("beam_sweeping_config")
+                for key, value in BeamSweepingParam.items():
+                    grp_config.create_dataset(key, data=value)
+                grp_config.create_dataset("initial_center", data=initial_center_list)
+                grp_config.create_dataset("refined_center", data=center_list)
 
-            grp_data = entry.create_group("data")
-            grp_data.create_dataset("data", data=hit_list, compression="gzip")
-            grp_shots = entry.create_group("shots")
-            grp_shots.create_dataset("shift_x_mm", data=shift_x_mm_list)
-            grp_shots.create_dataset("shift_y_mm", data=shift_y_mm_list)
-
-            ## Here comes all parameters needed for the beam sweeping. Is it good as it is right now ?? Ask Oleksandr
-
-            grp_config = f.create_group("beam_sweeping_config")
-            for key, value in BeamSweepingParam.items():
-                grp_config.create_dataset(key, data=value)
-            grp_config.create_dataset("initial_center", data=initial_center_list)
-            grp_config.create_dataset("refined_center", data=center_list)
-
-            f.close()
+            
 
 
 if __name__ == "__main__":

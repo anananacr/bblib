@@ -480,7 +480,7 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
         return False
 
 
-def open_fwhm_map_global_min(lines: list, output_file: str, pixel_step: int):
+def open_fwhm_map_global_min(lines: list, output_file: str, pixel_step: int, PlotsFlag:bool):
     """
     Open FWHM grid search optmization plot, fit projections in both axis to get the point of maximum sharpness of the radial average.
     Parameters
@@ -580,7 +580,8 @@ def open_fwhm_map_global_min(lines: list, output_file: str, pixel_step: int):
     # Display the figure
 
     # plt.show()
-    plt.savefig(f"{output_file}.png")
+    if PlotsFlag:
+        plt.savefig(f"{output_file}.png")
     plt.close()
     return xc, yc
 

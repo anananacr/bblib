@@ -95,7 +95,7 @@ def main():
     sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
     popt, pcov = curve_fit(gaussian, x, y, p0=[max(y), mean, sigma])
     residuals = y - gaussian(x, *popt)
-    ss_res = np.sum(residuals ** 2)
+    ss_res = np.sum(residuals**2)
     ss_tot = np.sum((y - np.mean(y)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
     ## Calculation of FWHM
@@ -127,7 +127,7 @@ def main():
 
     popt, pcov = curve_fit(gaussian, x, y, p0=[max(y), mean, sigma])
     residuals = y - gaussian(x, *popt)
-    ss_res = np.sum(residuals ** 2)
+    ss_res = np.sum(residuals**2)
     ss_tot = np.sum((y - np.mean(y)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
     ## Calculation of FWHM

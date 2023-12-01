@@ -8,7 +8,6 @@ import imageio
 
 
 def main():
-
     # argument parser
     parser = argparse.ArgumentParser(description="Gif maker.")
     parser.add_argument(

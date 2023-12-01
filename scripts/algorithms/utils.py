@@ -7,6 +7,7 @@ import math
 import json
 import pandas as pd
 import sys
+from scipy import ndimage
 
 sys.path.append("/home/rodria/software/vdsCsPadMaskMaker/new-versions/")
 from maskMakerGUI import pMakePolarisationArray as make_polarization_array_fast
@@ -339,7 +340,7 @@ def gaussian(x: np.ndarray, a: float, x0: float, sigma: float) -> np.ndarray:
     y: np.ndarray
         value of the function evaluated
     """
-    return a * exp(-((x - x0) ** 2) / (2 * sigma ** 2))
+    return a * exp(-((x - x0) ** 2) / (2 * sigma**2))
 
 
 def quadratic(x, a, b, c):
@@ -358,7 +359,7 @@ def quadratic(x, a, b, c):
     y: np.ndarray
         value of the function evaluated
     """
-    return a * x ** 2 + b * x + c
+    return a * x**2 + b * x + c
 
 
 def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
@@ -373,7 +374,6 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
 
     merged_dict = {}
     for dictionary in lines[:]:
-
         for key, value in dictionary.items():
             if key in merged_dict:
                 merged_dict[key].append(value)
@@ -422,7 +422,7 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
 
     popt = np.polyfit(x, proj_x, 2)
     residuals = proj_x - quadratic(x, *popt)
-    ss_res = np.sum(residuals ** 2)
+    ss_res = np.sum(residuals**2)
     ss_tot = np.sum((proj_x - np.mean(proj_x)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
 
@@ -446,7 +446,7 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
     x = np.arange(y[0], y[-1] + pixel_step, pixel_step)
     popt = np.polyfit(x, proj_y, 2)
     residuals = proj_y - quadratic(x, *popt)
-    ss_res = np.sum(residuals ** 2)
+    ss_res = np.sum(residuals**2)
     ss_tot = np.sum((proj_y - np.mean(proj_y)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
 
@@ -480,7 +480,9 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
         return False
 
 
-def open_fwhm_map_global_min(lines: list, output_file: str, pixel_step: int, PlotsFlag:bool):
+def open_fwhm_map_global_min(
+    lines: list, output_file: str, pixel_step: int, PlotsFlag: bool
+):
     """
     Open FWHM grid search optmization plot, fit projections in both axis to get the point of maximum sharpness of the radial average.
     Parameters
@@ -492,7 +494,6 @@ def open_fwhm_map_global_min(lines: list, output_file: str, pixel_step: int, Plo
 
     merged_dict = {}
     for dictionary in lines[:]:
-
         for key, value in dictionary.items():
             if key in merged_dict:
                 merged_dict[key].append(value)
@@ -586,6 +587,113 @@ def open_fwhm_map_global_min(lines: list, output_file: str, pixel_step: int, Plo
     return xc, yc
 
 
+def open_r_sqrd_map_global_max(
+    lines: list, output_file: str, pixel_step: int, PlotsFlag: bool
+):
+    """
+    Open FWHM grid search optmization plot, fit projections in both axis to get the point of maximum sharpness of the radial average.
+    Parameters
+    ----------
+    lines: list
+        Output of grid search for FWHM optmization, each line should contain a dictionary contaning entries for xc, yc and fwhm_over_radius.
+    """
+    n = int(math.sqrt(len(lines)))
+
+    merged_dict = {}
+    for dictionary in lines[:]:
+        for key, value in dictionary.items():
+            if key in merged_dict:
+                merged_dict[key].append(value)
+            else:
+                merged_dict[key] = [value]
+
+    # Create a figure with three subplots
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 10))
+
+    # Extract x, y, and z from merged_dict
+
+    x = np.array(merged_dict["xc"]).reshape((n, n))[0]
+    y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
+    z = np.array(merged_dict["fwhm"], dtype=np.float32).reshape((n, n))
+    r = np.array(merged_dict["r_squared"], dtype=np.float32).reshape((n, n))
+    # r = ndimage.median_filter(r, 10)
+    pos1 = ax1.imshow(z, cmap="plasma")
+    step = 10
+    n = z.shape[0]
+
+    ax1.set_xticks(np.arange(0, n, step, dtype=int))
+    ax1.set_yticks(np.arange(0, n, step, dtype=int))
+
+    ticks_len = (np.arange(0, n, step)).shape[0]
+    step = round(step * (abs(x[0] - x[1])), 1)
+    ax1.set_xticklabels(
+        np.linspace(round(x[0], 1), round(x[-1] + step, 1), ticks_len, dtype=int),
+        rotation=45,
+    )
+    ax1.set_yticklabels(
+        np.linspace(round(y[0], 1), round(y[-1] + step, 1), ticks_len, dtype=int)
+    )
+
+    ax1.set_ylabel("yc [px]")
+    ax1.set_xlabel("xc [px]")
+    ax1.set_title("FWHM")
+
+    pos2 = ax2.imshow(r, cmap="plasma")
+    step = 10
+    n = z.shape[0]
+
+    ax2.set_xticks(np.arange(0, n, step, dtype=int))
+    ax2.set_yticks(np.arange(0, n, step, dtype=int))
+
+    ticks_len = (np.arange(0, n, step)).shape[0]
+    step = round(step * (abs(x[0] - x[1])), 1)
+    ax2.set_xticklabels(
+        np.linspace(round(x[0], 1), round(x[-1] + step, 1), ticks_len, dtype=int),
+        rotation=45,
+    )
+    ax2.set_yticklabels(
+        np.linspace(round(y[0], 1), round(y[-1] + step, 1), ticks_len, dtype=int)
+    )
+
+    ax2.set_ylabel("yc [px]")
+    ax2.set_xlabel("xc [px]")
+    ax2.set_title("R²")
+
+    proj_x = np.sum(r, axis=0)
+    x = np.arange(x[0], x[-1] + pixel_step, pixel_step)
+    index_x = np.unravel_index(np.argmax(proj_x, axis=None), proj_x.shape)
+    # print(index_x)
+    xc = x[index_x]
+    ax3.scatter(x, proj_x, color="b")
+    ax3.scatter(xc, proj_x[index_x], color="r", label=f"xc: {xc}")
+    ax3.set_ylabel("Average FWHM")
+    ax3.set_xlabel("xc [px]")
+    ax3.set_title("FWHM projection in x")
+    ax3.legend()
+
+    proj_y = np.sum(r, axis=1)
+    x = np.arange(y[0], y[-1] + pixel_step, pixel_step)
+    index_y = np.unravel_index(np.argmax(proj_y, axis=None), proj_y.shape)
+    yc = x[index_y]
+    ax4.scatter(x, proj_y, color="b")
+    ax4.scatter(yc, proj_y[index_y], color="r", label=f"yc: {yc}")
+    ax4.set_ylabel("Average FWHM")
+    ax4.set_xlabel("yc [px]")
+    ax4.set_title("FWHM projection in y")
+    ax4.legend()
+
+    fig.colorbar(pos1, ax=ax1, shrink=0.6)
+    fig.colorbar(pos2, ax=ax2, shrink=0.6)
+
+    # Display the figure
+
+    # plt.show()
+    if PlotsFlag:
+        plt.savefig(f"{output_file}.png")
+    plt.close()
+    return xc, yc
+
+
 def open_distance_map_global_min(
     lines: list, output_folder: str, label: str, pixel_step: int
 ) -> tuple:
@@ -602,7 +710,6 @@ def open_distance_map_global_min(
     pixel_step /= 2
     merged_dict = {}
     for dictionary in lines[:]:
-
         for key, value in dictionary.items():
             if key in merged_dict:
                 merged_dict[key].append(value)
@@ -686,7 +793,6 @@ def fit_fwhm(lines: list, pixel_step: int) -> Tuple[int]:
     n = int(math.sqrt(len(lines)))
     merged_dict = {}
     for dictionary in lines[:]:
-
         for key, value in dictionary.items():
             if key in merged_dict:
                 merged_dict[key].append(value)
@@ -701,7 +807,7 @@ def fit_fwhm(lines: list, pixel_step: int) -> Tuple[int]:
     x = np.arange(x[0], x[-1] + 1, 1)
     popt = np.polyfit(x, proj_x, 2)
     residuals = proj_x - quadratic(x, *popt)
-    ss_res = np.sum(residuals ** 2)
+    ss_res = np.sum(residuals**2)
     ss_tot = np.sum((proj_x - np.mean(proj_x)) ** 2)
     r_squared_x = 1 - (ss_res / ss_tot)
     xc = round((-1 * popt[1]) / (2 * popt[0]))
@@ -710,7 +816,7 @@ def fit_fwhm(lines: list, pixel_step: int) -> Tuple[int]:
     x = np.arange(y[0], y[-1] + 1, 1)
     popt = np.polyfit(x, proj_y, 2)
     residuals = proj_y - quadratic(x, *popt)
-    ss_res = np.sum(residuals ** 2)
+    ss_res = np.sum(residuals**2)
     ss_tot = np.sum((proj_y - np.mean(proj_y)) ** 2)
     r_squared_y = 1 - (ss_res / ss_tot)
     yc = round((-1 * popt[1]) / (2 * popt[0]))
@@ -920,7 +1026,6 @@ def get_center_theory(
     """
     center_theory = []
     for i in files_path:
-
         label = str(i).split("/")[-1]
         crystal = int(label.split("_")[-3][-2:])
         rot = int(label.split("_")[-2][:])
@@ -938,7 +1043,6 @@ def fill_gaps(data: np.ndarray, center: tuple, mask: np.ndarray) -> np.ndarray:
     y, x = np.where(data * mask <= 0)
 
     for i in zip(y, x):
-
         radius = math.sqrt((i[0] - center[1]) ** 2 + (i[1] - center[0]) ** 2)
 
         index = np.where(ave_r == round(radius))[0]

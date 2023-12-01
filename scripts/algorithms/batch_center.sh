@@ -19,4 +19,4 @@ source /etc/profile.d/modules.sh
 module load maxwell python/3.6
 source /home/rodria/scripts/p09/env-p09/bin/activate
 
-python find_center.py -i ${SCRATCH}/lists/${INPUT}.lst -o ${ROOT} -s ${SCRATCH} -m /asap3/petra3/gpfs/p09/2023/data/11019087/scratch_cc/rodria/masks/mask_ana_v2.h5 -g /asap3/petra3/gpfs/p09/2023/data/11019087/processed/galchenm/beam_sweeping/powder_direct_beam/eiger500k_corrected_beam_centre.geom;
+python find_center.py -i ${SCRATCH}/lists/${INPUT}.lst -o ${ROOT} -s ${SCRATCH} -m /asap3/petra3/gpfs/p09/2023/data/11019087/scratch_cc/rodria/masks/mask_ana_v4.h5 -m_bad /asap3/petra3/gpfs/p09/2023/data/11019087/scratch_cc/rodria/masks/mask_bad_pixels_v0.h5 -g /asap3/petra3/gpfs/p09/2023/data/11019087/processed/galchenm/beam_sweeping/powder_direct_beam/eiger500k_corrected_beam_centre.geom;

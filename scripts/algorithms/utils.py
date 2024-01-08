@@ -17,7 +17,7 @@ Res = 75 * 1e-6
 cspad_psana_shape = (1, 1, 1475, 1679)
 
 
-def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> Tuple[int]:
+def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> List[int]:
     """
     Adapted from Robert Bücker work on diffractem (https://github.com/robertbuecker/diffractem/tree/master)
     Bücker, R., Hogan-Lamarre, P., Mehrabi, P. et al. Serial protein crystallography in an electron microscope. Nat Commun 11, 996 (2020). https://doi.org/10.1038/s41467-020-14793-0
@@ -41,7 +41,7 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> Tuple[int]:
     indices = np.where(data > 0)
     xc = np.sum(data[indices] * indices[1]) / np.sum(data[indices])
     yc = np.sum(data[indices] * indices[0]) / np.sum(data[indices])
-    return xc, yc
+    return [xc, yc]
 
 
 def azimuthal_average(
@@ -342,6 +342,25 @@ def gaussian(x: np.ndarray, a: float, x0: float, sigma: float) -> np.ndarray:
     """
     return a * exp(-((x - x0) ** 2) / (2 * sigma**2))
 
+def gaussian_lin(
+    x: np.ndarray, a: float, x0: float, sigma: float, m: float, n: float
+) -> np.ndarray:
+    """
+    Gaussian function.
+
+    Parameters
+    ----------
+    x: np.ndarray
+        x array of the spectrum.
+    a, x0, sigma: float
+        gaussian parameters
+
+    Returns
+    ----------
+    y: np.ndarray
+        value of the function evaluated
+    """
+    return m * x + n + a * exp(-((x - x0) ** 2) / (2 * sigma**2))
 
 def quadratic(x, a, b, c):
     """
@@ -479,7 +498,6 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
     else:
         return False
 
-
 def open_fwhm_map_global_min(
     lines: list, output_file: str, pixel_step: int, PlotsFlag: bool
 ):
@@ -510,7 +528,7 @@ def open_fwhm_map_global_min(
     z = np.array(merged_dict["fwhm"], dtype=np.float64).reshape((n, n))
     r = np.array(merged_dict["r_squared"]).reshape((n, n))
 
-    pos1 = ax1.imshow(z, cmap="plasma")
+    pos1 = ax1.imshow(z, cmap="inferno",vmax=50)
     step = 10
     n = z.shape[0]
 
@@ -531,7 +549,7 @@ def open_fwhm_map_global_min(
     ax1.set_xlabel("xc [px]")
     ax1.set_title("FWHM")
 
-    pos2 = ax2.imshow(r, cmap="plasma")
+    pos2 = ax2.imshow(r, cmap="inferno")
     step = 10
     n = z.shape[0]
 
@@ -617,6 +635,10 @@ def open_r_sqrd_map_global_max(
     z = np.array(merged_dict["fwhm"], dtype=np.float32).reshape((n, n))
     r = np.array(merged_dict["r_squared"], dtype=np.float32).reshape((n, n))
     # r = ndimage.median_filter(r, 10)
+
+    z=np.nan_to_num(z)
+    r=np.nan_to_num(r)
+
     pos1 = ax1.imshow(z, cmap="plasma")
     step = 10
     n = z.shape[0]

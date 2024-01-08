@@ -5,8 +5,8 @@ START=$2
 END=$3
 
 ## SET HERE YOUR PATHS
-ROOT=/asap3/petra3/gpfs/p09/2023/data/11019087/processed/rodria
-SCRATCH=/asap3/petra3/gpfs/p09/2023/data/11019087/scratch_cc/rodria
+ROOT=/asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria
+SCRATCH=/asap3/petra3/gpfs/p09/2023/data/11019088/scratch_cc/rodria
 
 
 for i in $(seq $START 1 $END); do
@@ -29,8 +29,8 @@ for i in $(seq $START 1 $END); do
     echo "#SBATCH --chdir   $PWD" >> $SLURMFILE
     echo "#SBATCH --job-name  $JNAME" >> $SLURMFILE
     echo "#SBATCH --requeue" >> $SLURMFILE
-    echo "#SBATCH --output    /asap3/petra3/gpfs/p09/2023/data/11019087/scratch_cc/rodria/error/${NAME}-%N-%j.out" >> $SLURMFILE
-    echo "#SBATCH --error     /asap3/petra3/gpfs/p09/2023/data/11019087/scratch_cc/rodria/error/${NAME}-%N-%j.err" >> $SLURMFILE
+    echo "#SBATCH --output    /asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/error/${NAME}-%N-%j.out" >> $SLURMFILE
+    echo "#SBATCH --error     /asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/error/${NAME}-%N-%j.err" >> $SLURMFILE
     echo "#SBATCH --nice=0" >> $SLURMFILE
     echo "#SBATCH --mincpus=128" >> $SLURMFILE
     echo "#SBATCH --mem=40G" >> $SLURMFILE
@@ -40,10 +40,9 @@ for i in $(seq $START 1 $END); do
     echo "unset LD_PRELOAD" >> $SLURMFILE
     echo "source /etc/profile.d/modules.sh" >> $SLURMFILE
     echo "module purge" >> $SLURMFILE
-    echo "module load maxwell python/3.7" >> $SLURMFILE
     echo "source /home/rodria/scripts/p09/env-p09/bin/activate" >> $SLURMFILE
     echo >> $SLURMFILE
-    command="python find_center.py -i ${SCRATCH}/lists/${LIST_NAME} -o ${ROOT} -s ${SCRATCH} -m /asap3/petra3/gpfs/p09/2023/data/11019087/scratch_cc/rodria/masks/mask_ana_v2.h5 -g /asap3/petra3/gpfs/p09/2023/data/11019087/processed/galchenm/beam_sweeping/powder_direct_beam/eiger500k_corrected_beam_centre.geom;"
+    command="python find_center.py -i ${ROOT}/lists/${LIST_NAME} -o ${ROOT} -s ${SCRATCH} -m /asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/mask/mask_ana_dec_v1.h5 -g /asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/geoms/eiger500k_corrected_beam_centre.geom;"
     echo $command >> $SLURMFILE
     echo "chmod a+rw $PWD" >> $SLURMFILE
     sbatch $SLURMFILE 

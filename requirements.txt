@@ -21,6 +21,7 @@ kiwisolver==1.4.4
 matplotlib==3.5.3
 msgpack==1.0.5
 mypy-extensions==1.0.0
+networkx==2.6.3
 numpy==1.21.6
 ondamonitor==21.5.0
 packaging==23.1
@@ -36,16 +37,19 @@ PyQt5-sip==12.12.2
 pyqtgraph==0.12.4
 python-dateutil==2.8.2
 pytz==2023.3
+PyWavelets==1.3.0
 PyYAML==6.0.1
 pyzmq==25.1.0
 requests==2.31.0
 rfc3987==1.3.8
+scikit-image==0.19.3
 scikit-learn==1.0.2
 scipy==1.7.3
 sip==4.19.25
 six==1.16.0
 strict-rfc3339==0.7
 threadpoolctl==3.1.0
+tifffile==2021.11.2
 tomli==2.0.1
 typed-ast==1.5.5
 typing_extensions==4.7.1

@@ -37,18 +37,18 @@ MinPeaks = 0
 
 PF8Config = PF8Info(
     max_num_peaks=10000,
-    adc_threshold=40,
+    adc_threshold=20,
     minimum_snr=5,
-    min_pixel_count=2,
-    max_pixel_count=10,
+    min_pixel_count=1,
+    max_pixel_count=200,
     local_bg_radius=3,
     min_res=0,
-    max_res=1200,
+    max_res=1200
 )
 
 listed_events = False
 
-PlotsFlag = False
+PlotsFlag = True
 # Set here pixel resolution in mm to correct from the DetectorCenter taken from the geometry file.
 
 PixelResolution = 1 / (75 * 1e-3)
@@ -61,8 +61,8 @@ AutoFlag = True
 OutlierDistance = 10
 
 # Look for the background peak region, for this you have to know exactly the peak region to fit
-MinPeakRegion = 50
-MaxPeakRegion = 70
+MinPeakRegion = 35
+MaxPeakRegion = 55
 
 ## Parameters to fix the first guess with the center of mass
 
@@ -333,7 +333,7 @@ def main():
             if not PlotsFlag:
                 max_frame=data.shape[0]
             else:
-                max_frame=10
+                max_frame=30
 
             for frame_index in range(max_frame):
                 frame = np.array(data[frame_index])
@@ -524,7 +524,7 @@ def main():
                             corrected_data * mask, vmax=20, cmap="cividis"
                         )
                         ax1.scatter(
-                            xr, yr, color="green", label=f"Detector center:({round(DetectorCenter[0])},{round(DetectorCenter[1])})"
+                            round(DetectorCenter[0]), round(DetectorCenter[1]), color="green", label=f"Detector center:({round(DetectorCenter[0])},{round(DetectorCenter[1])})"
                         )
                         ax1.scatter(
                             xr, yr, color="cyan", label=f"First center:({round(xr)},{round(yr)})"
@@ -560,8 +560,13 @@ def main():
             list_of_events=np.arange(0, len(shift_x_mm),1)
 
             # Save the hdf5 files as it is in the raw folder. I have to sit with Marina and Oleksandr and come up with what should be the best way to pass things for CrystFEL and if the paths make sense for them.
+            if PlotsFlag:
+                output_folder=f"{args.scratch}/centered"
+            else:
+                output_folder=f"{args.output}/centered/{run_label}"
+
             with h5py.File(
-                f"{args.output}/centered/{run_label}/{file_label}.h5", "w"
+                f"{output_folder}/{file_label}.h5", "w"
             ) as f:
                 ## Here comes everything needed to pass to CrystFEL. Is it missing something? Ask Marina
                 entry = f.create_group("entry")

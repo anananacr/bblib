@@ -18,4 +18,4 @@ SCRATCH=/asap3/petra3/gpfs/p09/2023/data/11019088/scratch_cc/rodria
 source /etc/profile.d/modules.sh
 source /home/rodria/scripts/p09/env-p09/bin/activate
 
-python find_center.py -i ${ROOT}/lists/${INPUT} -o ${ROOT} -s ${SCRATCH} -m /asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/mask/mask_ana_dec_v2.h5 -g /asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/geoms/eiger500k_corrected_beam_centre.geom
+python find_center.py -i ${ROOT}/lists/${INPUT} -o ${ROOT} -s ${SCRATCH} -m /asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/mask/mask_ana_dec_fakp.h5 -g /asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/geoms/eiger500k_corrected_beam_centre_fosakp.geom

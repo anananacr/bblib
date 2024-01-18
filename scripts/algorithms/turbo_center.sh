@@ -42,7 +42,7 @@ for i in $(seq $START 1 $END); do
     echo "module purge" >> $SLURMFILE
     echo "source /home/rodria/scripts/p09/env-p09/bin/activate" >> $SLURMFILE
     echo >> $SLURMFILE
-    command="python find_center.py -i ${ROOT}/lists/${LIST_NAME} -o ${ROOT} -s ${SCRATCH} -m /asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/mask/mask_ana_dec_v1.h5 -g /asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/geoms/eiger500k_corrected_beam_centre.geom;"
+    command="python find_center.py -i ${ROOT}/lists/${LIST_NAME} -o ${ROOT} -s ${SCRATCH} -m /asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/mask/mask_ana_dec_fakp.h5 -g /asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/geoms/eiger500k_corrected_beam_centre_fosakp.geom;"
     echo $command >> $SLURMFILE
     echo "chmod a+rw $PWD" >> $SLURMFILE
     sbatch $SLURMFILE 

@@ -13,10 +13,7 @@
 
 INPUT=$1
 OUTPUT=$2
-CENTER=$3
-INDEX=$4
-DIST=$5
-CELL=$6
+CELL=$3
 
 
 ROOT=/asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria
@@ -26,29 +23,11 @@ module purge
 module load maxwell crystfel/0.10.2
 
 rm /asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/streams/${OUTPUT}.stream
-if [ "$CENTER" -eq 0 ];
+command="indexamajig -i ${ROOT}/lists/${INPUT}.lst -o  ${ROOT}/streams/${OUTPUT}.stream -g ${ROOT}/geoms/eiger500k_corrected_beam_centre_shift_fosakp_for_index.geom -o  ${ROOT}/streams/${OUTPUT}.stream --peaks=cxi --copy-header=/entry/data/shift_vertical_mm --copy-header=/entry/data/event_id --copy-header=/entry/data/file_id --copy-header=/entry/data/nPeaks --no-check-peaks --integration=rings-grad-nocen --int-radius=3,4,6 --no-refine --no-retry --no-revalidate --indexing=xgandalf,asdf --xgandalf-no-deviation-from-provided-cell --tolerance=5,3.2,0.8,1.5"
+if [ -n "$CELL" ];
 then
-    command="indexamajig -i ${ROOT}/lists/${INPUT}.lst -o  ${ROOT}/streams/${OUTPUT}.stream -g ${ROOT}/geoms/eiger500k_corrected_beam_centre_fosakp.geom --peaks=peakfinder8"
-else
-    if [ "$DIST" -gt 0 ];
-    then
-    command="indexamajig -i ${ROOT}/lists/${INPUT}.lst -o  ${ROOT}/streams/${OUTPUT}_${DIST}.stream -g ${ROOT}/geoms/eiger500k_corrected_beam_centre_shift_fosakp_${DIST}.geom --peaks=peakfinder8"
-    else
-    command="indexamajig -i ${ROOT}/lists/${INPUT}.lst -o  ${ROOT}/streams/${OUTPUT}.stream -g ${ROOT}/geoms/eiger500k_corrected_beam_centre_shift_fosakp.geom --peaks=peakfinder8"
-    fi
+command="$command -p ${ROOT}/cell/${CELL}"
 fi
-
-if [ "$INDEX" -eq 0 ];
-then
-    command="$command --indexing=none"
-else
-    if [ -n "$CELL" ];
-    then
-    command="$command -p ${ROOT}/cell/${CELL}"
-    fi
-fi
-
-command="$command -j 128 --threshold=40 --min-snr=5 --min-pix-count=1 --max-pix-count=200 --max-res=1200 --int-radius=3,4,5 --min-peaks=10;"
-
+command="$command -j 128"
 echo $command
 $command

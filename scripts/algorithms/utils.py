@@ -527,7 +527,8 @@ def open_fwhm_map_global_min(
     y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
     z = np.array(merged_dict["fwhm"], dtype=np.float64).reshape((n, n))
     r = np.array(merged_dict["r_squared"]).reshape((n, n))
-
+    z=np.nan_to_num(z)
+    r=np.nan_to_num(r)
     pos1 = ax1.imshow(z, cmap="inferno",vmax=50)
     step = 10
     n = z.shape[0]
@@ -746,7 +747,8 @@ def open_distance_map_global_min(
     x = np.array(merged_dict["xc"]).reshape((n, n))[0]
     y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
     z = np.array(merged_dict["d"], dtype=np.float64).reshape((n, n))
-
+    z=np.nan_to_num(z)
+    r=np.nan_to_num(r)
     pos1 = ax1.imshow(z, cmap="rainbow")
     step = 20
     n = z.shape[0]
@@ -797,6 +799,131 @@ def open_distance_map_global_min(
     plt.savefig(f"{output_folder}/plots/distance_map/{label}.png")
     plt.close()
     return xc, yc
+
+
+def open_distance_map_fit_min(
+    lines: list, output_folder: str, label: str, pixel_step: int
+) -> tuple:
+    """
+    Open distance minimization plot, fit projections in both axis to get the point of minimum distance.
+
+    Parameters
+    ----------
+    lines: list
+        Output of grid search for distance optmization, each line should contain a dictionary contaning entries for xc, yc and distance.
+    """
+
+    n = int(math.sqrt(len(lines)))
+    pixel_step /= 2
+    merged_dict = {}
+    for dictionary in lines[:]:
+
+        for key, value in dictionary.items():
+            if key in merged_dict:
+                merged_dict[key].append(value)
+            else:
+                merged_dict[key] = [value]
+
+    # Create a figure with three subplots
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 5))
+
+    # Extract x, y, and z from merged_dict
+
+    x = np.array(merged_dict["xc"]).reshape((n, n))[0]
+    y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
+    z = np.array(merged_dict["d"], dtype=np.float64).reshape((n, n))
+
+    pos1 = ax1.imshow(z, cmap="rainbow")
+    step = 20
+    n = z.shape[0]
+    ax1.set_xticks(np.arange(0, n, step, dtype=float))
+    ax1.set_yticks(np.arange(0, n, step, dtype=float))
+
+    ticks_len = (np.arange(0, n, step)).shape[0]
+    step = round(step * (abs(x[0] - x[1])), 1)
+
+    ax1.set_xticklabels(
+        np.linspace(round(x[0], 1), round(x[-1] + step, 1), ticks_len, dtype=int),
+        rotation=45,
+    )
+    ax1.set_yticklabels(
+        np.linspace(round(y[0], 1), round(y[-1] + step, 1), ticks_len, dtype=int)
+    )
+
+    ax1.set_ylabel("yc [px]")
+    ax1.set_xlabel("xc [px]")
+    ax1.set_title("Distance [px]")
+
+    proj_x = np.sum(z, axis=0) / z.shape[0]
+    x = np.arange(x[0], x[-1] + pixel_step, pixel_step)
+
+    popt = np.polyfit(x, proj_x, 2)
+    residuals = proj_x - quadratic(x, *popt)
+    ss_res = np.sum(residuals**2)
+    ss_tot = np.sum((proj_x - np.mean(proj_x)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+
+    x_fit = np.arange(x[0], x[-1] + 0.1, 0.1)
+    y_fit = quadratic(x_fit, *popt)
+
+    a, b, c = popt
+    xc = round((-1 * b) / (2 * a), 1)
+    y_min = round((-1 * (b**2) + 4 * a * c) / (4 * a), 1)
+    ax2.plot(
+        x_fit,
+        y_fit,
+        "r",
+        label=f"quadratic fit:\nR²: {round(r_squared,5)}, xc: {xc}",
+    )
+
+    ax2.scatter(x, proj_x + pixel_step, color="b")
+    ax2.scatter(xc, y_min, color="r", label=f"xc: {xc}")
+    ax2.set_ylabel("Average distance (px)")
+    ax2.set_xlabel("Detector center in x (px)")
+    ax2.set_title("Distance projection in x")
+    ax2.legend()
+
+    proj_y = np.sum(z, axis=1) / z.shape[1]
+    x = np.arange(y[0], y[-1] + pixel_step, pixel_step)
+    popt = np.polyfit(x, proj_y, 2)
+    residuals = proj_y - quadratic(x, *popt)
+    ss_res = np.sum(residuals**2)
+    ss_tot = np.sum((proj_y - np.mean(proj_y)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+
+    a, b, c = popt
+    yc = round((-1 * b) / (2 * a), 1)
+    y_min = round((-1 * (b**2) + 4 * a * c) / (4 * a), 1)
+
+    x_fit = np.arange(y[0], y[-1] + 0.1, 0.1)
+    y_fit = quadratic(x_fit, *popt)
+    ax3.plot(
+        x_fit,
+        y_fit,
+        "r",
+        label=f"quadratic fit:\nR²: {round(r_squared,5)}, yc: {yc}",
+    )
+
+    ax3.scatter(x, proj_y, color="b")
+    ax3.scatter(yc, y_min, color="r", label=f"yc: {yc}")
+    ax3.set_ylabel("Average distance (px)")
+    ax3.set_xlabel("Detector center in y (px)")
+    ax3.set_title("Distance projection in y")
+    ax3.legend()
+
+    fig.colorbar(pos1, ax=ax1, shrink=0.6)
+
+    # Display the figure
+
+    # plt.show()
+    plt.savefig(f"{output_folder}/distance_map_fit/{label}.png")
+    plt.close()
+    if int(np.sum(proj_y)) == 0 or int(np.sum(proj_x)) == 0:
+        converged = 0
+    else:
+        converged = 1
+    return xc, yc, converged
+
 
 
 def fit_fwhm(lines: list, pixel_step: int) -> Tuple[int]:
@@ -1098,3 +1225,29 @@ def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:
     [X, Y] = np.meshgrid(np.arange(b) - center[0], np.arange(a) - center[1])
     R = np.sqrt(np.square(X) + np.square(Y))
     return (np.greater(R, radius)).astype(np.int32)
+
+def ring_mask(data, center, inner_radius, outer_radius):
+    """
+    Make a  ring mask for the data
+
+    Parameters
+    ----------
+    data: np.ndarray
+        Image in which mask will be shaped
+    center: tuple (xc,yc)
+    
+    inner_radius: int
+    
+    outer_radius: int
+    Returns
+    ----------
+    mask: np.ndarray
+    """
+
+    bin_size = bin
+    a = data.shape[0]
+    b = data.shape[1]
+    [X, Y] = np.meshgrid(np.arange(b) - center[0], np.arange(a) - center[1])
+    R = np.sqrt(np.square(X) + np.square(Y))
+    bin_size=outer_radius-inner_radius
+    return np.greater(R, outer_radius - bin_size) & np.less(R, outer_radius + bin_size) 

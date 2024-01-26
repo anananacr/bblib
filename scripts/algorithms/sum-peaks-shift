@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Generate "peak powder" from CrystFEL stream
+#
+# Copyright © 2017-2020 Deutsches Elektronen-Synchrotron DESY,
+#                       a research centre of the Helmholtz Association.
+#
+# Author:
+#    2017 Alexandra Tolstikova <alexandra.tolstikova@desy.de>
+#
+
+import sys
+import numpy as np
+import h5py
+from os.path import basename, splitext
+
+if sys.argv[1] == '-':
+    stream = sys.stdin
+else:
+    stream = open("/asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/streams/"+sys.argv[1]+".stream", 'r')
+
+
+PixelResolution = 1 / (75 * 1e-3)
+
+reading_geometry = False
+reading_chunks = False
+reading_peaks = False
+max_fs = 1027
+max_ss = 511
+for count, line in enumerate(stream):
+    if reading_chunks:
+        if line.startswith('End of peak list'):
+            reading_peaks = False            
+        elif line.startswith('  fs/px   ss/px (1/d)/nm^-1   Intensity  Panel'):
+            reading_peaks = True
+        elif reading_peaks:
+            fs, ss, dump, intensity = [float(i) for i in line.split()[:4]]
+            print(line.split()[:4])
+            if intensity<0: print(intensity)
+            powder[int(ss), int(fs+shift_vertical_px)] += 1e0*intensity
+        elif line.split(': ')[0]=='Image filename':
+            file_name=line.split(': ')[-1][:-1]
+        elif line.split(': ')[0]=='Event':
+            event=int(line.split(': //')[-1])
+        elif line.split(' = ')[0]=="header/float//entry/data/shift_vertical_mm":
+            shift_vertical_mm = float(line.split(' = ')[-1])
+            shift_vertical_px = int(shift_vertical_mm * PixelResolution)
+    elif line.startswith('----- End geometry file -----'):
+        reading_geometry = False
+        powder = np.zeros((max_ss + 1, 2*max_fs + 1))
+    elif reading_geometry:
+        try:
+            par, val = line.split('=')
+            if par.split('/')[-1].strip() == 'max_fs' and int(val) > max_fs:
+                max_fs = int(val)
+            elif par.split('/')[-1].strip() == 'max_ss' and int(val) > max_ss:
+                max_ss = int(val)
+        except ValueError:
+            pass
+    elif line.startswith('----- Begin geometry file -----'):
+        reading_geometry = True
+    elif line.startswith('----- Begin chunk -----'):
+        reading_chunks = True
+
+f = h5py.File(splitext(basename(sys.argv[1]))[0]+'-powder-shift.h5', 'w')
+f.create_dataset('/data/data', data=powder[:max_ss+1,:max_fs+1])
+f.close()

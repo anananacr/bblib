@@ -7,16 +7,17 @@ import math
 import json
 import pandas as pd
 import sys
+from scipy import ndimage
 
 sys.path.append("/home/rodria/software/vdsCsPadMaskMaker/new-versions/")
 from maskMakerGUI import pMakePolarisationArray as make_polarization_array_fast
 import geometry_funcs as gf
 
-Res = 172 * 1e-6
+Res = 75 * 1e-6
 cspad_psana_shape = (1, 1, 1475, 1679)
 
 
-def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> Tuple[int]:
+def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> List[int]:
     """
     Adapted from Robert Bücker work on diffractem (https://github.com/robertbuecker/diffractem/tree/master)
     Bücker, R., Hogan-Lamarre, P., Mehrabi, P. et al. Serial protein crystallography in an electron microscope. Nat Commun 11, 996 (2020). https://doi.org/10.1038/s41467-020-14793-0
@@ -40,7 +41,7 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> Tuple[int]:
     indices = np.where(data > 0)
     xc = np.sum(data[indices] * indices[1]) / np.sum(data[indices])
     yc = np.sum(data[indices] * indices[0]) / np.sum(data[indices])
-    return xc, yc
+    return [xc, yc]
 
 
 def azimuthal_average(
@@ -341,6 +342,25 @@ def gaussian(x: np.ndarray, a: float, x0: float, sigma: float) -> np.ndarray:
     """
     return a * exp(-((x - x0) ** 2) / (2 * sigma**2))
 
+def gaussian_lin(
+    x: np.ndarray, a: float, x0: float, sigma: float, m: float, n: float
+) -> np.ndarray:
+    """
+    Gaussian function.
+
+    Parameters
+    ----------
+    x: np.ndarray
+        x array of the spectrum.
+    a, x0, sigma: float
+        gaussian parameters
+
+    Returns
+    ----------
+    y: np.ndarray
+        value of the function evaluated
+    """
+    return m * x + n + a * exp(-((x - x0) ** 2) / (2 * sigma**2))
 
 def quadratic(x, a, b, c):
     """
@@ -373,7 +393,6 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
 
     merged_dict = {}
     for dictionary in lines[:]:
-
         for key, value in dictionary.items():
             if key in merged_dict:
                 merged_dict[key].append(value)
@@ -391,27 +410,27 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
     r = np.array(merged_dict["r_squared"]).reshape((n, n))
 
     index_y, index_x = np.where(z == np.min(z))
-    pos1 = ax1.imshow(z, cmap="rainbow")
-    step = 5
+    pos1 = ax1.imshow(z, cmap="plasma")
+    step = 10
     n = z.shape[0]
     ax1.set_xticks(np.arange(0, n, step, dtype=int))
     ax1.set_yticks(np.arange(0, n, step, dtype=int))
     step = step * (abs(x[0] - x[1]))
-    ax1.set_xticklabels(np.arange(x[0], x[-1]+step, step, dtype=int))
-    ax1.set_yticklabels(np.arange(y[0], y[-1]+step, step, dtype=int))
+    ax1.set_xticklabels(np.arange(x[0], x[-1] + step, step, dtype=int))
+    ax1.set_yticklabels(np.arange(y[0], y[-1] + step, step, dtype=int))
 
     ax1.set_ylabel("yc [px]")
     ax1.set_xlabel("xc [px]")
     ax1.set_title("FWHM")
 
-    pos2 = ax2.imshow(r, cmap="rainbow")
-    step = 5
+    pos2 = ax2.imshow(r, cmap="plasma")
+    step = 10
     n = z.shape[0]
     ax2.set_xticks(np.arange(0, n, step, dtype=int))
     ax2.set_yticks(np.arange(0, n, step, dtype=int))
     step = step * (abs(x[0] - x[1]))
-    ax2.set_xticklabels(np.arange(x[0], x[-1]+step, step, dtype=int))
-    ax2.set_yticklabels(np.arange(y[0], y[-1]+step, step, dtype=int))
+    ax2.set_xticklabels(np.arange(x[0], x[-1] + step, step, dtype=int))
+    ax2.set_yticklabels(np.arange(y[0], y[-1] + step, step, dtype=int))
 
     ax2.set_ylabel("yc [px]")
     ax2.set_xlabel("xc [px]")
@@ -458,7 +477,7 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
         "r",
         label=f"quadratic fit:\nR²: {round(r_squared,5)}, Yc: {round((-1*popt[1])/(2*popt[0]))}",
     )
-    ax4.scatter(x,proj_y, color="b")
+    ax4.scatter(x, proj_y, color="b")
     ax4.set_ylabel("Average FWHM")
     ax4.set_xlabel("yc [px]")
     ax4.set_title("FWHM projection in y")
@@ -479,9 +498,8 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
     else:
         return False
 
-
 def open_fwhm_map_global_min(
-    lines: list, output_folder: str, label: str, pixel_step: int
+    lines: list, output_file: str, pixel_step: int, PlotsFlag: bool
 ):
     """
     Open FWHM grid search optmization plot, fit projections in both axis to get the point of maximum sharpness of the radial average.
@@ -494,7 +512,6 @@ def open_fwhm_map_global_min(
 
     merged_dict = {}
     for dictionary in lines[:]:
-
         for key, value in dictionary.items():
             if key in merged_dict:
                 merged_dict[key].append(value)
@@ -511,33 +528,49 @@ def open_fwhm_map_global_min(
     z = np.array(merged_dict["fwhm"], dtype=np.float64).reshape((n, n))
     r = np.array(merged_dict["r_squared"]).reshape((n, n))
 
-    pos1 = ax1.imshow(z, cmap="rainbow")
-    step = 5
+    pos1 = ax1.imshow(z, cmap="inferno",vmax=50)
+    step = 10
     n = z.shape[0]
+
     ax1.set_xticks(np.arange(0, n, step, dtype=int))
     ax1.set_yticks(np.arange(0, n, step, dtype=int))
-    step = step * (abs(x[0] - x[1]))
-    ax1.set_xticklabels(np.arange(x[0], x[-1]+step, step, dtype=int))
-    ax1.set_yticklabels(np.arange(y[0], y[-1]+step, step, dtype=int))
+
+    ticks_len = (np.arange(0, n, step)).shape[0]
+    step = round(step * (abs(x[0] - x[1])), 1)
+    ax1.set_xticklabels(
+        np.linspace(round(x[0], 1), round(x[-1] + step, 1), ticks_len, dtype=int),
+        rotation=45,
+    )
+    ax1.set_yticklabels(
+        np.linspace(round(y[0], 1), round(y[-1] + step, 1), ticks_len, dtype=int)
+    )
 
     ax1.set_ylabel("yc [px]")
     ax1.set_xlabel("xc [px]")
     ax1.set_title("FWHM")
 
-    pos2 = ax2.imshow(r, cmap="rainbow")
-    step = 5
+    pos2 = ax2.imshow(r, cmap="inferno")
+    step = 10
     n = z.shape[0]
+
     ax2.set_xticks(np.arange(0, n, step, dtype=int))
     ax2.set_yticks(np.arange(0, n, step, dtype=int))
-    step = step * (abs(x[0] - x[1]))
-    ax2.set_xticklabels(np.arange(x[0], x[-1]+step, step, dtype=int))
-    ax2.set_yticklabels(np.arange(y[0], y[-1]+step, step, dtype=int))
+
+    ticks_len = (np.arange(0, n, step)).shape[0]
+    step = round(step * (abs(x[0] - x[1])), 1)
+    ax2.set_xticklabels(
+        np.linspace(round(x[0], 1), round(x[-1] + step, 1), ticks_len, dtype=int),
+        rotation=45,
+    )
+    ax2.set_yticklabels(
+        np.linspace(round(y[0], 1), round(y[-1] + step, 1), ticks_len, dtype=int)
+    )
 
     ax2.set_ylabel("yc [px]")
     ax2.set_xlabel("xc [px]")
     ax2.set_title("R²")
 
-    proj_x = np.sum(z, axis=0)
+    proj_x = np.sum(z, axis=0) // n
     x = np.arange(x[0], x[-1] + pixel_step, pixel_step)
     index_x = np.unravel_index(np.argmin(proj_x, axis=None), proj_x.shape)
     # print(index_x)
@@ -549,12 +582,12 @@ def open_fwhm_map_global_min(
     ax3.set_title("FWHM projection in x")
     ax3.legend()
 
-    proj_y = np.sum(z, axis=1)
+    proj_y = np.sum(z, axis=1) // n
     x = np.arange(y[0], y[-1] + pixel_step, pixel_step)
     index_y = np.unravel_index(np.argmin(proj_y, axis=None), proj_y.shape)
     yc = x[index_y]
-    ax4.scatter(x,proj_y, color="b")
-    ax4.scatter(yc,proj_y[index_y], color="r", label=f"yc: {yc}")
+    ax4.scatter(x, proj_y, color="b")
+    ax4.scatter(yc, proj_y[index_y], color="r", label=f"yc: {yc}")
     ax4.set_ylabel("Average FWHM")
     ax4.set_xlabel("yc [px]")
     ax4.set_title("FWHM projection in y")
@@ -566,13 +599,126 @@ def open_fwhm_map_global_min(
     # Display the figure
 
     # plt.show()
-    plt.savefig(f"{output_folder}/plots/fwhm_map/{label}.png")
+    if PlotsFlag:
+        plt.savefig(f"{output_file}.png")
+    plt.close()
+    return xc, yc
+
+
+def open_r_sqrd_map_global_max(
+    lines: list, output_file: str, pixel_step: int, PlotsFlag: bool
+):
+    """
+    Open FWHM grid search optmization plot, fit projections in both axis to get the point of maximum sharpness of the radial average.
+    Parameters
+    ----------
+    lines: list
+        Output of grid search for FWHM optmization, each line should contain a dictionary contaning entries for xc, yc and fwhm_over_radius.
+    """
+    n = int(math.sqrt(len(lines)))
+
+    merged_dict = {}
+    for dictionary in lines[:]:
+        for key, value in dictionary.items():
+            if key in merged_dict:
+                merged_dict[key].append(value)
+            else:
+                merged_dict[key] = [value]
+
+    # Create a figure with three subplots
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 10))
+
+    # Extract x, y, and z from merged_dict
+
+    x = np.array(merged_dict["xc"]).reshape((n, n))[0]
+    y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
+    z = np.array(merged_dict["fwhm"], dtype=np.float32).reshape((n, n))
+    r = np.array(merged_dict["r_squared"], dtype=np.float32).reshape((n, n))
+    # r = ndimage.median_filter(r, 10)
+
+    z=np.nan_to_num(z)
+    r=np.nan_to_num(r)
+
+    pos1 = ax1.imshow(z, cmap="plasma")
+    step = 10
+    n = z.shape[0]
+
+    ax1.set_xticks(np.arange(0, n, step, dtype=int))
+    ax1.set_yticks(np.arange(0, n, step, dtype=int))
+
+    ticks_len = (np.arange(0, n, step)).shape[0]
+    step = round(step * (abs(x[0] - x[1])), 1)
+    ax1.set_xticklabels(
+        np.linspace(round(x[0], 1), round(x[-1] + step, 1), ticks_len, dtype=int),
+        rotation=45,
+    )
+    ax1.set_yticklabels(
+        np.linspace(round(y[0], 1), round(y[-1] + step, 1), ticks_len, dtype=int)
+    )
+
+    ax1.set_ylabel("yc [px]")
+    ax1.set_xlabel("xc [px]")
+    ax1.set_title("FWHM")
+
+    pos2 = ax2.imshow(r, cmap="plasma")
+    step = 10
+    n = z.shape[0]
+
+    ax2.set_xticks(np.arange(0, n, step, dtype=int))
+    ax2.set_yticks(np.arange(0, n, step, dtype=int))
+
+    ticks_len = (np.arange(0, n, step)).shape[0]
+    step = round(step * (abs(x[0] - x[1])), 1)
+    ax2.set_xticklabels(
+        np.linspace(round(x[0], 1), round(x[-1] + step, 1), ticks_len, dtype=int),
+        rotation=45,
+    )
+    ax2.set_yticklabels(
+        np.linspace(round(y[0], 1), round(y[-1] + step, 1), ticks_len, dtype=int)
+    )
+
+    ax2.set_ylabel("yc [px]")
+    ax2.set_xlabel("xc [px]")
+    ax2.set_title("R²")
+
+    proj_x = np.sum(r, axis=0)
+    x = np.arange(x[0], x[-1] + pixel_step, pixel_step)
+    index_x = np.unravel_index(np.argmax(proj_x, axis=None), proj_x.shape)
+    # print(index_x)
+    xc = x[index_x]
+    ax3.scatter(x, proj_x, color="b")
+    ax3.scatter(xc, proj_x[index_x], color="r", label=f"xc: {xc}")
+    ax3.set_ylabel("Average FWHM")
+    ax3.set_xlabel("xc [px]")
+    ax3.set_title("FWHM projection in x")
+    ax3.legend()
+
+    proj_y = np.sum(r, axis=1)
+    x = np.arange(y[0], y[-1] + pixel_step, pixel_step)
+    index_y = np.unravel_index(np.argmax(proj_y, axis=None), proj_y.shape)
+    yc = x[index_y]
+    ax4.scatter(x, proj_y, color="b")
+    ax4.scatter(yc, proj_y[index_y], color="r", label=f"yc: {yc}")
+    ax4.set_ylabel("Average FWHM")
+    ax4.set_xlabel("yc [px]")
+    ax4.set_title("FWHM projection in y")
+    ax4.legend()
+
+    fig.colorbar(pos1, ax=ax1, shrink=0.6)
+    fig.colorbar(pos2, ax=ax2, shrink=0.6)
+
+    # Display the figure
+
+    # plt.show()
+    if PlotsFlag:
+        plt.savefig(f"{output_file}.png")
     plt.close()
     return xc, yc
 
 
 def open_distance_map_global_min(
-    lines: list, output_folder: str, label: str, pixel_step: int) -> tuple:
+    lines: list, output_folder: str, label: str, pixel_step: int
+) -> tuple:
     """
     Open distance minimization plot, fit projections in both axis to get the point of minimum distance.
 
@@ -583,10 +729,9 @@ def open_distance_map_global_min(
     """
 
     n = int(math.sqrt(len(lines)))
-    pixel_step/=2
+    pixel_step /= 2
     merged_dict = {}
     for dictionary in lines[:]:
-
         for key, value in dictionary.items():
             if key in merged_dict:
                 merged_dict[key].append(value)
@@ -594,35 +739,39 @@ def open_distance_map_global_min(
                 merged_dict[key] = [value]
 
     # Create a figure with three subplots
-    fig, (ax1, ax2,ax3) = plt.subplots(1, 3, figsize=(20, 5))
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 5))
 
     # Extract x, y, and z from merged_dict
 
     x = np.array(merged_dict["xc"]).reshape((n, n))[0]
     y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
     z = np.array(merged_dict["d"], dtype=np.float64).reshape((n, n))
-    
+
     pos1 = ax1.imshow(z, cmap="rainbow")
-    step = 30
+    step = 20
     n = z.shape[0]
     ax1.set_xticks(np.arange(0, n, step, dtype=float))
     ax1.set_yticks(np.arange(0, n, step, dtype=float))
-    step = round(step * (abs(x[0] - x[1])),1)
-    ax1.set_xticklabels(np.arange(round(x[0],1), round(x[-1]+step,1), step, dtype=int), rotation=45)
-    ax1.set_yticklabels(np.arange(round(y[0],1), round(y[-1]+step,1), step, dtype=int))
+    step = round(step * (abs(x[0] - x[1])), 1)
+    ax1.set_xticklabels(
+        np.arange(round(x[0], 1), round(x[-1] + step, 1), step, dtype=int), rotation=45
+    )
+    ax1.set_yticklabels(
+        np.arange(round(y[0], 1), round(y[-1] + step, 1), step, dtype=int)
+    )
 
     ax1.set_ylabel("yc [px]")
     ax1.set_xlabel("xc [px]")
     ax1.set_title("Distance [px]")
 
     proj_x = np.sum(z, axis=0)
-    print('proj',len(proj_x))
-    x = np.arange(x[0], x[-1]+pixel_step, pixel_step)
-    print('x',len(x))
+    # print('proj',len(proj_x))
+    x = np.arange(x[0], x[-1] + pixel_step, pixel_step)
+    # print('x',len(x))
     index_x = np.unravel_index(np.argmin(proj_x, axis=None), proj_x.shape)
     # print(index_x)
-    xc = round(x[index_x],1)
-    ax2.scatter(x, proj_x+pixel_step, color="b")
+    xc = round(x[index_x], 1)
+    ax2.scatter(x, proj_x + pixel_step, color="b")
     ax2.scatter(xc, proj_x[index_x], color="r", label=f"xc: {xc}")
     ax2.set_ylabel("Average distance [px]")
     ax2.set_xlabel("xc [px]")
@@ -630,10 +779,10 @@ def open_distance_map_global_min(
     ax2.legend()
 
     proj_y = np.sum(z, axis=1)
-    x = np.arange(y[0], y[-1]+pixel_step, pixel_step)
+    x = np.arange(y[0], y[-1] + pixel_step, pixel_step)
     index_y = np.unravel_index(np.argmin(proj_y, axis=None), proj_y.shape)
-    yc = round(x[index_y],1)
-    ax3.scatter(x,proj_y, color="b")
+    yc = round(x[index_y], 1)
+    ax3.scatter(x, proj_y, color="b")
     ax3.scatter(yc, proj_y[index_y], color="r", label=f"yc: {yc}")
     ax3.set_ylabel("Average Distance [px]")
     ax3.set_xlabel("yc [px]")
@@ -648,7 +797,6 @@ def open_distance_map_global_min(
     plt.savefig(f"{output_folder}/plots/distance_map/{label}.png")
     plt.close()
     return xc, yc
-
 
 
 def fit_fwhm(lines: list, pixel_step: int) -> Tuple[int]:
@@ -667,7 +815,6 @@ def fit_fwhm(lines: list, pixel_step: int) -> Tuple[int]:
     n = int(math.sqrt(len(lines)))
     merged_dict = {}
     for dictionary in lines[:]:
-
         for key, value in dictionary.items():
             if key in merged_dict:
                 merged_dict[key].append(value)
@@ -901,7 +1048,6 @@ def get_center_theory(
     """
     center_theory = []
     for i in files_path:
-
         label = str(i).split("/")[-1]
         crystal = int(label.split("_")[-3][-2:])
         rot = int(label.split("_")[-2][:])
@@ -919,7 +1065,6 @@ def fill_gaps(data: np.ndarray, center: tuple, mask: np.ndarray) -> np.ndarray:
     y, x = np.where(data * mask <= 0)
 
     for i in zip(y, x):
-
         radius = math.sqrt((i[0] - center[1]) ** 2 + (i[1] - center[0]) ** 2)
 
         index = np.where(ave_r == round(radius))[0]
@@ -928,3 +1073,28 @@ def fill_gaps(data: np.ndarray, center: tuple, mask: np.ndarray) -> np.ndarray:
 
         filled_data[i] = np.mean(ave_y[index])
     return filled_data
+
+
+def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:
+    """
+    Make a  ring mask for the data
+
+    Parameters
+    ----------
+    data: np.ndarray
+        Image in which mask will be shaped
+    radius: int
+        Outer radius of the mask
+
+    Returns
+    ----------
+    mask: np.ndarray
+    """
+
+    bin_size = bin
+    a = data.shape[0]
+    b = data.shape[1]
+
+    [X, Y] = np.meshgrid(np.arange(b) - center[0], np.arange(a) - center[1])
+    R = np.sqrt(np.square(X) + np.square(Y))
+    return (np.greater(R, radius)).astype(np.int32)

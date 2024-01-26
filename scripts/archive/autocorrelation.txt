@@ -416,3 +416,122 @@ def calculate_product(key_args: tuple) -> float:
                     plt.savefig(f"{args.output}/plots/cc_map/{label}_{i}.png")
                     plt.close()
                 """
+
+lattice fft:
+shifts_list=[[peak_0[0]-peak_1[0],peak_0[1]-peak_1[1], peak_0, peak_1] for peak_0, peak_1 in pairs_list]
+                shifts_list.sort(key= lambda x: math.sqrt(x[0]**2+x[1]**2))
+                #shifts_list=[[peak_0[0]-peak_1[0],peak_0[1]-peak_1[1]] for peak_0, peak_1 in pairs_list]
+                d=0.1
+                bins=np.arange(-6,6.1,d)
+
+                shift_x=100
+                shift_y=100
+                peak_0=[]
+                if len(shifts_list)==1:
+                    shifts_list=np.array(shifts_list)
+                    shift_x=shifts_list[0,0]
+                    shift_y=shifts_list[0,1]
+                    peak_0=shifts_list[0,2]
+                    peak_1=shifts_list[0,3]
+
+                elif len(shifts_list)>1:
+                    shifts_list=np.array(shifts_list)
+                    """
+                    shift_x=shifts_list[0,0]
+                    shift_y=shifts_list[0,1]
+                    peak_0=shifts_list[0,2]
+                    peak_1=shifts_list[0,3]
+                    print('shift in  x',shift_x)
+                    print('shift in y', shift_y)
+                    """
+                    shifts_x=shifts_list[:,0]
+                    shifts_y=shifts_list[:,1]
+                    
+                    #print('Shifts', shifts_list)
+                    fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2, 2, figsize=(10, 5))
+                    ax1.hist(shifts_x,bins=bins)
+                    ax2.hist(shifts_y, bins=bins,color='orange')
+                    
+                    counts,bins=np.histogram(shifts_x, bins=bins)
+                    sp = fft(counts, norm='forward')
+                    sp= np.abs(sp)/np.max(np.abs(sp))
+                    freq = fftfreq(bins.shape[-1], d=d)
+                    height_threshold=0.3
+                    peaks_index, properties = find_peaks(sp, height=height_threshold)
+                    ax3.plot(freq[:-1], np.abs(sp),'-', freq[peaks_index],properties['peak_heights'],'x')
+
+                    counts,bins=np.histogram(shifts_y, bins=bins)
+                    sp = fft(counts, norm='forward')
+                    sp= np.abs(sp)/np.max(np.abs(sp))
+                    freq = fftfreq(bins.shape[-1], d=d)
+                    height_threshold=0.3
+                    peaks_index, properties = find_peaks(sp, height=height_threshold)
+                    ax4.plot(freq[:-1], np.abs(sp),'-', freq[peaks_index],properties['peak_heights'],'x')
+                    
+                    #plt.show()
+                    
+                    fig, (ax1,ax2) = plt.subplots(1, 2, figsize=(10, 5))
+                    frequencies_y=[abs(freq[k]-freq[peaks_index[idk+1]]) for idk,k in enumerate(peaks_index[:-1]) if abs(freq[k]-freq[peaks_index[idk+1]])<1]
+                    peaks_number=np.arange(0., len(frequencies_y),1)
+                    ax2.scatter(peaks_number, frequencies_y)
+                    print('Shift_y',1/np.median(frequencies_y))
+
+
+                    counts,bins=np.histogram(shifts_x, bins=bins)
+                    sp = fft(counts, norm='forward')
+                    sp= np.abs(sp)/np.max(np.abs(sp))
+                    freq = fftfreq(bins.shape[-1], d=d)
+                    height_threshold=0.3
+                    peaks_index, properties = find_peaks(sp, height=height_threshold)
+                    frequencies_x=[abs(freq[k]-freq[peaks_index[idk+1]]) for idk,k in enumerate(peaks_index[:-1]) if abs(freq[k]-freq[peaks_index[idk+1]])<5 and abs(freq[k]-freq[peaks_index[idk+1]])>0.1]
+                    peaks_number=np.arange(0., len(frequencies_x),1)
+                    ax1.scatter(peaks_number, frequencies_x)
+                    print('Shift_x',1/np.median(frequencies_x))
+                    #plt.show()
+                    """
+
+                    bins=np.arange(-10,10.1,10)
+                    fig, (ax1,ax2) = plt.subplots(1, 2, figsize=(10, 5))
+                    ax1.hist(shifts_x,bins=bins)
+                    ax2.hist(shifts_y, bins=bins,color='orange')
+                    counts,bins=np.histogram(shifts_x, bins=bins)
+                    #print(counts, bins)
+                    if counts[0]>counts[1]:
+                        shift_x=-1*1/np.median(frequencies_x)
+                    else: 
+                        shift_x=1/np.median(frequencies_x)
+                        
+                    counts,bins=np.histogram(shifts_y, bins=bins)
+
+                    if counts[0]>counts[1]:
+                        shift_y=-1*1/np.median(frequencies_y)
+                    else:
+                        shift_y=1/np.median(frequencies_y)
+
+                    """
+                    bins=np.arange(-10,10.1,0.1)
+                    fig, (ax1,ax2) = plt.subplots(1, 2, figsize=(10, 5))
+                    ax1.hist(shifts_x,bins=bins)
+                    ax2.hist(shifts_y, bins=bins,color='orange')
+                    if frequencies_x==[]:
+                        shift_x=0
+                    else:
+                        print('Tx',1/np.median(frequencies_x))
+                        counts,bins=np.histogram(shifts_x, bins=bins)
+                        selected_bin=bins[np.argmax(counts)]
+                        shift_x=selected_bin-(math.floor(selected_bin*np.median(frequencies_x))/np.median(frequencies_x))
+                    
+                    print(shift_x)
+                    if frequencies_y==[]:
+                        shift_y=0
+                    else:
+                        print('Ty',1/np.median(frequencies_y))
+                        counts,bins=np.histogram(shifts_y, bins=bins)
+                        selected_bin=bins[np.argmax(counts)]
+                        shift_y=selected_bin-(math.floor(selected_bin*np.median(frequencies_y))/np.median(frequencies_y))
+                    
+                    print(shift_y)
+                    #plt.show()
+
+                    print('Final shift x:', shift_x,'Final shift y:', shift_y)
+                    

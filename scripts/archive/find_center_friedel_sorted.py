@@ -49,7 +49,8 @@ pf8_info = PF8Info(
 
 RealCenter = [1255, 1158]
 
-def calculate_cc(center:tuple)-> Dict[str, int]:
+
+def calculate_cc(center: tuple) -> Dict[str, int]:
     # Update center for pf8 with the last calculated center
     # print(pf8_info)
     pf8_info.modify_radius(center[0], center[1])
@@ -61,25 +62,25 @@ def calculate_cc(center:tuple)-> Dict[str, int]:
     pf8 = PF8(pf8_info)
 
     # Update geom and recorrect polarization
-    updated_geom = f"{args.geom[:-5]}_{label}_{frame_number}_fwhm_{center[0]}_{center[1]}.geom"
+    updated_geom = (
+        f"{args.geom[:-5]}_{label}_{frame_number}_fwhm_{center[0]}_{center[1]}.geom"
+    )
     cmd = f"cp {args.geom} {updated_geom}"
     sub.call(cmd, shell=True)
-    update_corner_in_geom(
-        updated_geom, center[0], center[1]
-    )
+    update_corner_in_geom(updated_geom, center[0], center[1])
     x_map, y_map, det_dict = gf.pixel_maps_from_geometry_file(
         updated_geom, return_dict=True
     )
     corrected_data, _ = correct_polarization(x_map, y_map, clen_v, data, mask=mask)
 
     # Find Bragg peaks list with pf8
-    
+
     peak_list = pf8.get_peaks_pf8(data=corrected_data)
     indices = (
         np.array(peak_list["ss"], dtype=int),
         np.array(peak_list["fs"], dtype=int),
     )
-    transformed_indices=(indices[0]-center[1],indices[1]-center[0])
+    transformed_indices = (indices[0] - center[1], indices[1] - center[0])
     """
     distance_to_center=[]
     for i in range(len(transformed_indices[0])):
@@ -88,16 +89,12 @@ def calculate_cc(center:tuple)-> Dict[str, int]:
     inverted_distance=distance_to_center[::-1]
     cc=np.corrcoef(distance_to_center,inverted_distance)[0,1]
     """
-    inverted_indices=(transformed_indices[0][::-1], transformed_indices[1][::-1])
-    cc_x=np.corrcoef(transformed_indices[1],inverted_indices[1])[0,1]
-    cc_y=np.corrcoef(transformed_indices[0],inverted_indices[0])[0,1]
+    inverted_indices = (transformed_indices[0][::-1], transformed_indices[1][::-1])
+    cc_x = np.corrcoef(transformed_indices[1], inverted_indices[1])[0, 1]
+    cc_y = np.corrcoef(transformed_indices[0], inverted_indices[0])[0, 1]
 
-    return {
-        "xc": center[0],
-        "yc": center[1],
-        "cc_x": -1*cc_x,
-        "cc_y": -1*cc_y
-    }
+    return {"xc": center[0], "yc": center[1], "cc_x": -1 * cc_x, "cc_y": -1 * cc_y}
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -552,7 +549,6 @@ def open_cc_map_global_max(
 
     merged_dict = {}
     for dictionary in lines[:]:
-
         for key, value in dictionary.items():
             if key in merged_dict:
                 merged_dict[key].append(value)
@@ -568,7 +564,7 @@ def open_cc_map_global_max(
     y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
     z1 = np.array(merged_dict["cc_x"], dtype=np.float64).reshape((n, n))
     z2 = np.array(merged_dict["cc_y"], dtype=np.float64).reshape((n, n))
-    
+
     pos1 = ax1.imshow(z1, cmap="rainbow")
     step = 20
     n = z1.shape[0]
@@ -582,7 +578,7 @@ def open_cc_map_global_max(
     ax1.set_xlabel("xc [px]")
     ax1.set_title("CC")
     index_x = np.unravel_index(np.argmax(z1, axis=None), z1.shape)
-    
+
     pos2 = ax2.imshow(z2, cmap="rainbow")
     step = 20
     n = z2.shape[0]
@@ -596,11 +592,11 @@ def open_cc_map_global_max(
     ax2.set_xlabel("xc [px]")
     ax2.set_title("CC")
     index_y = np.unravel_index(np.argmax(z2, axis=None), z2.shape)
-    
+
     x = np.array(merged_dict["xc"]).reshape((n, n))
     y = np.array(merged_dict["yc"]).reshape((n, n))
 
-    print(x[index_y],y[index_y], x[index_x],y[index_x])
+    print(x[index_y], y[index_y], x[index_x], y[index_x])
     xc = x[index_x]
     yc = y[index_y]
     """
@@ -639,8 +635,5 @@ def open_cc_map_global_max(
     return xc, yc
 
 
-
 if __name__ == "__main__":
     main()
-
-

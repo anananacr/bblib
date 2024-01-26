@@ -111,7 +111,6 @@ def main():
     n = len(paths)
 
     if file_format == "lst":
-
         pool = multiprocessing.Pool()
         with pool:
             features_extraction = pool.map(extract_histogram, paths)

@@ -41,7 +41,13 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> List[int]:
     indices = np.where(data > 0)
     xc = np.sum(data[indices] * indices[1]) / np.sum(data[indices])
     yc = np.sum(data[indices] * indices[0]) / np.sum(data[indices])
-    return [xc, yc]
+
+    if np.isnan(xc) or np.isnan(yc):
+        converged=0
+    else:
+        converged=1
+    
+    return converged,[xc, yc]
 
 
 def azimuthal_average(
@@ -259,7 +265,7 @@ def update_corner_in_geom(geom: str, new_xc: float, new_yc: float):
     f.close()
 
 
-def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int) -> np.ndarray:
+def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int, n:int) -> np.ndarray:
     """
     Gather coordinates of a box of 1x1 pixels around each point from the indices list. Bragg flag indicates if the mask returned will contain only bragg peaks regions (bragg =1), no bragg peaks regions (bragg=0), or both (bragg =-1).
     Parameters
@@ -270,6 +276,8 @@ def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int) -> np.ndarray:
         Bragg peaks coordinates, indices[0] contains x-coordinates of Bragg peaks and indices[1] the corresponding y-coordinates.
     bragg: int
         Bragg flag, choose between return only peaks, only background or both (bypass masking of peaks).
+    n: int
+        n pixels to build a 2n box around the peak.
     Returns
     ----------
     surrounding_mask: np.ndarray
@@ -278,7 +286,6 @@ def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int) -> np.ndarray:
     surrounding_positions = []
     count = 0
     for index in zip(indices[0], indices[1]):
-        n = 2
         row, col = index
         for i in range(-n, n + 1):
             for k in range(-n, n + 1):
@@ -748,7 +755,7 @@ def open_distance_map_global_min(
     y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
     z = np.array(merged_dict["d"], dtype=np.float64).reshape((n, n))
     z=np.nan_to_num(z)
-    r=np.nan_to_num(r)
+
     pos1 = ax1.imshow(z, cmap="rainbow")
     step = 20
     n = z.shape[0]
@@ -796,10 +803,15 @@ def open_distance_map_global_min(
     # Display the figure
 
     # plt.show()
-    plt.savefig(f"{output_folder}/plots/distance_map/{label}.png")
+        
+    if int(np.sum(proj_y)) == 0 or int(np.sum(proj_x)) == 0:
+        converged = 0
+    else:
+        converged = 1
+        plt.savefig(f"{output_folder}/distance_map/{label}.png")
+    
     plt.close()
-    return xc, yc
-
+    return xc, yc, converged
 
 def open_distance_map_fit_min(
     lines: list, output_folder: str, label: str, pixel_step: int

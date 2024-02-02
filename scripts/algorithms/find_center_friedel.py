@@ -2,11 +2,7 @@ from typing import List, Optional, Callable, Tuple, Any, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-from utils import open_distance_map_fit_min
-
-## Fine search
-SearchRadius = 14
-OutlierDistance = 7
+from utils import open_distance_map_fit_min, open_distance_map_global_min
 
 def remove_repeated_items(pairs_list: list) -> list:
     x_vector = []
@@ -85,10 +81,16 @@ def find_a_peak_in_the_surrounding(
     else:
         return cut_peaks_list[0][0]
 
-def calculate_center_friedel_pairs(corrected_data: np.ndarray, mask: np.ndarray,peaks_list: list, initial_center: list, plots_flag: bool, output_folder: str, label:str):
+def calculate_center_friedel_pairs(corrected_data: np.ndarray, mask: np.ndarray,peaks_list: list, initial_center: list, search_radius: int, plots_flag: bool, output_folder: str, label:str):
     global ref_center
     ref_center=initial_center
 
+    global SearchRadius
+    SearchRadius=search_radius
+
+    global OutlierDistance
+    #OutlierDistance=SearchRadius/2
+    OutlierDistance=20 
     peaks_list_x = [k - ref_center[0] for k in peaks_list["fs"]]
     peaks_list_y = [k - ref_center[1] for k in peaks_list["ss"]]
     peaks = list(zip(peaks_list_x, peaks_list_y))
@@ -99,8 +101,8 @@ def calculate_center_friedel_pairs(corrected_data: np.ndarray, mask: np.ndarray,
     ## Grid search of shifts around the detector center
     pixel_step = 0.2
     xx, yy = np.meshgrid(
-        np.arange(-30, 30.2, pixel_step, dtype=float),
-        np.arange(-30, 30.2, pixel_step, dtype=float),
+        np.arange(-OutlierDistance, OutlierDistance+0.2, pixel_step, dtype=float),
+        np.arange(-OutlierDistance, OutlierDistance+0.2, pixel_step, dtype=float),
     )
     coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
     peaks_0 = [x for x, y in pairs_list]
@@ -115,25 +117,25 @@ def calculate_center_friedel_pairs(corrected_data: np.ndarray, mask: np.ndarray,
         )
     ## Display plots
     ## Minimize distance
-    # xc, yc, converged = open_distance_map_global_min(
-    #    distance_summary, output_folder, f"{label}", pixel_step
-    # )
-    ## Fine tune
-    xc, yc, converged = open_distance_map_fit_min(
+    xc, yc, converged = open_distance_map_global_min(
         distance_summary, output_folder, f"{label}", pixel_step
     )
-    if math.isnan(xc) or math.isnan(yc):
-        converged=0
+    
+    ## Fine tune
+    #xc, yc, converged = open_distance_map_fit_min(
+    #    distance_summary, output_folder, f"{label}", pixel_step
+    #)
+        
+    if converged==1:
+        refined_center = (np.around(xc, 1), np.around(yc, 1))
+    else:
         h, w = corrected_data.shape
         refined_center = (np.around(w/2, 1), np.around(h/2, 1))
-    else:
-        converged=1
-        refined_center = (np.around(xc, 1), np.around(yc, 1))
 
     shift_x = 2 * (xc - ref_center[0])
     shift_y = 2 * (yc - ref_center[1])
-    if plots_flag:
-        fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+    if plots_flag and converged==1:
+        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
         pos = ax.imshow(corrected_data * mask, vmax=20, cmap="cividis")
         ax.scatter(
             ref_center[0],
@@ -151,8 +153,8 @@ def calculate_center_friedel_pairs(corrected_data: np.ndarray, mask: np.ndarray,
             s=25,
             label=f"Refined center:({refined_center[0]}, {refined_center[1]})",
         )
-        ax.set_xlim(0, 1028)
-        ax.set_ylim(512, 0)
+        ax.set_xlim(360, 840)
+        ax.set_ylim(512, 200)
         plt.title("Center refinement: autocorrelation of Friedel pairs")
         fig.colorbar(pos, shrink=0.6)
         ax.legend()
@@ -177,9 +179,9 @@ def calculate_center_friedel_pairs(corrected_data: np.ndarray, mask: np.ndarray,
     inverted_shifted_peaks_y = [
         np.round(k + ref_center[1] + shift_y) for k in inverted_peaks_y
     ]
-    if plots_flag:
+    if plots_flag and converged==1:
         ## Check pairs alignement
-        fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
         pos = ax.imshow(corrected_data * mask, vmax=20, cmap="cividis")
         ax.scatter(
             original_peaks_x,
@@ -209,8 +211,8 @@ def calculate_center_friedel_pairs(corrected_data: np.ndarray, mask: np.ndarray,
             edgecolor="lime",
             label="shift of inverted peaks",
         )
-        ax.set_xlim(0, 1028)
-        ax.set_ylim(512, 0)
+        ax.set_xlim(360, 840)
+        ax.set_ylim(512, 200)
         plt.title("Bragg peaks alignement")
         fig.colorbar(pos, shrink=0.6)
         ax.legend()

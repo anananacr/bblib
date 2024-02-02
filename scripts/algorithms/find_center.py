@@ -34,14 +34,13 @@ import h5py
 import hdf5plugin
 import multiprocessing
 
-# Set here minimum peaks rejection
-MinPeaks = 0
+
 # Set here peakfinder8 parameters to find correctly Bragg spots that will be masked to get the background signal
 
 PF8Config = PF8Info(
     max_num_peaks=10000,
-    adc_threshold=20,
-    minimum_snr=5,
+    adc_threshold=30,
+    minimum_snr=3.5,
     min_pixel_count=1,
     max_pixel_count=200,
     local_bg_radius=3,
@@ -51,35 +50,32 @@ PF8Config = PF8Info(
 
 listed_events = False
 
-PlotsFlag = True
+PlotsFlag = False
 # Set here pixel resolution in mm to correct from the DetectorCenter taken from the geometry file.
 
 PixelResolution = 1 / (75 * 1e-3)
 
-## Ignore AutoFlag center of mass as initial guess
-AutoFlag = True
-
-# Set here the maximum number of pixels from ForceCenter to define region where the FWHM minimization search will look for the direct beam position
-# OutlierDistance = 80
 OutlierDistance = 10
 
-# Look for the background peak region, for this you have to know exactly the peak region to fit
-MinPeakRegion = 60 #35 
-MaxPeakRegion = 80 #55
+SearchRadius = 6
 
-## Parameters to fix the first guess with the center of mass
+# Look for the background peak region, for this you have to know exactly the peak region to fit
+MinPeakRegion = 35 #60 #35 
+MaxPeakRegion = 55 #80 #55
 
 ## Canny algorithm parameters
-CannySigma = 1
-CannyLowThr = 0.98
+CannySigma = 4
+CannyLowThr = 0.985
 CannyHighThr = 0.99
 
-Method=1
+Method = 1
+
+BraggPosCenterOfMass = True
+PixelsPeak = 2
 
 # Here I am creating a dictionary to save all beam sweeping parameters in the hdf5 output file
 BeamSweepingParam = {
     "pixel_resolution": PixelResolution,
-    "min_peaks": MinPeaks,
     "pf8_max_num_peaks": PF8Config.max_num_peaks,
     "pf8_adc_threshold": PF8Config.adc_threshold,
     "pf8_minimum_snr": PF8Config.minimum_snr,
@@ -93,9 +89,13 @@ BeamSweepingParam = {
     "canny_sigma": CannySigma,
     "canny_low_thr": CannyLowThr,
     "canny_high_thr": CannyHighThr,
-    "auto_flag": AutoFlag
-}
+    "outlier_distance": OutlierDistance,
+    "search_radius": SearchRadius,
+    "method": Method,
+    "bragg_peaks_positions_for_center_of_mass_calculation": BraggPosCenterOfMass,
+    "pixels_for_mask_of_bragg_peaks":PixelsPeak
 
+}
 
 def calculate_fwhm(data_and_coordinates: tuple) -> Dict[str, int]:
     corrected_data, mask, center_to_radial_average = data_and_coordinates
@@ -238,12 +238,12 @@ def main():
     res = preamb["res"]
     clen = preamb["clen"]
     dist = 0.0
-    print(det_dict)
+    #print(det_dict)
     _img_center_x = det_dict["panel0"]["corner_y"]
     _img_center_y = -1 * det_dict["panel0"]["corner_x"]
     DetectorCenter = [_img_center_x, _img_center_y]
 
-    print(DetectorCenter)
+    #print(DetectorCenter)
 
     f = h5py.File(f"{args.mask}", "r")
     mask = np.array(f["data/data"])
@@ -251,6 +251,11 @@ def main():
 
     global file_label
     global run_label
+    try:
+        job_index=int(args.input[-2:])
+    except ValueError:
+        job_index=0
+
     if file_format == "lst":
         for i in range(0, len(paths[:])):
             hit_list = []
@@ -267,7 +272,6 @@ def main():
             if not listed_events:
                 file_name_str = str(paths[i][:-1])
                 split_path = (os.path.dirname(file_name_str)).split("/")
-                # It is not good the way to create folders it is working, in the beginning they had different folder structure I hate it
                 # run_label=split_path[-3]+'/'+split_path[-2]+'/'+split_path[-1]
                 run_label = split_path[-2] + "/" + split_path[-1]
 
@@ -280,7 +284,7 @@ def main():
                 if PlotsFlag:
                     cmd = f"mkdir {args.scratch}/center_refinement/plots/{split_path[-2]}; mkdir {args.scratch}/center_refinement/plots/{run_label};"
                     sub.call(cmd, shell=True)
-                    cmd = f" mkdir {args.scratch}/center_refinement/plots/{run_label}/distance_map_fit/; mkdir {args.scratch}/center_refinement/plots/{run_label}/peaks/; mkdir {args.scratch}/center_refinement/plots/{run_label}/centered_friedel/; mkdir {args.scratch}/center_refinement/plots/{run_label}/radial_average/; mkdir {args.scratch}/center_refinement/plots/{run_label}/centered/;  mkdir {args.scratch}/center_refinement/plots/{run_label}/fwhm_map/"
+                    cmd = f" mkdir {args.scratch}/center_refinement/plots/{run_label}/distance_map/; mkdir {args.scratch}/center_refinement/plots/{run_label}/peaks/; mkdir {args.scratch}/center_refinement/plots/{run_label}/centered_friedel/; mkdir {args.scratch}/center_refinement/plots/{run_label}/radial_average/; mkdir {args.scratch}/center_refinement/plots/{run_label}/centered/;  mkdir {args.scratch}/center_refinement/plots/{run_label}/fwhm_map/;  mkdir {args.scratch}/center_refinement/plots/{run_label}/edges/"
                     sub.call(cmd, shell=True)
                 file_name = paths[i][:-1]
             
@@ -299,9 +303,9 @@ def main():
                     cmd = f"mkdir {args.output}/centered/{split_path[-2]}; mkdir {args.output}/centered/{run_label}"
                     sub.call(cmd, shell=True)
                 if PlotsFlag:
-                    cmd = f"mkdir {args.scratch}/center_refinement/plots/{split_path[-2]}; mkdir {args.scratch}/center_refinement/plots/{run_label};"
+                    cmd = f"mkdir {args.scratch}/center_refinement/plots/{split_path[-2]}; mkdir {args.scratch}/center_refinement/plots/{run_label}; mkdir {args.scratch}/center_refinement/plots/{run_label}/edges/;"
                     sub.call(cmd, shell=True)
-                    cmd = f" mkdir {args.scratch}/center_refinement/plots/{run_label}/distance_map_fit/; mkdir {args.scratch}/center_refinement/plots/{run_label}/radial_average/; mkdir {args.scratch}/center_refinement/plots/{run_label}/centered/;  mkdir {args.scratch}/center_refinement/plots/{run_label}/fwhm_map/"
+                    cmd = f"mkdir {args.scratch}/center_refinement/plots/{run_label}/distance_map/ ; mkdir {args.scratch}/center_refinement/plots/{run_label}/radial_average/; mkdir {args.scratch}/center_refinement/plots/{run_label}/centered/;  mkdir {args.scratch}/center_refinement/plots/{run_label}/fwhm_map/;"
                     sub.call(cmd, shell=True)
                 file_name = paths[i][:-1]
             if get_format(file_name) == "h":
@@ -311,12 +315,13 @@ def main():
             if not PlotsFlag:
                 max_frame=data.shape[0]
             else:
-                max_frame=30
+                max_frame=10
 
             for frame_index in range(max_frame):
                 frame = np.array(data[frame_index])
-                
                 corrected_data = frame
+                hit_list.append(frame)
+
                 mask[np.where(corrected_data>4.28e9)]=0
 
                 ## Peakfinder8 detector information and bad_pixel_map
@@ -336,205 +341,186 @@ def main():
                     np.array(peaks_list["fs"], dtype=int),
                 )
                 # Mask Bragg  peaks
-                only_peaks_mask = mask_peaks(mask, indices, bragg=0)
+                if BraggPosCenterOfMass:
+                    only_peaks_mask = mask_peaks(mask, indices, bragg=1, n=PixelsPeak)
+                else:
+                    only_peaks_mask = mask_peaks(mask, indices, bragg=0, n=PixelsPeak)
+
                 first_mask = only_peaks_mask * mask
-                first_center = center_of_mass(corrected_data, first_mask)
+                if BraggPosCenterOfMass:
+                    unity_data= corrected_data.copy()
+                    unity_data[first_mask]=1
+                    converged,first_center = center_of_mass(unity_data, first_mask)
+                else:
+                    converged,first_center = center_of_mass(corrected_data, first_mask)
+
+                if converged==0:
+                    first_center=DetectorCenter.copy()
+                
                 first_center_list.append(first_center)
                 print("First center", first_center)                
-                
-                ## Put the center in the first center guess, peakfinder8 is finding peaks even though the initial_center is far from the actual center. Check with Oleksandr if it is correct after.
-                #PF8Config.modify_radius(first_center[0], first_center[1])
-                #pf8 = PF8(PF8Config)
-                #peaks_list = pf8.get_peaks_pf8(data=corrected_data)
-                n_hits = 0
-                ## Minimum peaks rejection the frame will not be saved in processed
-                if peaks_list["num_peaks"] >= MinPeaks:
-                    ## Save frame if it is a hit. This requires a lot of memory, bad way of do it. I have to fix after the beamtime.
-                    hit_list.append(frame)
-                    """
-                    ## Peak search
+                                
+                # Mask Bragg peaks. I take the mask shape, Bragg peaks positions, bragg is a flag if I want to see only bragg peaks or only the image without Bragg peaks
+                only_peaks_mask = mask_peaks(mask, indices, bragg=0, n=PixelsPeak)
+                pf8_mask = only_peaks_mask * mask
 
-                    # I have to retrive this information from the geometry file. TO DO.
-                    PF8Config.pf8_detector_info = dict(
-                        asic_nx=mask.shape[1],
-                        asic_ny=mask.shape[0],
-                        nasics_x=1,
-                        nasics_y=1,
-                    )
-                    PF8Config._bad_pixel_map = mask
-
-                    # Don't need to do it. Not sure why I used this once. So far it doesn't change anything. TO DO
-                    PF8Config.modify_radius(int(first_center[0]), int(first_center[1]))
-                    pf8 = PF8(PF8Config)
-
-                    peaks_list = pf8.get_peaks_pf8(data=corrected_data)
-
-                    # This may break for other detector types. TO DO.
-                    indices = (
-                        np.array(peaks_list["ss"], dtype=int),
-                        np.array(peaks_list["fs"], dtype=int),
-                    )
-                    """
-                    # Mask Bragg peaks. I take the mask shape, Bragg peaks positions, bragg is a flag if I want to see only bragg peaks or only the image without Bragg peaks
-                    only_peaks_mask = mask_peaks(mask, indices, bragg=0)
-                    pf8_mask = only_peaks_mask * mask
-
-                    # Brute force manner. May be this can be improved ask Oleksandr.
-                    ## Calculate FWHM of the background peak for each coordinate in a box of OutlierDistance around the pixel coordinates defined in first_center    
-                    
-                    edges = canny(corrected_data, mask=pf8_mask, sigma=CannySigma,use_quantiles=True,low_threshold=CannyLowThr, high_threshold=CannyHighThr)
-
-                    # Detect radii
-                    hough_radii = np.arange(MinPeakRegion, MaxPeakRegion, 1)
-                    hough_res = hough_circle(edges, hough_radii)
-
-                    # Select the most prominent 1 circle
-                    accums, cx, cy, radii = hough_circle_peaks(hough_res, hough_radii,
-                                           total_num_peaks=1)
+                ## Scikit-image circle detection                
+                edges = canny(corrected_data, mask=pf8_mask, sigma=CannySigma,use_quantiles=True,low_threshold=CannyLowThr, high_threshold=CannyHighThr)
+                if PlotsFlag:
+                    fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
+                    ax1.imshow(edges)
+                    plt.savefig(f"{args.scratch}/center_refinement/plots/{run_label}/edges/{file_label}_{frame_index}.png")
+                    plt.close()
+                # Detect radii
+                hough_radii = np.arange(MinPeakRegion, MaxPeakRegion, 1)
+                hough_res = hough_circle(edges, hough_radii)
+                # Select the most prominent 1 circle
+                accums, cx, cy, radii = hough_circle_peaks(hough_res, hough_radii,
+                                       total_num_peaks=1)
+                if len(cx)>0:
                     second_center= [cx[0],cy[0]]
- 
-                    initial_center_list.append(second_center)
-                    second_center_list.append(second_center)
-                    pixel_step = 1
+                else:
+                    second_center=first_center.copy()
+                initial_center_list.append(second_center)
+                second_center_list.append(second_center)
 
-                    xx, yy = np.meshgrid(
-                        np.arange(
-                            second_center[0] - OutlierDistance,
-                            second_center[0] + OutlierDistance + 1,
-                            pixel_step,
-                            dtype=int,
-                        ),
-                        np.arange(
-                            second_center[1] - OutlierDistance,
-                            second_center[1] + OutlierDistance + 1,
-                            pixel_step,
-                            dtype=int,
-                        ),
-                    )
-
-                    coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
-
-                    masked_data=corrected_data.copy()
-                    ring_mask_array=ring_mask(masked_data,second_center, MinPeakRegion, MaxPeakRegion)
-                    masked_data[~ring_mask_array]=0
-                    coordinates_anchor_data = [
-                        (masked_data, pf8_mask, shift) for shift in coordinates
-                    ]
-                    fwhm_summary = []
-
-                    pool = multiprocessing.Pool()
-                    with pool:
-                        fwhm_summary = pool.map(calculate_fwhm, coordinates_anchor_data)
-                    
-                    third_center = open_fwhm_map_global_min(
-                        fwhm_summary,
-                        f"{args.scratch}/center_refinement/plots/{run_label}/fwhm_map/{file_label}_{frame_index}",
+                ## Calculate FWHM of the background peak for each coordinate in a box of OutlierDistance around the pixel coordinates defined in first_center    
+                """
+                pixel_step = 1
+                print(second_center)
+                xx, yy = np.meshgrid(
+                    np.arange(
+                        second_center[0] - OutlierDistance,
+                        second_center[0] + OutlierDistance + 1,
                         pixel_step,
-                        PlotsFlag,
-                    )
-                    third_center_list.append(third_center)
+                        dtype=int,
+                    ),
+                    np.arange(
+                        second_center[1] - OutlierDistance,
+                        second_center[1] + OutlierDistance + 1,
+                        pixel_step,
+                        dtype=int,
+                    ),
+                )
+                coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
+                masked_data=corrected_data.copy()
+                ring_mask_array=ring_mask(masked_data,second_center, MinPeakRegion, MaxPeakRegion)
+                masked_data[~ring_mask_array]=0
+                coordinates_anchor_data = [
+                    (masked_data, pf8_mask, shift) for shift in coordinates
+                ]
+                fwhm_summary = []
+                pool = multiprocessing.Pool()
+                with pool:
+                    fwhm_summary = pool.map(calculate_fwhm, coordinates_anchor_data)
+                
+                third_center = open_fwhm_map_global_min(
+                    fwhm_summary,
+                    f"{args.scratch}/center_refinement/plots/{run_label}/fwhm_map/{file_label}_{frame_index}",
+                    pixel_step,
+                    PlotsFlag,
+                )
+                third_center_list.append(third_center)
+                """
 
+                third_center=[0,0]
+
+                if Method==0:
+                    xc, yc = first_center
+                elif Method==1:
+                    xc, yc=second_center
+                elif Method==2:
+                    xc,yc=third_center
+                if peaks_list["num_peaks"] >= 4:
+                    PF8Config.modify_radius(xc, yc)
+                    pf8 = PF8(PF8Config)
+                    peaks_list = pf8.get_peaks_pf8(data=corrected_data)
+                    fourth_center=calculate_center_friedel_pairs(corrected_data, mask, peaks_list, [xc,yc], SearchRadius, PlotsFlag, f"{args.scratch}/center_refinement/plots/{run_label}", f"{file_label}_{frame_index}")
+                else:
+                    fourth_center=None
+                if fourth_center:
+                    fourth_center_list.append(fourth_center)
+                    xc, yc = fourth_center
+                else:
+                    fourth_center_list.append([-1,-1])
                     if Method==0:
                         xc, yc = first_center
                     elif Method==1:
                         xc, yc=second_center
                     elif Method==2:
-                        xc,yc=third_center
-
-                    if peaks_list["num_peaks"] >= 4:
-                        fourth_center=calculate_center_friedel_pairs(corrected_data, mask, peaks_list, [xc,yc], PlotsFlag, f"{args.scratch}/center_refinement/plots/{run_label}", f"{file_label}_{frame_index}")
-                    else:
-                        fourth_center=None
-
-                    if fourth_center:
-                        fourth_center_list.append(fourth_center)
-                        xc, yc = fourth_center
-                    else:
-                        fourth_center_list.append([-1,-1])
-                        if Method==0:
-                            xc, yc = first_center
-                        elif Method==1:
-                            xc, yc=second_center
-                        elif Method==2:
-                            xc,yc=third_center                  
-                        
-                    print("Final center", xc, yc)
-                    ## Here you get the direct beam position in detector coordinates. Is it right to call this? Ask Oleksandr.
-                    refined_center = (int(np.round(xc)), int(yc))
-                    center_list.append(refined_center)
-                    detector_shift_y = (
-                        - refined_center[0] + DetectorCenter[0]
-                    ) / PixelResolution
-                    detector_shift_x = (
-                        - refined_center[1] + DetectorCenter[1]
-                    ) / PixelResolution
-                    print("shift_y", detector_shift_y, "shift_x",detector_shift_x)
+                        xc,yc=third_center                  
                     
-                    shift_x_mm_list.append(1* detector_shift_x)
-                    shift_y_mm_list.append(-1* detector_shift_y)
-
-                    ## For the calculated direct beam postion I do the azimuthal integration and save the plot to check results. Is it okay to save this plots? Does Oleksandr uses a better way to check results, it is just for testing and see if it is converging. In the final pipeline this plots may not be necessary? Ask Oleksandr.
-                    if PlotsFlag:
-                        plot_flag = True
-                    results = calculate_fwhm(
-                        (masked_data, pf8_mask, (refined_center))
+                #print("Final center", xc, yc)
+                ## Here you get the direct beam position in detector coordinates.
+                refined_center = (int(np.round(xc)), int(yc))
+                center_list.append(refined_center)
+                detector_shift_y = (
+                    - refined_center[0] + DetectorCenter[0]
+                ) / PixelResolution
+                detector_shift_x = (
+                    - refined_center[1] + DetectorCenter[1]
+                ) / PixelResolution
+                
+                shift_x_mm_list.append(1* detector_shift_x)
+                shift_y_mm_list.append(-1* detector_shift_y)
+                ## For the calculated direct beam postion I do the azimuthal integration and save the plot to check results.
+                if PlotsFlag:
+                    plot_flag = True
+                results = calculate_fwhm(
+                    (corrected_data, pf8_mask, (refined_center))
+                )
+                plot_flag = False
+                
+                ## Display plots to check peaksearch and if the refined center converged.
+                if PlotsFlag:
+                    xr = first_center[0]
+                    yr = first_center[1]
+                    fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
+                    pos1 = ax1.imshow(
+                        corrected_data * mask, vmax=20, cmap="cividis"
                     )
-                    plot_flag = False
-                    
-                    ## Display plots to check peaksearch and where the refined center converged in relation to the first_center.
-                    if PlotsFlag:
-                        xr = first_center[0]
-                        yr = first_center[1]
+                    ax1.scatter(
+                        round(DetectorCenter[0]), round(DetectorCenter[1]), color="green", label=f"Detector center:({round(DetectorCenter[0])},{round(DetectorCenter[1])})"
+                    )
+                    ax1.scatter(
+                        round(first_center[0]), round(first_center[1]), color="cyan", label=f"First center:({round(first_center[0])},{round(first_center[1])})"
+                    )
+                    ax1.scatter(
+                        round(second_center[0]), round(second_center[1]), color="magenta", label=f"Second center:({round(second_center[0])},{round(second_center[1])})"
+                    )
+                    ax1.scatter(
+                        round(third_center[0]), round(third_center[1]), color="red", label=f"Third center:({round(third_center[0])}, {round(third_center[1])})"
+                    )
+                    ax1.scatter(
+                        indices[1],
+                        indices[0],
+                        facecolor="none",
+                        s=60,
+                        marker="s",
+                        edgecolor="lime",
+                        label="original peaks",
+                    )
+                    ax1.set_title("Center refinement: FWHM minimization")
+                    fig.colorbar(pos1, ax=ax1, shrink=0.6)
+                    # ax1.set_xlim(400, 2000)
+                    # ax1.set_ylim(400, 2000)
+                    ax1.legend(fontsize="10", loc="upper left")
+                    plt.savefig(
+                        f"{args.scratch}/center_refinement/plots/{run_label}/centered/{file_label}_{frame_index}.png"
+                    )
+                    plt.close()
 
-                        fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-                        pos1 = ax1.imshow(
-                            corrected_data * mask, vmax=20, cmap="cividis"
-                        )
-                        ax1.scatter(
-                            round(DetectorCenter[0]), round(DetectorCenter[1]), color="green", label=f"Detector center:({round(DetectorCenter[0])},{round(DetectorCenter[1])})"
-                        )
-                        ax1.scatter(
-                            round(first_center[0]), round(first_center[1]), color="cyan", label=f"First center:({round(first_center[0])},{round(first_center[1])})"
-                        )
-                        ax1.scatter(
-                            round(second_center[0]), round(second_center[1]), color="magenta", label=f"Second center:({round(second_center[0])},{round(second_center[1])})"
-                        )
-                        ax1.scatter(
-                            round(third_center[0]), round(third_center[1]), color="red", label=f"Third center:({round(third_center[0])}, {round(third_center[1])})"
-                        )
-                        ax1.scatter(
-                            indices[1],
-                            indices[0],
-                            facecolor="none",
-                            s=60,
-                            marker="s",
-                            edgecolor="lime",
-                            label="original peaks",
-                        )
-                        ax1.set_title("Center refinement: FWHM minimization")
-                        fig.colorbar(pos1, ax=ax1, shrink=0.6)
-                        # ax1.set_xlim(400, 2000)
-                        # ax1.set_ylim(400, 2000)
-                        ax1.legend(fontsize="10", loc="upper left")
-                        plt.savefig(
-                            f"{args.scratch}/center_refinement/plots/{run_label}/centered/{file_label}_{frame_index}.png"
-                        )
-                        plt.close()
-                        n_hits += 1
-                    cmd=f"cp {args.geom} {args.scratch}/tmp.geom"
-                    sub.call(cmd, shell=True)
-                    update_corner_in_geom(f"{args.scratch}/tmp.geom", refined_center[0], refined_center[1])
-                    x_map, y_map, det_dict = gf.pixel_maps_from_geometry_file(f"{args.scratch}/tmp.geom", return_dict=True)
-                    pol_corrected_data, pol_array_first = correct_polarization(x_map, y_map, float(clen), corrected_data, mask=mask)
-                    pol_hits_list.append(pol_corrected_data)
-            # Don't forget to close the file. Should I do in a safer way? Ask Marina and Oleksandr.
+                cmd=f"cp {args.geom} {args.scratch}/tmp_{job_index}.geom"
+                sub.call(cmd, shell=True)
+                update_corner_in_geom(f"{args.scratch}/tmp_{job_index}.geom", refined_center[0], refined_center[1])
+                x_map, y_map, det_dict = gf.pixel_maps_from_geometry_file(f"{args.scratch}/tmp_{job_index}.geom", return_dict=True)
+                pol_corrected_data, pol_array_first = correct_polarization(x_map, y_map, float(clen), corrected_data, mask=mask)
+                pol_hits_list.append(np.array(pol_corrected_data, dtype=np.int32))
             f.close()
-
             shift_x_mm = np.array(shift_x_mm_list).astype(np.float32)
             shift_y_mm = np.array(shift_y_mm_list).astype(np.float32)
             list_of_events=np.arange(0, len(shift_x_mm),1)
 
-            # Save the hdf5 files as it is in the raw folder. I have to sit with Marina and Oleksandr and come up with what should be the best way to pass things for CrystFEL and if the paths make sense for them.
             if PlotsFlag:
                 output_folder=f"{args.scratch}/centered"
             else:
@@ -543,7 +529,7 @@ def main():
             with h5py.File(
                 f"{output_folder}/{file_label}.h5", "w"
             ) as f:
-                ## Here comes everything needed to pass to CrystFEL. Is it missing something? Ask Marina
+                ## Here comes everything needed to pass to CrystFEL.
                 entry = f.create_group("entry")
                 entry.attrs["NX_class"]="NXentry"
                 grp_data = entry.create_group("data")

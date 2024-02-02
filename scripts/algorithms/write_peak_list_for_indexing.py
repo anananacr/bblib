@@ -38,7 +38,7 @@ def initialize_collecting_hits():
     return  peakXPosOriginal_agg, peakXPosRaw_agg, peakYPosOriginal_agg,peakYPosRaw_agg, peaknPeak_agg, peakTotalIntensity_agg, peak_list, file_name_list, event_list, shift_vertical_mm_list
 
 def write_agg_file(file_label: str, file_index: int, n_hits:int):
-    f = h5py.File(f"/asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/hits_v8/{file_label}-{file_index}-agg_hit.h5", 'w')
+    f = h5py.File(f"/asap3/petra3/gpfs/p09/2023/data/11019088/processed/rodria/hits/{file_label}-{file_index}-agg_hit.h5", 'w')
     f.create_dataset('/entry/data/powder', data=powder[:max_ss+1,:max_fs+1])
     f.create_dataset('/entry/data/data', data=agg_hits[:n_hits,:,:], compression="gzip")
     f.create_dataset('/entry/data/peakXPosRaw', data=peakXPosRaw)
@@ -127,11 +127,9 @@ for count, line in enumerate(stream):
                 file_name = line.split(': ')[-1][:-1]
         elif line.split(': ')[0]=='Event':
             event=int(line.split(': //')[-1])
-            print(file_name, event)
-            f = h5py.File(file_name, 'r')
-            shift_vertical_mm = -1* float(f['shift_vertical_mm'][event])
+        elif line.split(' = ')[0]=="header/float//shift_vertical_mm":
+            shift_vertical_mm = float(line.split(' = ')[-1])
             shift_vertical_px = shift_vertical_mm * PixelResolution
-            f.close()
     elif line.startswith('----- End geometry file -----'):
         print("starting")
         reading_geometry = False

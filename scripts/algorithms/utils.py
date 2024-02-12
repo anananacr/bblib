@@ -2,19 +2,14 @@ from typing import List, Optional, Callable, Tuple, Any, Dict
 from numpy import exp
 import numpy as np
 import matplotlib.pyplot as plt
+
+plt.switch_backend("agg")
 import matplotlib.colors as colors
 import math
 import json
 import pandas as pd
 import sys
 from scipy import ndimage
-
-sys.path.append("/home/rodria/software/vdsCsPadMaskMaker/new-versions/")
-from maskMakerGUI import pMakePolarisationArray as make_polarization_array_fast
-import geometry_funcs as gf
-
-Res = 75 * 1e-6
-cspad_psana_shape = (1, 1, 1475, 1679)
 
 
 def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> List[int]:
@@ -43,11 +38,11 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> List[int]:
     yc = np.sum(data[indices] * indices[0]) / np.sum(data[indices])
 
     if np.isnan(xc) or np.isnan(yc):
-        converged=0
+        converged = 0
     else:
-        converged=1
-    
-    return converged,[xc, yc]
+        converged = 1
+
+    return converged, [xc, yc]
 
 
 def azimuthal_average(
@@ -107,6 +102,7 @@ def correct_polarization_python(
     data: np.ndarray,
     mask: np.ndarray,
     polarization_axis: str = "x",
+    p: float = 0.99,
 ) -> np.ndarray:
     """
     Correct data for polarisation effect, version in Python. It is based on pMakePolarisationArray from https://github.com/galchenm/vdsCsPadMaskMaker/blob/main/new-versions/maskMakerGUI-v2.py#L234
@@ -119,7 +115,7 @@ def correct_polarization_python(
     y: np.ndarray
         Array containg pixels coordinates in y (pixels) distance from the direct beam. It has same shape of data.
     dist: float
-        z distance coordinates of the detector position.
+        z distance coordinates of the detector position in PIXELS.
     data: np.ndarray
         Raw data frame in which polarization correction will be applied.
     mask: np.ndarray
@@ -137,7 +133,7 @@ def correct_polarization_python(
     mask = mask.flatten()
     Int = np.reshape(data.copy(), len(mask))
     pol = mask.copy().astype(np.float32)
-    pol = make_polarization_array(pol, x.flatten(), y.flatten(), dist / Res, 0.99)
+    pol = make_polarization_array(pol, x.flatten(), y.flatten(), dist, p)
     Int = Int / pol
     return Int.reshape(data.shape), pol.reshape(data.shape)
 
@@ -167,7 +163,7 @@ def make_polarization_array(
         Polarization array for polarization correction.
     """
 
-    z = detdist * np.ones_like(x)
+    z = detdist * np.ones(cox.shape[0])
     valid = np.where(pol == 1)
 
     pol[valid] = 1 - (
@@ -177,46 +173,6 @@ def make_polarization_array(
     pol[np.where(pol == 0)] = 1.0
 
     return pol
-
-
-def correct_polarization(
-    x: np.ndarray, y: np.ndarray, dist: float, data: np.ndarray, mask: np.ndarray
-) -> np.ndarray:
-    """
-    Correct data for polarisation effect, C built function from https://github.com/galchenm/vdsCsPadMaskMaker/blob/main/SubLocalBG.c#L249
-    Acknowledgements: Oleksandr Yefanov, Marina Galchenkova
-    Parameters
-    ----------
-    x: np.ndarray
-        x distance coordinates from the direct beam position.
-    y: np.ndarray
-        y distance coordinates from the direct beam position.
-    dist: float
-        z distance coordinates of the detector position.
-    data: np.ndarray
-        Raw data frame in which polarization correction will be applied.
-    mask: np.ndarray
-        Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
-
-    Returns
-    ----------
-    corrected_data: np.ndarray
-        Corrected data frame for polarization effect.
-    pol: np.ndarray
-        Polarization array for polarization correction.
-    """
-
-    mask = mask.astype(bool)
-    mask = ~mask.flatten()
-    Int = np.reshape(data.copy(), len(mask))
-    pol = mask.copy().astype(np.float32)
-    pol = make_polarization_array_fast(
-        pol, len(mask), x.flatten(), y.flatten(), dist / Res, 0.99
-    )
-    mask = ~mask
-    pol[np.where(mask == 0)] = 1
-    Int = Int / pol
-    return Int.reshape(data.shape), pol.reshape(data.shape)
 
 
 def update_corner_in_geom(geom: str, new_xc: float, new_yc: float):
@@ -240,9 +196,9 @@ def update_corner_in_geom(geom: str, new_xc: float, new_yc: float):
         Polarization array for polarization correction.
     """
     # convert y x values to i j values
-    y = int(-new_yc + 1)
-    x = int(-new_xc + 1)
-    # print(x,y)
+    y = -1 * new_yc
+    x = -1 * new_xc
+
     f = open(geom, "r")
     lines = f.readlines()
     f.close()
@@ -265,7 +221,7 @@ def update_corner_in_geom(geom: str, new_xc: float, new_yc: float):
     f.close()
 
 
-def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int, n:int) -> np.ndarray:
+def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int, n: int) -> np.ndarray:
     """
     Gather coordinates of a box of 1x1 pixels around each point from the indices list. Bragg flag indicates if the mask returned will contain only bragg peaks regions (bragg =1), no bragg peaks regions (bragg=0), or both (bragg =-1).
     Parameters
@@ -311,26 +267,6 @@ def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int, n:int) -> np.ndarra
     return surrounding_mask
 
 
-def get_format(file_path: str) -> str:
-    """
-    Return file format with only alphabet letters.
-    Parameters
-    ----------
-    file_path: str
-
-    Returns
-    ----------
-    extension: str
-        File format contanining only alphabetical letters
-    """
-    ext = (file_path.split("/")[-1]).split(".")[-1]
-    filt_ext = ""
-    for i in ext:
-        if i.isalpha():
-            filt_ext += i
-    return str(filt_ext)
-
-
 def gaussian(x: np.ndarray, a: float, x0: float, sigma: float) -> np.ndarray:
     """
     Gaussian function.
@@ -348,6 +284,7 @@ def gaussian(x: np.ndarray, a: float, x0: float, sigma: float) -> np.ndarray:
         value of the function evaluated
     """
     return a * exp(-((x - x0) ** 2) / (2 * sigma**2))
+
 
 def gaussian_lin(
     x: np.ndarray, a: float, x0: float, sigma: float, m: float, n: float
@@ -368,6 +305,7 @@ def gaussian_lin(
         value of the function evaluated
     """
     return m * x + n + a * exp(-((x - x0) ** 2) / (2 * sigma**2))
+
 
 def quadratic(x, a, b, c):
     """
@@ -417,7 +355,7 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
     r = np.array(merged_dict["r_squared"]).reshape((n, n))
 
     index_y, index_x = np.where(z == np.min(z))
-    pos1 = ax1.imshow(z, cmap="plasma")
+    pos1 = ax1.imshow(z, cmap="YlGnBu")
     step = 10
     n = z.shape[0]
     ax1.set_xticks(np.arange(0, n, step, dtype=int))
@@ -430,7 +368,7 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
     ax1.set_xlabel("xc [px]")
     ax1.set_title("FWHM")
 
-    pos2 = ax2.imshow(r, cmap="plasma")
+    pos2 = ax2.imshow(r, cmap="YlGnBu")
     step = 10
     n = z.shape[0]
     ax2.set_xticks(np.arange(0, n, step, dtype=int))
@@ -505,6 +443,7 @@ def open_fwhm_map(lines: list, output_folder: str, label: str, pixel_step: int):
     else:
         return False
 
+
 def open_fwhm_map_global_min(
     lines: list, output_file: str, pixel_step: int, PlotsFlag: bool
 ):
@@ -534,9 +473,9 @@ def open_fwhm_map_global_min(
     y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
     z = np.array(merged_dict["fwhm"], dtype=np.float64).reshape((n, n))
     r = np.array(merged_dict["r_squared"]).reshape((n, n))
-    z=np.nan_to_num(z)
-    r=np.nan_to_num(r)
-    pos1 = ax1.imshow(z, cmap="inferno",vmax=50)
+    z = np.nan_to_num(z)
+    r = np.nan_to_num(r)
+    pos1 = ax1.imshow(z, cmap="YlGnBu", vmax=50)
     step = 10
     n = z.shape[0]
 
@@ -557,7 +496,7 @@ def open_fwhm_map_global_min(
     ax1.set_xlabel("xc [px]")
     ax1.set_title("FWHM")
 
-    pos2 = ax2.imshow(r, cmap="inferno")
+    pos2 = ax2.imshow(r, cmap="YlGnBu")
     step = 10
     n = z.shape[0]
 
@@ -644,10 +583,10 @@ def open_r_sqrd_map_global_max(
     r = np.array(merged_dict["r_squared"], dtype=np.float32).reshape((n, n))
     # r = ndimage.median_filter(r, 10)
 
-    z=np.nan_to_num(z)
-    r=np.nan_to_num(r)
+    z = np.nan_to_num(z)
+    r = np.nan_to_num(r)
 
-    pos1 = ax1.imshow(z, cmap="plasma")
+    pos1 = ax1.imshow(z, cmap="YlGnBu")
     step = 10
     n = z.shape[0]
 
@@ -668,7 +607,7 @@ def open_r_sqrd_map_global_max(
     ax1.set_xlabel("xc [px]")
     ax1.set_title("FWHM")
 
-    pos2 = ax2.imshow(r, cmap="plasma")
+    pos2 = ax2.imshow(r, cmap="YlGnBu")
     step = 10
     n = z.shape[0]
 
@@ -725,7 +664,7 @@ def open_r_sqrd_map_global_max(
 
 
 def open_distance_map_global_min(
-    lines: list, output_folder: str, label: str, pixel_step: int
+    lines: list, output_folder: str, label: str, pixel_step: int, plots_flag: bool
 ) -> tuple:
     """
     Open distance minimization plot, fit projections in both axis to get the point of minimum distance.
@@ -754,7 +693,7 @@ def open_distance_map_global_min(
     x = np.array(merged_dict["xc"]).reshape((n, n))[0]
     y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
     z = np.array(merged_dict["d"], dtype=np.float64).reshape((n, n))
-    z=np.nan_to_num(z)
+    z = np.nan_to_num(z)
 
     pos1 = ax1.imshow(z, cmap="rainbow")
     step = 20
@@ -779,9 +718,9 @@ def open_distance_map_global_min(
     # print('x',len(x))
     index_x = np.unravel_index(np.argmin(proj_x, axis=None), proj_x.shape)
     # print(index_x)
-    xc = round(x[index_x], 1)
+    xc = x[index_x]
     ax2.scatter(x, proj_x + pixel_step, color="b")
-    ax2.scatter(xc, proj_x[index_x], color="r", label=f"xc: {xc}")
+    ax2.scatter(xc, proj_x[index_x], color="r", label=f"xc: {np.round(xc,1)}")
     ax2.set_ylabel("Average distance [px]")
     ax2.set_xlabel("xc [px]")
     ax2.set_title("Distance projection in x")
@@ -790,9 +729,9 @@ def open_distance_map_global_min(
     proj_y = np.sum(z, axis=1)
     x = np.arange(y[0], y[-1] + pixel_step, pixel_step)
     index_y = np.unravel_index(np.argmin(proj_y, axis=None), proj_y.shape)
-    yc = round(x[index_y], 1)
+    yc = x[index_y]
     ax3.scatter(x, proj_y, color="b")
-    ax3.scatter(yc, proj_y[index_y], color="r", label=f"yc: {yc}")
+    ax3.scatter(yc, proj_y[index_y], color="r", label=f"yc: {np.round(yc,1)}")
     ax3.set_ylabel("Average Distance [px]")
     ax3.set_xlabel("yc [px]")
     ax3.set_title("Distance projection in y")
@@ -803,15 +742,17 @@ def open_distance_map_global_min(
     # Display the figure
 
     # plt.show()
-        
+
     if int(np.sum(proj_y)) == 0 or int(np.sum(proj_x)) == 0:
         converged = 0
     else:
         converged = 1
-        plt.savefig(f"{output_folder}/distance_map/{label}.png")
-    
+        if plots_flag:
+            plt.savefig(f"{output_folder}/distance_map/{label}.png")
+
     plt.close()
     return xc, yc, converged
+
 
 def open_distance_map_fit_min(
     lines: list, output_folder: str, label: str, pixel_step: int
@@ -935,7 +876,6 @@ def open_distance_map_fit_min(
     else:
         converged = 1
     return xc, yc, converged
-
 
 
 def fit_fwhm(lines: list, pixel_step: int) -> Tuple[int]:
@@ -1238,6 +1178,7 @@ def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:
     R = np.sqrt(np.square(X) + np.square(Y))
     return (np.greater(R, radius)).astype(np.int32)
 
+
 def ring_mask(data, center, inner_radius, outer_radius):
     """
     Make a  ring mask for the data
@@ -1247,9 +1188,9 @@ def ring_mask(data, center, inner_radius, outer_radius):
     data: np.ndarray
         Image in which mask will be shaped
     center: tuple (xc,yc)
-    
+
     inner_radius: int
-    
+
     outer_radius: int
     Returns
     ----------
@@ -1261,5 +1202,5 @@ def ring_mask(data, center, inner_radius, outer_radius):
     b = data.shape[1]
     [X, Y] = np.meshgrid(np.arange(b) - center[0], np.arange(a) - center[1])
     R = np.sqrt(np.square(X) + np.square(Y))
-    bin_size=outer_radius-inner_radius
-    return np.greater(R, outer_radius - bin_size) & np.less(R, outer_radius + bin_size) 
+    bin_size = outer_radius - inner_radius
+    return np.greater(R, outer_radius - bin_size) & np.less(R, outer_radius + bin_size)

@@ -2,7 +2,10 @@ from typing import List, Optional, Callable, Tuple, Any, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-from utils import open_distance_map_fit_min, open_distance_map_global_min
+from utils import open_distance_map_global_min
+plt.switch_backend("agg")
+import multiprocessing
+
 
 def remove_repeated_items(pairs_list: list) -> list:
     x_vector = []
@@ -29,9 +32,9 @@ def shift_inverted_peaks_and_calculate_minimum_distance(
 
     return {
         "shift_x": shift[0],
-        "xc": (shift[0] / 2) + ref_center[0],
+        "xc": (shift[0] / 2) + ref_center[0] + 0.5,
         "shift_y": shift[1],
-        "yc": (shift[1] / 2) + ref_center[1],
+        "yc": (shift[1] / 2) + ref_center[1] + 0.5,
         "d": distance,
     }
 
@@ -57,6 +60,7 @@ def select_closest_peaks(peaks_list: list, inverted_peaks: list) -> list:
     peaks = remove_repeated_items(peaks)
     return peaks
 
+
 def find_a_peak_in_the_surrounding(
     peaks_list: list, inverted_peak: list, radius: int
 ) -> list:
@@ -81,62 +85,76 @@ def find_a_peak_in_the_surrounding(
     else:
         return cut_peaks_list[0][0]
 
-def calculate_center_friedel_pairs(corrected_data: np.ndarray, mask: np.ndarray,peaks_list: list, initial_center: list, search_radius: int, plots_flag: bool, output_folder: str, label:str):
+
+def calculate_center_friedel_pairs(
+    corrected_data: np.ndarray,
+    mask: np.ndarray,
+    peak_list: list,
+    initial_center: list,
+    search_radius: int,
+    outlier_distance: int,
+    plots_flag: bool,
+    output_folder: str,
+    label: str,
+):
     global ref_center
-    ref_center=initial_center
+    ref_center = initial_center
 
     global SearchRadius
-    SearchRadius=search_radius
+    SearchRadius = search_radius
 
     global OutlierDistance
-    #OutlierDistance=SearchRadius/2
-    OutlierDistance=20 
-    peaks_list_x = [k - ref_center[0] for k in peaks_list["fs"]]
-    peaks_list_y = [k - ref_center[1] for k in peaks_list["ss"]]
-    peaks = list(zip(peaks_list_x, peaks_list_y))
-    inverted_peaks_x = [-1 * k for k in peaks_list_x]
-    inverted_peaks_y = [-1 * k for k in peaks_list_y]
+    OutlierDistance = outlier_distance
+    peak_list_x_in_frame, peak_list_y_in_frame = peak_list
+
+    peaks = list(zip(peak_list_x_in_frame, peak_list_y_in_frame))
+    inverted_peaks_x = [-1 * k for k in peak_list_x_in_frame]
+    inverted_peaks_y = [-1 * k for k in peak_list_y_in_frame]
     inverted_peaks = list(zip(inverted_peaks_x, inverted_peaks_y))
     pairs_list = select_closest_peaks(peaks, inverted_peaks)
     ## Grid search of shifts around the detector center
     pixel_step = 0.2
     xx, yy = np.meshgrid(
-        np.arange(-OutlierDistance, OutlierDistance+0.2, pixel_step, dtype=float),
-        np.arange(-OutlierDistance, OutlierDistance+0.2, pixel_step, dtype=float),
+        np.arange(-OutlierDistance, OutlierDistance + 0.2, pixel_step, dtype=float),
+        np.arange(-OutlierDistance, OutlierDistance + 0.2, pixel_step, dtype=float),
     )
     coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
     peaks_0 = [x for x, y in pairs_list]
     peaks_1 = [y for x, y in pairs_list]
-    coordinates_anchor_peaks = [
-        [peaks_0, peaks_1, shift] for shift in coordinates
-    ]
-    distance_summary = []
-    for shift in coordinates_anchor_peaks:
-        distance_summary.append(
-            shift_inverted_peaks_and_calculate_minimum_distance(shift)
-        )
+    coordinates_anchor_peaks = [[peaks_0, peaks_1, shift] for shift in coordinates]
+
+    ## Speed up TO TEST
+    if not plots_flag:
+        pool = multiprocessing.Pool()
+        with pool:
+            distance_summary = pool.map(
+                shift_inverted_peaks_and_calculate_minimum_distance,
+                coordinates_anchor_peaks,
+            )
+    else:
+        distance_summary = []
+        for shift in coordinates_anchor_peaks:
+            distance_summary.append(
+                shift_inverted_peaks_and_calculate_minimum_distance(shift)
+            )
+
     ## Display plots
     ## Minimize distance
     xc, yc, converged = open_distance_map_global_min(
-        distance_summary, output_folder, f"{label}", pixel_step
+        distance_summary, output_folder, f"{label}", pixel_step, plots_flag
     )
-    
-    ## Fine tune
-    #xc, yc, converged = open_distance_map_fit_min(
-    #    distance_summary, output_folder, f"{label}", pixel_step
-    #)
-        
-    if converged==1:
-        refined_center = (np.around(xc, 1), np.around(yc, 1))
+
+    if converged == 1:
+        refined_center = (xc, yc)
     else:
         h, w = corrected_data.shape
-        refined_center = (np.around(w/2, 1), np.around(h/2, 1))
+        refined_center = (w / 2, h / 2)
 
     shift_x = 2 * (xc - ref_center[0])
     shift_y = 2 * (yc - ref_center[1])
-    if plots_flag and converged==1:
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-        pos = ax.imshow(corrected_data * mask, vmax=20, cmap="cividis")
+    if plots_flag and converged == 1:
+        fig, ax = plt.subplots(1, 1, figsize=(8, 8))
+        pos = ax.imshow(corrected_data, vmin=0, vmax=100, cmap="YlGnBu")
         ax.scatter(
             ref_center[0],
             ref_center[1],
@@ -151,22 +169,18 @@ def calculate_center_friedel_pairs(corrected_data: np.ndarray, mask: np.ndarray,
             color="r",
             marker="o",
             s=25,
-            label=f"Refined center:({refined_center[0]}, {refined_center[1]})",
+            label=f"Refined center:({np.round(refined_center[0],1)}, {np.round(refined_center[1],1)})",
         )
-        ax.set_xlim(360, 840)
-        ax.set_ylim(512, 200)
+        ax.set_xlim(200, 900)
+        ax.set_ylim(900, 200)
         plt.title("Center refinement: autocorrelation of Friedel pairs")
         fig.colorbar(pos, shrink=0.6)
         ax.legend()
         plt.savefig(f"{output_folder}/centered_friedel/{label}.png")
         plt.close("all")
-    
-    original_peaks_x = [
-        np.round(k + ref_center[0]) for k in peaks_list_x
-    ]
-    original_peaks_y = [
-        np.round(k + ref_center[1]) for k in peaks_list_y
-    ]
+
+    original_peaks_x = [np.round(k + ref_center[0]) for k in peak_list_x_in_frame]
+    original_peaks_y = [np.round(k + ref_center[1]) for k in peak_list_y_in_frame]
     inverted_non_shifted_peaks_x = [
         np.round(k + ref_center[0]) for k in inverted_peaks_x
     ]
@@ -179,60 +193,56 @@ def calculate_center_friedel_pairs(corrected_data: np.ndarray, mask: np.ndarray,
     inverted_shifted_peaks_y = [
         np.round(k + ref_center[1] + shift_y) for k in inverted_peaks_y
     ]
-    if plots_flag and converged==1:
+    if plots_flag and converged == 1:
         ## Check pairs alignement
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-        pos = ax.imshow(corrected_data * mask, vmax=20, cmap="cividis")
+        fig, ax = plt.subplots(1, 1, figsize=(8, 8))
+        pos = ax.imshow(corrected_data, vmin=0, vmax=100, cmap="YlGn")
         ax.scatter(
             original_peaks_x,
             original_peaks_y,
             facecolor="none",
-            s=100,
+            s=50,
             marker="s",
-            edgecolor="red",
+            edgecolor="tab:red",
+            linewidth=1.5,
             label="original peaks",
         )
         ax.scatter(
             inverted_non_shifted_peaks_x,
             inverted_non_shifted_peaks_y,
-            s=100,
+            s=70,
             facecolor="none",
             marker="s",
-            edgecolor="cyan",
+            edgecolor="tab:orange",
+            linewidth=1.5,
             label="inverted peaks",
-            alpha=0.5
+            alpha=0.8,
         )
         ax.scatter(
             inverted_shifted_peaks_x,
             inverted_shifted_peaks_y,
             facecolor="none",
-            s=100,
+            s=120,
             marker="D",
-            edgecolor="lime",
+            linewidth=1.8,
+            alpha=0.8,
+            edgecolor="blue",
             label="shift of inverted peaks",
         )
-        ax.set_xlim(360, 840)
-        ax.set_ylim(512, 200)
+        ax.set_xlim(200, 900)
+        ax.set_ylim(900, 200)
         plt.title("Bragg peaks alignement")
         fig.colorbar(pos, shrink=0.6)
         ax.legend()
         plt.savefig(f"{output_folder}/peaks/{label}.png")
         plt.close()
-    original_peaks_x = [k + ref_center[0] for k in peaks_list_x]
-    original_peaks_y = [k + ref_center[1] for k in peaks_list_y]
-    inverted_non_shifted_peaks_x = [
-        k + ref_center[0] for k in inverted_peaks_x
-    ]
-    inverted_non_shifted_peaks_y = [
-        k + ref_center[1] for k in inverted_peaks_y
-    ]
-    inverted_shifted_peaks_x = [
-        k + ref_center[0] + shift_x for k in inverted_peaks_x
-    ]
-    inverted_shifted_peaks_y = [
-        k + ref_center[1] + shift_y for k in inverted_peaks_y
-    ]
-    if converged==1:
-        return [xc, yc]
+    original_peaks_x = [k + ref_center[0] for k in peak_list_x_in_frame]
+    original_peaks_y = [k + ref_center[1] for k in peak_list_y_in_frame]
+    inverted_non_shifted_peaks_x = [k + ref_center[0] for k in inverted_peaks_x]
+    inverted_non_shifted_peaks_y = [k + ref_center[1] for k in inverted_peaks_y]
+    inverted_shifted_peaks_x = [k + ref_center[0] + shift_x for k in inverted_peaks_x]
+    inverted_shifted_peaks_y = [k + ref_center[1] + shift_y for k in inverted_peaks_y]
+    if converged == 1:
+        return [xc , yc ]
     else:
         return None

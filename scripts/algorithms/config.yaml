@@ -1,16 +1,16 @@
-plots_flag: true
+plots_flag: false
 force_center:
   mode: true
-  x: 553
-  y: 539
+  x: 555
+  y: 532
 offset:
   x: -10
   y: +7
-outlier_distance: 20
 search_radius: 10
 peak_region:
   min: 0
   max: 0
+outlier_distance: 20
 canny:
   sigma: 0
   low_threshold: 0

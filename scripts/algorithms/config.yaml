@@ -1,0 +1,33 @@
+plots_flag: true
+force_center:
+  mode: true
+  x: 553
+  y: 539
+offset:
+  x: -10
+  y: +7
+outlier_distance: 20
+search_radius: 10
+peak_region:
+  min: 0
+  max: 0
+canny:
+  sigma: 0
+  low_threshold: 0
+  high_threshold: 0
+method: 0
+bragg_pos_center_of_mass: -1
+pixels_per_peak: 8
+skip_method:
+  - 1
+  - 2
+skip_pol: true
+pf8:
+  max_num_peaks: 10000
+  adc_threshold: 0
+  minimum_snr: 4.0
+  min_pixel_count: 4
+  max_pixel_count: 1000
+  local_bg_radius: 10
+  min_res: 20
+  max_res: 250

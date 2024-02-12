@@ -20,7 +20,7 @@ from utils import (
 )
 from skimage.transform import hough_circle, hough_circle_peaks
 from skimage.feature import canny
-from models import PF8, PF8Info
+from models import PF8
 from scipy.optimize import curve_fit
 import math
 import matplotlib.pyplot as plt
@@ -37,16 +37,7 @@ config=settings.read("config.yaml")
 
 BeambustersParam=settings.parse(config)
 
-PF8Config = PF8Info(
-    max_num_peaks=config["pf8"]["max_num_peaks"],
-    adc_threshold=config["pf8"]["adc_threshold"],
-    minimum_snr=config["pf8"]["minimum_snr"],
-    min_pixel_count=config["pf8"]["min_pixel_count"],
-    max_pixel_count=config["pf8"]["max_pixel_count"],
-    local_bg_radius=config["pf8"]["local_bg_radius"],
-    min_res=config["pf8"]["min_res"],
-    max_res=config["pf8"]["max_res"],
-)
+PF8Config = settings.get_pf8_info(config)
 
 def calculate_fwhm(data_and_coordinates: tuple) -> Dict[str, int]:
     corrected_data, mask, center_to_radial_average, plots_info = data_and_coordinates

@@ -4,34 +4,7 @@ from dataclasses import dataclass, field
 import math
 from om.algorithms.crystallography import TypePeakList, Peakfinder8PeakDetection
 
-## Some abstractions to call peakfinder8 in Python
-
-
-def build_pixel_map(row: int, col: int, x0: int, y0: int) -> Dict[str, int]:
-    """
-    Calculate radius pixels map for a given center x0,y0.
-
-    Parameters
-    ----------
-    row: int
-        Number of rows of data.
-    col: int
-        Number of columns of data.
-    x0:
-        Radial center position in x axis (column).
-    y0:
-        Radial center position in y axis (row).
-
-    Returns
-    ----------
-    radius_pixel_map: Dict
-        "radius": radius pixel map in realtion to the give center. It has same size of data given by row and col.
-    """
-
-    [X, Y] = np.meshgrid(np.arange(col) - x0, np.arange(row) - y0)
-    R = np.sqrt(np.square(X) + np.square(Y))
-    Rint = np.rint(R).astype(int)
-    return dict(radius=Rint)
+## Some abstractions to shift detector center for peakfinder8
 
 
 @dataclass
@@ -45,16 +18,40 @@ class PF8Info:
     min_res: float
     max_res: float
     pf8_detector_info: dict = None
-    _bad_pixel_map: np.array = None
-    _pixelmaps: np.array = field(init=False)
+    bad_pixel_map_filename: str = None
+    bad_pixel_map_hdf5_path: str = None
+    pixel_maps: np.array = None
 
-    def modify_radius(self, center_x, center_y):
-        self._pixelmaps = build_pixel_map(
-            (self._bad_pixel_map).shape[0],
-            (self._bad_pixel_map.shape[1]),
-            center_x,
-            center_y,
-        )
+    def modify_radius(self, detector_shift_x: int, detector_shift_y: int):
+        self._data_shape = self.pixel_maps["x"].shape
+        self.pixel_maps["x"] = (
+            self.pixel_maps["x"].flatten() + detector_shift_x
+        ).reshape(self._data_shape)
+        self.pixel_maps["y"] = (
+            self.pixel_maps["y"].flatten() + detector_shift_y
+        ).reshape(self._data_shape)
+
+    def get(self, parameter: str):
+        if parameter == "max_num_peaks":
+            return self.max_num_peaks
+        elif parameter == "adc_threshold":
+            return self.adc_threshold
+        elif parameter == "minimum_snr":
+            return self.minimum_snr
+        elif parameter == "min_pixel_count":
+            return self.min_pixel_count
+        elif parameter == "max_pixel_count":
+            return self.max_pixel_count
+        elif parameter == "local_bg_radius":
+            return self.local_bg_radius
+        elif parameter == "min_res":
+            return self.min_res
+        elif parameter == "max_res":
+            return self.max_res
+        elif parameter == "bad_pixel_map_filename":
+            return self.bad_pixel_map_filename
+        elif parameter == "bad_pixel_map_hdf5_path":
+            return self.bad_pixel_map_hdf5_path
 
 
 class PF8:
@@ -65,23 +62,45 @@ class PF8:
         self.pf8_param = info
 
     def get_peaks_pf8(self, data):
-        detector_layout = self.pf8_param.pf8_detector_info
-
+        self._radius_pixel_map = self.pf8_param.pixel_maps["radius"]
+        self._data_shape: Tuple[int, ...] = self._radius_pixel_map.shape
+        self._flattened_visualization_pixel_map_x = self.pf8_param.pixel_maps[
+            "x"
+        ].flatten()
+        self._flattened_visualization_pixel_map_y = self.pf8_param.pixel_maps[
+            "y"
+        ].flatten()
         peak_detection = Peakfinder8PeakDetection(
-            self.pf8_param.max_num_peaks,
-            self.pf8_param.pf8_detector_info["asic_nx"],
-            self.pf8_param.pf8_detector_info["asic_ny"],
-            self.pf8_param.pf8_detector_info["nasics_x"],
-            self.pf8_param.pf8_detector_info["nasics_y"],
-            self.pf8_param.adc_threshold,
-            self.pf8_param.minimum_snr,
-            self.pf8_param.min_pixel_count,
-            self.pf8_param.max_pixel_count,
-            self.pf8_param.local_bg_radius,
-            self.pf8_param.min_res,
-            self.pf8_param.max_res,
-            self.pf8_param._bad_pixel_map.astype(np.float32),
-            (self.pf8_param._pixelmaps["radius"]).astype(np.float32),
+            radius_pixel_map=(self.pf8_param.pixel_maps["radius"]).astype(np.float32),
+            layout_info=self.pf8_param.pf8_detector_info,
+            crystallography_parameters=self.pf8_param,
         )
-        peaks_list = peak_detection.find_peaks(data)
-        return peaks_list
+        peak_list = peak_detection.find_peaks(data=data)
+        return peak_list
+
+    def peak_list_in_slab(self, peak_list):
+        ## From OM
+        peak_list_x_in_frame: List[float] = []
+        peak_list_y_in_frame: List[float] = []
+        peak_fs: float
+        peak_ss: float
+        peak_value: float
+        for peak_fs, peak_ss, peak_value, peak_max_pixel_intensity in zip(
+            peak_list["fs"],
+            peak_list["ss"],
+            peak_list["intensity"],
+            peak_list["max_pixel_intensity"],
+        ):
+            peak_index_in_slab: int = int(round(peak_ss)) * self._data_shape[1] + int(
+                round(peak_fs)
+            )
+            y_in_frame: float = self._flattened_visualization_pixel_map_y[
+                peak_index_in_slab
+            ]
+            x_in_frame: float = self._flattened_visualization_pixel_map_x[
+                peak_index_in_slab
+            ]
+            peak_list_x_in_frame.append(x_in_frame)
+            peak_list_y_in_frame.append(y_in_frame)
+
+        return peak_list_x_in_frame, peak_list_y_in_frame

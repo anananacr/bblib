@@ -31,78 +31,22 @@ import subprocess as sub
 import h5py
 import hdf5plugin
 import multiprocessing
+import settings
 
-# Set here peakfinder8 parameters for Bragg peaks search
+config=settings.read("config.yaml")
+
+BeambustersParam=settings.parse(config)
 
 PF8Config = PF8Info(
-    max_num_peaks=10000,
-    adc_threshold=0,
-    minimum_snr=4.0,
-    min_pixel_count=4,
-    max_pixel_count=1000,
-    local_bg_radius=10,
-    min_res=20,
-    max_res=250,
+    max_num_peaks=config["pf8"]["max_num_peaks"],
+    adc_threshold=config["pf8"]["adc_threshold"],
+    minimum_snr=config["pf8"]["minimum_snr"],
+    min_pixel_count=config["pf8"]["min_pixel_count"],
+    max_pixel_count=config["pf8"]["max_pixel_count"],
+    local_bg_radius=config["pf8"]["local_bg_radius"],
+    min_res=config["pf8"]["min_res"],
+    max_res=config["pf8"]["max_res"],
 )
-
-PlotsFlag = False
-ForceCenterMode = True
-ForceCenter = [553, 539]
-
-Offset_X = -10
-Offset_Y = +7
-
-OutlierDistance = 20
-SearchRadius = 10
-
-# Look for the background peak region, for this you have to know exactly the peak region to fit
-MinPeakRegion = 0
-MaxPeakRegion = 0
-
-## Canny algorithm parameters
-CannySigma = 0
-CannyLowThr = 0
-CannyHighThr = 0
-
-Method = 0
-
-BraggPosCenterOfMass = -1
-PixelsPeak = 8
-
-SkipMethod = [1, 2]
-SkipPol = True
-
-# Here I am creating a dictionary to save all beambusters parameters in the hdf5 output file
-BeambustersParam = {
-    "pf8_max_num_peaks": PF8Config.max_num_peaks,
-    "pf8_adc_threshold": PF8Config.adc_threshold,
-    "pf8_minimum_snr": PF8Config.minimum_snr,
-    "pf8_min_pixel_count": PF8Config.min_pixel_count,
-    "pf8_max_pixel_count": PF8Config.max_pixel_count,
-    "pf8_local_bg_radius": PF8Config.local_bg_radius,
-    "pf8_min_res": PF8Config.min_res,
-    "pf8_max_res": PF8Config.max_res,
-    "min_peak_region": MinPeakRegion,
-    "max_peak_region": MaxPeakRegion,
-    "canny_sigma": CannySigma,
-    "canny_low_thr": CannyLowThr,
-    "canny_high_thr": CannyHighThr,
-    "outlier_distance": OutlierDistance,
-    "search_radius": SearchRadius,
-    "method": Method,
-    "bragg_peaks_positions_for_center_of_mass_calculation": BraggPosCenterOfMass,
-    "pixels_for_mask_of_bragg_peaks": PixelsPeak,
-    "skipped_methods": SkipMethod,
-    "skipped_polarization": SkipPol,
-    "offset_x": Offset_X,
-    "offset_y": Offset_Y,
-    "force_center_mode": ForceCenterMode,
-    "force_center": []
-
-}
-
-if ForceCenterMode:
-    BeambustersParam["force_center"] = ForceCenter
 
 def calculate_fwhm(data_and_coordinates: tuple) -> Dict[str, int]:
     corrected_data, mask, center_to_radial_average, plots_info = data_and_coordinates
@@ -116,8 +60,8 @@ def calculate_fwhm(data_and_coordinates: tuple) -> Dict[str, int]:
         plt.plot(x, y)
 
     ## Define background peak region
-    x_min = MinPeakRegion
-    x_max = MaxPeakRegion
+    x_min = config["peak_region"]["min"]
+    x_max = config["peak_region"]["max"]
     x = x[x_min:x_max]
     y = y[x_min:x_max]
     ## Estimation of initial parameters
@@ -243,7 +187,7 @@ def main():
         ][0]
     )
     pixel_resolution = float(
-        [(x.split(" = ")[-1])[0] for x in geometry_txt if x.split(" = ")[0] == "res"][0]
+        [(x.split(" = ")[-1]) for x in geometry_txt if x.split(" = ")[0] == "res"][0]
     )
     h5_path = [
         x.split(" = ")[-1][:-1] for x in geometry_txt if x.split(" = ")[0] == "data"
@@ -286,7 +230,7 @@ def main():
             if os.path.exists(os.path.dirname(file_name)+"/info.txt"):
                 cmd = f"cp {os.path.dirname(file_name)+'/info.txt'} {args.output}/centered/{run_label}"
                 sub.call(cmd, shell=True)
-            if PlotsFlag and not os.path.exists(
+            if config["plots_flag"] and not os.path.exists(
                 f"{args.scratch}/center_refinement/plots/{run_label}"
             ):
                 cmd = f"mkdir {args.scratch}/center_refinement/plots/{split_path[-2]}; mkdir {args.scratch}/center_refinement/plots/{run_label};"
@@ -300,14 +244,14 @@ def main():
                 f = h5py.File(f"{file_name}", "r")
                 data = f[f"{h5_path}"]
 
-            if not PlotsFlag:
+            if not config["plots_flag"]:
                 max_frame = data.shape[0]
             else:
                 max_frame = 10
             _data_shape = data.shape
             ## Initialize collecting arrays
             raw_data = np.ndarray((_data_shape), dtype=np.int32)
-            if not SkipPol:
+            if not config["skip_pol"]:
                 pol_correct_data = np.ndarray((_data_shape), dtype=np.int32)
             center_data = np.ndarray((_data_shape[0], 2), dtype=np.float32)
             center_data_method_zero = np.ndarray((_data_shape[0], 2), dtype=np.float32)
@@ -349,19 +293,19 @@ def main():
                     indices[0, idx] = row_peak
                     indices[1, idx] = col_peak
 
-                if 0 not in SkipMethod:
+                if 0 not in config["skip_method"]:
                     # Mask Bragg  peaks
-                    if BraggPosCenterOfMass == 1:
+                    if config["bragg_pos_center_of_mass"] == 1:
                         only_peaks_mask = mask_peaks(
-                            visual_mask, indices, bragg=1, n=PixelsPeak
+                            visual_mask, indices, bragg=1, n=config["pixels_per_peak"]
                         )
-                    elif BraggPosCenterOfMass == 0:
+                    elif config["bragg_pos_center_of_mass"] == 0:
                         only_peaks_mask = mask_peaks(
-                            visual_mask, indices, bragg=0, n=PixelsPeak
+                            visual_mask, indices, bragg=0, n=config["pixels_per_peak"]
                         )
-                    elif BraggPosCenterOfMass == -1:
+                    elif config["bragg_pos_center_of_mass"] == -1:
                         only_peaks_mask = mask_peaks(
-                            visual_mask, indices, bragg=-1, n=PixelsPeak
+                            visual_mask, indices, bragg=-1, n=config["pixels_per_peak"]
                         )
                     first_mask = only_peaks_mask * visual_mask
 
@@ -375,29 +319,29 @@ def main():
                     )
                     if converged == 0:
                         center_from_method_zero = DetectorCenter.copy()
-                    center_from_method_zero[0] += Offset_X
-                    center_from_method_zero[1] += Offset_Y
+                    center_from_method_zero[0] += config["offset"]["x"]
+                    center_from_method_zero[1] += config["offset"]["y"]
                 else:
                     center_from_method_zero = [0, 0]
 
                 center_data_method_zero[frame_index, :] = center_from_method_zero
                 # Mask Bragg peaks. I take the mask shape, Bragg peaks positions, bragg is a flag if I want to see only bragg peaks or only the image without Bragg peaks
 
-                if 1 not in SkipMethod:
+                if 1 not in config["skip_method"]:
                     only_peaks_mask = mask_peaks(
-                        visual_mask, indices, bragg=0, n=PixelsPeak
+                        visual_mask, indices, bragg=0, n=config["pixels_per_peak"]
                     )
                     pf8_mask = only_peaks_mask * visual_mask
                     ## Scikit-image circle detection
                     edges = canny(
                         corrected_data,
                         mask=pf8_mask,
-                        sigma=CannySigma,
+                        sigma=config["canny"]["sigma"],
                         use_quantiles=True,
-                        low_threshold=CannyLowThr,
-                        high_threshold=CannyHighThr,
+                        low_threshold=config["canny"]["low_threshold"],
+                        high_threshold=config["canny"]["high_threshold"],
                     )
-                    if PlotsFlag:
+                    if config["plots_flag"]:
                         fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
                         ax1.imshow(edges)
                         plt.savefig(
@@ -405,7 +349,7 @@ def main():
                         )
                         plt.close()
                     # Detect radii
-                    hough_radii = np.arange(MinPeakRegion, MaxPeakRegion, 1)
+                    hough_radii = np.arange(config["peak_region"]["min"], config["peak_region"]["max"], 1)
                     hough_res = hough_circle(edges, hough_radii)
                     # Select the most prominent 1 circle
                     accums, cx, cy, radii = hough_circle_peaks(
@@ -419,18 +363,18 @@ def main():
                     center_from_method_one = [0, 0]
                 center_data_method_one[frame_index, :] = center_from_method_one
                 ## Calculate FWHM of the background peak for each coordinate in a box of OutlierDistance around the pixel coordinates defined in center_from_method_zero
-                if 2 not in SkipMethod:
+                if 2 not in config["skip_method"]:
                     pixel_step = 1
                     xx, yy = np.meshgrid(
                         np.arange(
-                            center_from_method_one[0] - OutlierDistance,
-                            center_from_method_one[0] + OutlierDistance + 1,
+                            center_from_method_one[0] - config["outlier_distance"],
+                            center_from_method_one[0] + config["outlier_distance"] + 1,
                             pixel_step,
                             dtype=int,
                         ),
                         np.arange(
-                            center_from_method_one[1] - OutlierDistance,
-                            center_from_method_one[1] + OutlierDistance + 1,
+                            center_from_method_one[1] - config["outlier_distance"],
+                            center_from_method_one[1] + config["outlier_distance"] + 1,
                             pixel_step,
                             dtype=int,
                         ),
@@ -439,7 +383,7 @@ def main():
                     masked_data = corrected_data.copy()
 
                     ## TEST avoid effects from secondary peaks
-                    # ring_mask_array=ring_mask(masked_data,center_from_method_one, MinPeakRegion, MaxPeakRegion)
+                    # ring_mask_array=ring_mask(masked_data,center_from_method_one, config["peak_region"]["min"], config["peak_region"]["max"])
                     # masked_data[~ring_mask_array]=0
 
                     coordinates_anchor_data = [
@@ -455,21 +399,22 @@ def main():
                         fwhm_summary,
                         f"{args.scratch}/center_refinement/plots/{run_label}/fwhm_map/{file_label}_{frame_index}",
                         pixel_step,
-                        PlotsFlag,
+                        config["plots_flag"],
                     )
                 else:
                     center_from_method_two = [0, 0]
                 center_data_method_two[frame_index, :] = center_from_method_two
 
-                if Method == 0:
+                if config["method"] == 0:
                     xc, yc = center_from_method_zero
-                elif Method == 1:
+                elif config["method"] == 1:
                     xc, yc = center_from_method_one
-                elif Method == 2:
+                elif config["method"] == 2:
                     xc, yc = center_from_method_two
 
-                if ForceCenterMode:
-                    xc, yc=ForceCenter
+                if config["force_center"]["mode"]:
+                    xc=config["force_center"]["x"]
+                    yc=config["force_center"]["y"]
 
                 if peak_list["num_peaks"] >= 4:
                     PF8Config.modify_radius(
@@ -483,9 +428,9 @@ def main():
                         visual_mask,
                         peak_list_in_slab,
                         [xc, yc],
-                        SearchRadius,
-                        OutlierDistance,
-                        PlotsFlag,
+                        config["search_radius"],
+                        config["outlier_distance"],
+                        config["plots_flag"],
                         f"{args.scratch}/center_refinement/plots/{run_label}",
                         f"{file_label}_{frame_index}",
                     )
@@ -497,14 +442,15 @@ def main():
                 else:
                     center_data_method_three[frame_index, :] = [-1, -1]
                     
-                    if ForceCenterMode:
-                        xc, yc = ForceCenter
+                    if config["force_center"]["mode"]:
+                        xc = config["force_center"]["x"]
+                        yc = config["force_center"]["y"]
                     else:
-                        if Method == 0:
+                        if config["method"] == 0:
                             xc, yc = center_from_method_zero
-                        elif Method == 1:
+                        elif config["method"] == 1:
                             xc, yc = center_from_method_one
-                        elif Method == 2:
+                        elif config["method"] == 2:
                             xc, yc = center_from_method_two
 
                 ## Here you get the direct beam position in detector coordinates.
@@ -513,16 +459,16 @@ def main():
 
                 detector_shift_x = (
                     refined_center[0] - DetectorCenter[0]
-                ) * (pixel_resolution * 1e3)
+                ) * 1e3 / pixel_resolution
                 detector_shift_y = (
                     refined_center[1] - DetectorCenter[1]
-                )  * (pixel_resolution * 1e3)
+                )  * 1e3 / pixel_resolution
 
                 shift_x_mm[frame_index] = np.round(detector_shift_x,4)
                 shift_y_mm[frame_index] = np.round(detector_shift_y,4)
                 ## For the calculated direct beam postion I do the azimuthal integration and save the plot to check results.
 
-                if PlotsFlag and 2 not in SkipMethod:
+                if config["plots_flag"] and 2 not in config["skip_method"]:
                     plot_flag = True
                     results = calculate_fwhm(
                         (corrected_data, pf8_mask, (refined_center))
@@ -530,7 +476,7 @@ def main():
                     plot_flag = False
 
                 ## Display plots to check peaksearch and if the refined center converged.
-                if PlotsFlag:
+                if config["plots_flag"]:
                     xr = center_from_method_zero[0]
                     yr = center_from_method_zero[1]
                     fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
@@ -546,7 +492,7 @@ def main():
                         linewidth=1,
                         label=f"Initial detector center:({round(DetectorCenter[0])},{round(DetectorCenter[1])})",
                     )
-                    if 0 not in SkipMethod:
+                    if 0 not in config["skip_method"]:
                         ax1.scatter(
                             round(center_from_method_zero[0]),
                             round(center_from_method_zero[1]),
@@ -555,7 +501,7 @@ def main():
                             s=150,
                             label=f"First center:({round(center_from_method_zero[0])},{round(center_from_method_zero[1])})",
                         )
-                    if 1 not in SkipMethod:
+                    if 1 not in config["skip_method"]:
                         ax1.scatter(
                             round(center_from_method_one[0]),
                             round(center_from_method_one[1]),
@@ -564,7 +510,7 @@ def main():
                             s=150,
                             label=f"Second center:({round(center_from_method_one[0])},{round(center_from_method_one[1])})",
                         )
-                    if 2 not in SkipMethod:
+                    if 2 not in config["skip_method"]:
                         ax1.scatter(
                             round(center_from_method_two[0]),
                             round(center_from_method_two[1]),
@@ -602,7 +548,7 @@ def main():
                     )
                     plt.close()
 
-                if not SkipPol:
+                if not config["skip_pol"]:
                     PF8Config.modify_radius(
                         -xc + refined_center[0], -yc + refined_center[1]
                     )
@@ -629,7 +575,7 @@ def main():
                 PF8Config.pixel_maps = pixel_maps
             f.close()
 
-            if PlotsFlag:
+            if config["plots_flag"]:
                 output_folder = f"{args.scratch}/centered"
             else:
                 output_folder = f"{args.output}/centered/{run_label}"
@@ -641,7 +587,7 @@ def main():
                 grp_data = entry.create_group("data")
                 grp_data.attrs["NX_class"] = "NXdata"
                 grp_data.create_dataset("data", data=raw_data, compression="gzip")
-                if not SkipPol:
+                if not config["skip_pol"]:
                     grp_data.create_dataset(
                         "pol_corrected_data",
                         data=pol_corrected_data,
@@ -683,6 +629,12 @@ def main():
                 grp_config.create_dataset("geometry_file", data=args.geom)
                 grp_config.create_dataset(
                     "detector_center", data=DetectorCenter, compression="gzip"
+                )
+                grp_config.create_dataset(
+                    "pixel_resolution", data=pixel_resolution
+                )
+                grp_config.create_dataset(
+                    "clen", data=clen
                 )
 
 

@@ -1,5 +1,6 @@
 import yaml
 from pathlib import Path
+from models import PF8Info
 
 def read(path:str):
     path=Path(path)
@@ -35,3 +36,15 @@ def parse(config:dict):
     "force_center_mode": config["force_center"]["mode"],
     "force_center": [config["force_center"]["x"],config["force_center"]["y"]]
     }
+
+def get_pf8_info(config:dict):
+    return PF8Info(
+    max_num_peaks=config["pf8"]["max_num_peaks"],
+    adc_threshold=config["pf8"]["adc_threshold"],
+    minimum_snr=config["pf8"]["minimum_snr"],
+    min_pixel_count=config["pf8"]["min_pixel_count"],
+    max_pixel_count=config["pf8"]["max_pixel_count"],
+    local_bg_radius=config["pf8"]["local_bg_radius"],
+    min_res=config["pf8"]["min_res"],
+    max_res=config["pf8"]["max_res"],
+)

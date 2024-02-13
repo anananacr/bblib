@@ -1,11 +1,11 @@
-plots_flag: false
+plots_flag: true
 
 force_center:
-  mode: true
-  x: 612
-  y: 537
+  mode: false
+  x: 0
+  y: 0
 
-search_radius: 16
+search_radius: 20
 
 pf8:
   max_num_peaks: 10000
@@ -18,8 +18,8 @@ pf8:
   max_res: 250
 
 offset:
-  x: -10
-  y: +7
+  x: 0
+  y: 0
 
 peak_region:
   min: 0

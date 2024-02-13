@@ -5,6 +5,7 @@ import om.utils.crystfel_geometry as crystfel_geometry
 import os
 import subprocess as sub
 from PIL import Image
+import fabio
 
 def apply_geom(data: np.ndarray, geometry_filename: str) -> np.ndarray:
     ## Apply crystfel geometry file .geom
@@ -38,6 +39,9 @@ def main(raw_args=None):
     )
     parser.add_argument(
         "-o", "--output", type=str, action="store", help="hdf5 output path"
+    )
+    parser.add_argument(
+        "-f", "--format", type=str, action="store", help="output format tif or cbf"
     )
     args = parser.parse_args(raw_args)
 
@@ -75,7 +79,16 @@ def main(raw_args=None):
         corr_frame = apply_geom(raw, args.geom)
         corr_frame[np.where(corr_frame <= 0)] = -1
 
-        Image.fromarray(corr_frame).save(f"{args.output}/{label[:-7]}_{i:06}.tif")
+        output_filename=f"{args.output}/{label[:-7]}_{i:06}"
+        if args.format=='tif':
+            Image.fromarray(corr_frame).save(output_filename+".tif")
+        elif args.format=='cbf':
+            output=fabio.cbfimage.CbfImage(data=corr_frame)
+            output.write(output_filename+".cbf")
+        else:
+            print("Output not recognized")
+            f.close()
+            break
 
     f.close()
 

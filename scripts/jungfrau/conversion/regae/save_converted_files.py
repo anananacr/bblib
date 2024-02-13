@@ -24,6 +24,9 @@ def main(raw_args=None):
     parser.add_argument(
         "-o", "--output", type=str, action="store", help="hdf5 output path"
     )
+    parser.add_argument(
+        "-f", "--format", type=str, action="store", help="output format tif or cbf"
+    )
     args = parser.parse_args(raw_args)
 
     raw_folder = os.path.dirname(args.input)
@@ -48,9 +51,18 @@ def main(raw_args=None):
         )
         corr_frame = raw
         corr_frame[np.where(corr_frame <= 0)] = -1
+        
+        output_filename=f"{args.output}/{label}_{i:06}"
 
-        # cbf.write(f'{args.output}/{label}_{i:06}.cbf', corr_frame)
-        Image.fromarray(corr_frame).save(f"{args.output}/{label}_{i:06}.tif")
+        if args.format=='tif':
+            Image.fromarray(corr_frame).save(output_filename+".tif")
+        elif args.format=='cbf':
+            output=fabio.cbfimage.CbfImage(data=corr_frame)
+            output.write(output_filename+".cbf")
+        else:
+            print("Output not recognized")
+            f.close()
+            break
 
     f.close()
 

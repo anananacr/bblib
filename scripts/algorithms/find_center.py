@@ -237,11 +237,13 @@ def main():
 
             if not config["plots_flag"]:
                 max_frame = data.shape[0]
+                starting_frame = 0
             else:
                 max_frame = 10
+                starting_frame =config["starting_frame"]
             _data_shape = data.shape
             ## Initialize collecting arrays
-            raw_data = np.ndarray((_data_shape), dtype=np.int32)
+            raw_data = np.ndarray((max_frame,_data_shape[1], _data_shape[2]), dtype=np.int32)
             if not config["skip_pol"]:
                 pol_correct_data = np.ndarray((_data_shape), dtype=np.int32)
             center_data = np.ndarray((max_frame, 2), dtype=np.float32)
@@ -262,7 +264,7 @@ def main():
                     "args": args,
                 }
 
-                frame = np.array(data[frame_index])
+                frame = np.array(data[starting_frame+frame_index])
                 raw_data[frame_index, :, :] = frame
 
                 corrected_data = data_visualize.visualize_data(data=frame * mask)

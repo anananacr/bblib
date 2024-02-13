@@ -189,16 +189,24 @@ def main():
     pixel_maps = geom.get_pixel_maps()
     detector_layout = geom.get_layout_info()
 
-    # From OM
-    y_minimum: int = (
-        2 * int(max(abs(pixel_maps["y"].max()), abs(pixel_maps["y"].min()))) + 2
-    )
-    x_minimum: int = (
-        2 * int(max(abs(pixel_maps["x"].max()), abs(pixel_maps["x"].min()))) + 2
-    )
-    visual_img_shape: Tuple[int, int] = (y_minimum, x_minimum)
-    _img_center_x: int = int(visual_img_shape[1] / 2)
-    _img_center_y: int = int(visual_img_shape[0] / 2)
+    
+    if detector_layout["nasics_x"] * detector_layout["nasics_y"]>1:
+        # Multiple panels
+        # Get minimum array shape
+        y_minimum = (
+            2 * int(max(abs(pixel_maps["y"].max()), abs(pixel_maps["y"].min()))) + 2
+        )
+        x_minimum = (
+            2 * int(max(abs(pixel_maps["x"].max()), abs(pixel_maps["x"].min()))) + 2
+        )
+        visual_img_shape = (y_minimum, x_minimum)
+        # Detector center in the middle of the minimum array 
+        _img_center_x = int(visual_img_shape[1] / 2)
+        _img_center_y = int(visual_img_shape[0] / 2)
+    else:
+        # Single panel
+        _img_center_x = int(abs(pixel_maps["x"][0,0]))
+        _img_center_y = int(abs(pixel_maps["y"][0,0]))
 
     DetectorCenter = [_img_center_x, _img_center_y]
 

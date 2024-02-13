@@ -17,7 +17,7 @@ pf8:
   min_res: 20
   max_res: 250
 
-starting_frame: 200
+starting_frame: 0
 
 offset:
   x: 0

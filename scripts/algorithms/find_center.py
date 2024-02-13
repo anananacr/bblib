@@ -189,9 +189,19 @@ def main():
     pixel_maps = geom.get_pixel_maps()
     detector_layout = geom.get_layout_info()
 
-    _img_center_x = -1 * pixel_maps["x"][0, 0]
-    _img_center_y = -1 * pixel_maps["y"][0, 0]
+    # From OM
+    y_minimum: int = (
+        2 * int(max(abs(pixel_maps["y"].max()), abs(pixel_maps["y"].min()))) + 2
+    )
+    x_minimum: int = (
+        2 * int(max(abs(pixel_maps["x"].max()), abs(pixel_maps["x"].min()))) + 2
+    )
+    visual_img_shape: Tuple[int, int] = (y_minimum, x_minimum)
+    _img_center_x: int = int(visual_img_shape[1] / 2)
+    _img_center_y: int = int(visual_img_shape[0] / 2)
+
     DetectorCenter = [_img_center_x, _img_center_y]
+    print(DetectorCenter)
     data_visualize = geometry.DataVisualizer(pixel_maps=pixel_maps)
 
     ## Geometry info to Peakfinder8

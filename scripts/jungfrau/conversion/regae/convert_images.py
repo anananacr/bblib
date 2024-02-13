@@ -143,8 +143,9 @@ def main(raw_args=None):
 
     raw_folder = os.path.dirname(args.input)
     output_folder = os.path.dirname(args.output)
-    cmd = f"cp {raw_folder}/info.txt {output_folder}"
-    sub.call(cmd, shell=True)
+    if os.path.isfile(f"{raw_folder}/info.txt"):
+        cmd = f"cp {raw_folder}/info.txt {output_folder}"
+        sub.call(cmd, shell=True)
 
     num_panels: int = 2
     dark_filenames = [args.pedestal1, args.pedestal2]
@@ -168,7 +169,7 @@ def main(raw_args=None):
 
     if args.mode == 0:
         """Fly scan accumulate n sequential images"""
-        f = h5py.File(f"{args.input}_master_0.h5", "r")
+        f = h5py.File(f"{args.input}_master_{args.start_index}.h5", "r")
         size = len(f["entry/data/data"])
         n_frames_measured = math.floor(size / fly_frames_to_merge)
         averaged_frames = np.zeros((n_frames_measured, 1024, 1024), dtype=np.int32)

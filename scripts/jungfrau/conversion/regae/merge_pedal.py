@@ -12,10 +12,17 @@ def main():
         action="store",
         help="raw files label 231020_mica_c4_m1_001_001",
     )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        action="store",
+        help="output folder",
+    )
 
     args = parser.parse_args()
     label = args.label
-    root = "/asap3/fs-bmx/gpfs/regae/2023/data/11018148/processed/darks"
+    root = args.output
     f = h5py.File(f"{root}/pedal_d0_{label}_start.h5", "r")
     g = h5py.File(f"{root}/pedal_d0_{label}_stop.h5", "r")
     output = h5py.File(f"{root}/pedal_d0_{label}_average.h5", "w")

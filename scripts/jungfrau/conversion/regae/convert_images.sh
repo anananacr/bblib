@@ -24,13 +24,18 @@ source /etc/profile.d/modules.sh
 module load maxwell python/3.7
 source /home/rodria/scripts/regae/env-regae/bin/activate
 
-#INPUT=231020_mos_c3_ms_001/ed_rot_step_003/231020_mos_c3_ms_001_003
-#PEDAL=231020_mos_c3_ms_003_average
-
 INP=$1
 MODE=$2
 START=$3
 END=$4
+
+FOLDER=dirname $INP
+mkdir $ROOT/$FOLDER;
+
+#SUB_FOLDER =$(basename $(dirname $INP))
+#FOLDER =$(basename $(dirname $(dirname $INP)))
+#mkdir $ROOT/$FOLDER;
+#mkdir $ROOT/$SUB_FOLDER;
 
 N=$(basename $INP)
 
@@ -48,6 +53,6 @@ else
 fi
 
 echo $MODE_NUMBER
-ROOT=/asap3/fs-bmx/gpfs/regae/2023/data/11018148/processed/converted
-
-python3 convert_images.py -p1 ${ROOT}/../darks/pedal_d0_${N}_${MODE}_average.h5 -p2 ${ROOT}/../darks/pedal_d1_${N}_${MODE}_average.h5 -g1 ${ROOT}/../darks/gainMaps_M283.bin -g2 ${ROOT}/../darks/gainMaps_M281.bin -i ${ROOT}/../../raw/${INP} -m ${MODE_NUMBER} -s ${START} -e ${END} -o ${ROOT}/${INP}_master;
+beamtime=11016614
+ROOT=/asap3/fs-bmx/gpfs/regae/2022/data/$beamtime/processed/test/converted
+python3 convert_images.py -p1 ${ROOT}/../darks/pedal_d0_${N}_${MODE}_average.h5 -p2 ${ROOT}/../darks/pedal_d1_${N}_${MODE}_average.h5 -g1 ${ROOT}/../darks/gainMaps_M283.bin -g2 ${ROOT}/../darks/gainMaps_M281.bin -i ${ROOT}/../../../raw/${INP} -m ${MODE_NUMBER} -s ${START} -e ${END} -o ${ROOT}/${INP}_master;

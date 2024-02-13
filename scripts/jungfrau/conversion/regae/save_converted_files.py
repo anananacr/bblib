@@ -34,7 +34,7 @@ def main(raw_args=None):
     cmd = f"cp {raw_folder}/info.txt {output_folder}"
     sub.call(cmd, shell=True)
 
-    f = h5py.File(f"{args.input}_master.h5", "r")
+    f = h5py.File(f"{args.input}", "r")
     size = len(f["data"])
 
     label = (args.input).split("/")[-1]
@@ -57,8 +57,8 @@ def main(raw_args=None):
         if args.format=='tif':
             Image.fromarray(corr_frame).save(output_filename+".tif")
         elif args.format=='cbf':
-            output=fabio.cbfimage.CbfImage(data=corr_frame)
-            output.write(output_filename+".cbf")
+            cbf = fabio.cbfimage.cbfimage(data=corr_frame.astype(np.int16))
+            cbf.write(output_filename + ".cbf")
         else:
             print("Output not recognized")
             f.close()

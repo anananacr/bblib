@@ -1,5 +1,4 @@
 plots_flag: false
-
 force_center:
   mode: true
   x: 567
@@ -10,8 +9,8 @@ search_radius: 10
 pf8:
   max_num_peaks: 10000
   adc_threshold: 0
-  minimum_snr: 5.0
-  min_pixel_count: 5
+  minimum_snr: 4.0
+  min_pixel_count: 4
   max_pixel_count: 1000
   local_bg_radius: 10
   min_res: 20

@@ -1,10 +1,8 @@
-#!/usr/bin/env python3.6
-
 import h5py
 import argparse
 import numpy as np
 import om.utils.crystfel_geometry as crystfel_geometry
-import cbf
+import fabio
 import os
 import subprocess as sub
 from PIL import Image
@@ -31,8 +29,13 @@ def main(raw_args=None):
 
     raw_folder = os.path.dirname(args.input)
     output_folder = args.output
-    cmd = f"cp {raw_folder}/info.txt {output_folder}"
-    sub.call(cmd, shell=True)
+    if not os.path.isdir(output_folder):
+        cmd = f"mkdir {output_folder}"
+        sub.call(cmd, shell=True)
+
+    if os.path.isfile(f"{raw_folder}/info.txt"):
+        cmd = f"cp {raw_folder}/info.txt {output_folder}"
+        sub.call(cmd, shell=True)
 
     f = h5py.File(f"{args.input}", "r")
     size = len(f["data"])

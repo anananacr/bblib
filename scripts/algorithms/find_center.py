@@ -201,7 +201,7 @@ def main():
     _img_center_y: int = int(visual_img_shape[0] / 2)
 
     DetectorCenter = [_img_center_x, _img_center_y]
-    print(DetectorCenter)
+
     data_visualize = geometry.DataVisualizer(pixel_maps=pixel_maps)
 
     ## Geometry info to Peakfinder8

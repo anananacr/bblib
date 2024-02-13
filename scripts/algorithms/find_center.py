@@ -244,13 +244,13 @@ def main():
             raw_data = np.ndarray((_data_shape), dtype=np.int32)
             if not config["skip_pol"]:
                 pol_correct_data = np.ndarray((_data_shape), dtype=np.int32)
-            center_data = np.ndarray((_data_shape[0], 2), dtype=np.float32)
-            center_data_method_zero = np.ndarray((_data_shape[0], 2), dtype=np.float32)
-            center_data_method_one = np.ndarray((_data_shape[0], 2), dtype=np.float32)
-            center_data_method_two = np.ndarray((_data_shape[0], 2), dtype=np.float32)
-            center_data_method_three = np.ndarray((_data_shape[0], 2), dtype=np.float32)
-            shift_x_mm = np.ndarray((_data_shape[0],), dtype=np.float32)
-            shift_y_mm = np.ndarray((_data_shape[0],), dtype=np.float32)
+            center_data = np.ndarray((max_frame, 2), dtype=np.float32)
+            center_data_method_zero = np.ndarray((max_frame, 2), dtype=np.float32)
+            center_data_method_one = np.ndarray((max_frame, 2), dtype=np.float32)
+            center_data_method_two = np.ndarray((max_frame, 2), dtype=np.float32)
+            center_data_method_three = np.ndarray((max_frame, 2), dtype=np.float32)
+            shift_x_mm = np.ndarray((max_frame,), dtype=np.float32)
+            shift_y_mm = np.ndarray((max_frame,), dtype=np.float32)
 
             for frame_index in range(max_frame):
                 ## For plots info path

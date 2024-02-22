@@ -1,0 +1,88 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Generate "peak powder" from CrystFEL stream
+#
+# Copyright © 2017-2020 Deutsches Elektronen-Synchrotron DESY,
+#                       a research centre of the Helmholtz Association.
+#
+# Author:
+#    2017 Alexandra Tolstikova <alexandra.tolstikova@desy.de>
+#
+
+import sys
+import numpy as np
+import h5py
+import math
+from os.path import basename, splitext
+import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+xc=593
+yc=532
+#xc=604
+#yc=535
+if sys.argv[1] == '-':
+    stream = sys.stdin
+else:
+    stream = open(sys.argv[1], 'r')
+Resolution = 1/(75*1e-3)
+reading_geometry = False
+reading_chunks = False
+reading_peaks = False
+max_fs = -100500
+max_ss = -100500
+for line in stream:
+    if reading_chunks:
+        if line.startswith('End of peak list'):
+            reading_peaks = False
+        elif line.startswith('  fs/px   ss/px (1/d)/nm^-1   Intensity  Panel'):
+            reading_peaks = True
+        elif reading_peaks:
+            fs, ss, dump, intensity = [float(i) for i in line.split()[:4]]
+            powder[int(ss), int(fs)] += 1*intensity
+            x=(fs-xc)/Resolution
+            y=(ss-yc)/Resolution
+            r = math.sqrt((x)**2 +(y)**2)
+            phi = np.arctan2(y, x) * 180 / np.pi
+            powder_radial["r"].append(float(r))
+            powder_radial["phi"].append(float(phi))
+    elif line.startswith('----- End geometry file -----'):
+        reading_geometry = False
+        powder = np.zeros((max_ss + 1, max_fs + 1))
+        powder_radial={'r': [], 'phi': []}
+    elif reading_geometry:
+        try:
+            par, val = line.split('=')
+            if par.split('/')[-1].strip() == 'max_fs' and int(val) > max_fs:
+                max_fs = int(val)
+            elif par.split('/')[-1].strip() == 'max_ss' and int(val) > max_ss:
+                max_ss = int(val)
+        except ValueError:
+            pass
+    elif line.startswith('----- Begin geometry file -----'):
+        reading_geometry = True
+    elif line.startswith('----- Begin chunk -----'):
+        reading_chunks = True
+
+f = h5py.File(splitext(basename(sys.argv[1]))[0]+'-powder.h5', 'w')
+f.create_dataset('/data/data', data=powder)
+f.close()
+df = pd.DataFrame.from_dict(powder_radial, dtype=float)
+
+bins = 0.1
+yedges = np.arange(5, 20, bins)
+xedges = np.arange(-180, 180, 1)
+
+H, xedges, yedges = np.histogram2d(df.phi, df.r, bins=(xedges, yedges))
+H = H.T
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111, title="Virtual powder in polar coordinates")
+ax.set_xlabel("Azimuth (degrees)")
+ax.set_ylabel("Radial distance (mm)")
+X, Y = np.meshgrid(xedges, yedges)
+pos = ax.pcolormesh(X, Y, H, cmap="plasma", vmax=1)
+fig.colorbar(pos)
+fig.savefig(splitext(basename(sys.argv[1]))[0]+'-powder-radial.png')

@@ -27,9 +27,7 @@ def main():
     parser.add_argument(
         "-o", "--output", type=str, action="store", help="path to output data files"
     )
-    parser.add_argument(
-        "-l", "--label", type=str, action="store", help="label name"
-    )
+    parser.add_argument("-l", "--label", type=str, action="store", help="label name")
 
     args = parser.parse_args()
 
@@ -41,34 +39,34 @@ def main():
     output_folder = args.output
     label = "center_sweep_" + args.label
 
-    #print(label)
+    # print(label)
 
     fig = plt.figure(figsize=(8, 8))
     ax1 = fig.add_subplot(111, title="Shift vertical (mm)")
-    #ax2 = fig.add_subplot(122, title="Distance from last step (mm)")
-    count_outliers=0
+    # ax2 = fig.add_subplot(122, title="Distance from last step (mm)")
+    count_outliers = 0
     if file_format == "lst":
-        #for idx,i in enumerate(paths):
-        for idx,i in enumerate(paths[:]):
+        # for idx,i in enumerate(paths):
+        for idx, i in enumerate(paths[:]):
 
-            #print(idx)
+            # print(idx)
             f = h5py.File(f"{i[:-1]}", "r")
             shift = np.array(f["/shift_vertical_mm"])
-            #shift_cut=[x if x<8 and x>0 else (shift[pos-2]+shift[pos+2])/2 for pos,x in enumerate(shift)]
-            #first_shift=min(shift_cut)
-            first_shift=min(shift)
-            if idx==0:
-                ref_point=first_shift.copy()
+            # shift_cut=[x if x<8 and x>0 else (shift[pos-2]+shift[pos+2])/2 for pos,x in enumerate(shift)]
+            # first_shift=min(shift_cut)
+            first_shift = min(shift)
+            if idx == 0:
+                ref_point = first_shift.copy()
 
-            index=np.where(abs(shift-ref_point)<20)
-            start=index[0][0]
-                
+            index = np.where(abs(shift - ref_point) < 20)
+            start = index[0][0]
+
             f.close()
-            n=len(shift)
-            #print(start)
-            x=np.arange(-start, -start+n,1)
+            n = len(shift)
+            # print(start)
+            x = np.arange(-start, -start + n, 1)
             ax1.plot(x, shift, label=f"File ID {i[-6:-4]}")
-            #ax1.plot(x, shift_cut, label=f"File ID {i[-6:-4]}")
+            # ax1.plot(x, shift_cut, label=f"File ID {i[-6:-4]}")
             """
             last_value=shift[0]
             diff=[0,]
@@ -94,12 +92,11 @@ def main():
 
             """
     ax1.set_xlabel("Frame number")
-    ax1.set_xlim(0,1000)
-    #ax2.set_ylim(0)
-    
+    ax1.set_xlim(0, 1000)
+    # ax2.set_ylim(0)
+
     ax1.legend(fontsize=8)
-    #ax2.legend(fontsize=8)
-    
+    # ax2.legend(fontsize=8)
 
     plt.savefig(f"{args.output}/plots/{label}.png")
     plt.show()

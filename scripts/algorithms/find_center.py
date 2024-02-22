@@ -260,6 +260,7 @@ def main():
                 max_frame = 10
                 starting_frame =config["starting_frame"]
             _data_shape = data.shape
+            
             ## Initialize collecting arrays
             raw_data = np.ndarray((max_frame,_data_shape[1], _data_shape[2]), dtype=np.int32)
             if not config["skip_pol"]:
@@ -336,7 +337,6 @@ def main():
                     center_from_method_zero = [0, 0]
 
                 center_data_method_zero[frame_index, :] = center_from_method_zero
-                # Mask Bragg peaks. I take the mask shape, Bragg peaks positions, bragg is a flag if I want to see only bragg peaks or only the image without Bragg peaks
 
                 if 1 not in config["skip_method"]:
                     only_peaks_mask = mask_peaks(

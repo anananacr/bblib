@@ -1,22 +1,22 @@
 plots_flag: true
 force_center:
   mode: true
-  x: 545
-  y: 524
+  x: 540
+  y: 531
 
 search_radius: 18
 
 pf8:
   max_num_peaks: 10000
   adc_threshold: 0
-  minimum_snr: 4.5
-  min_pixel_count: 4
+  minimum_snr: 5
+  min_pixel_count: 5
   max_pixel_count: 1000
   local_bg_radius: 10
   min_res: 20
-  max_res: 250
+  max_res: 200
 
-starting_frame: 300
+starting_frame: 200
 
 offset:
   x: 0

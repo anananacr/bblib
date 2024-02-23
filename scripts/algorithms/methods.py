@@ -380,7 +380,7 @@ class FriedelPairs(CenteringMethod):
                 radius += 1
             if found_peak:
                 peaks.append((found_peak, i))
-        peaks = self._remove_repeated_pairs(peaks)
+        #peaks = self._remove_repeated_pairs(peaks)
         return peaks
 
     def _find_a_peak_in_the_surrounding(self, 
@@ -410,6 +410,7 @@ class FriedelPairs(CenteringMethod):
     def _prep_for_centering(self, data: np.ndarray, initial_center: tuple, peak_list: list) -> None:
 
         self.initial_center = initial_center
+
         ## Find peaks
         self.peak_list_x_in_frame, self.peak_list_y_in_frame = peak_list
 
@@ -489,8 +490,8 @@ class FriedelPairs(CenteringMethod):
             plt.savefig(f'{self.plots_info["args"].scratch}/center_refinement/plots/{self.plots_info["run_label"]}/centered_friedel/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png')
             plt.close("all")
 
-            original_peaks_x = [np.round(k + self.initial_center[0]) for k in peak_list_x_in_frame]
-            original_peaks_y = [np.round(k + self.initial_center[1]) for k in peak_list_y_in_frame]
+            original_peaks_x = [np.round(k + self.initial_center[0] ) for k in peak_list_x_in_frame]
+            original_peaks_y = [np.round(k + self.initial_center[1] ) for k in peak_list_y_in_frame]
 
             inverted_non_shifted_peaks_x = [
                 np.round(k + self.initial_center[0]) for k in inverted_peaks_x

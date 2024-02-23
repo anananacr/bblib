@@ -51,8 +51,8 @@ class CenterOfMass(CenteringMethod):
         indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
 
         for idx, k in enumerate(peak_list_y_in_frame):
-            row_peak = int(k + initial_center[1])
-            col_peak = int(peak_list_x_in_frame[idx] + initial_center[0])
+            row_peak = int(k + self.initial_center[1])
+            col_peak = int(peak_list_x_in_frame[idx] + self.initial_center[0])
             indices[0, idx] = row_peak
             indices[1, idx] = col_peak
 
@@ -102,8 +102,8 @@ class CircleDetection(CenteringMethod):
         indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
 
         for idx, k in enumerate(peak_list_y_in_frame):
-            row_peak = int(k + initial_center[1])
-            col_peak = int(peak_list_x_in_frame[idx] + initial_center[0])
+            row_peak = int(k + self.initial_center[1])
+            col_peak = int(peak_list_x_in_frame[idx] + self.initial_center[0])
             indices[0, idx] = row_peak
             indices[1, idx] = col_peak
 
@@ -261,8 +261,8 @@ class MinimizePeakFWHM(CenteringMethod):
         indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
 
         for idx, k in enumerate(peak_list_y_in_frame):
-            row_peak = int(k + initial_center[1])
-            col_peak = int(peak_list_x_in_frame[idx] + initial_center[0])
+            row_peak = int(k + self.initial_center[1])
+            col_peak = int(peak_list_x_in_frame[idx] + self.initial_center[0])
             indices[0, idx] = row_peak
             indices[1, idx] = col_peak
 
@@ -286,14 +286,14 @@ class MinimizePeakFWHM(CenteringMethod):
         self.pixel_step = 1
         xx, yy = np.meshgrid(
             np.arange(
-                initial_center[0] - self.config["outlier_distance"],
-                initial_center[0] + self.config["outlier_distance"] + 1,
+                self.initial_center[0] - self.config["outlier_distance"],
+                self.initial_center[0] + self.config["outlier_distance"] + 1,
                 self.pixel_step,
                 dtype=int,
             ),
             np.arange(
-                initial_center[1] - self.config["outlier_distance"],
-                initial_center[1] + self.config["outlier_distance"] + 1,
+                self.initial_center[1] - self.config["outlier_distance"],
+                self.initial_center[1] + self.config["outlier_distance"] + 1,
                 self.pixel_step,
                 dtype=int,
             ),

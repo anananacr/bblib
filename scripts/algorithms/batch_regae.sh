@@ -4,7 +4,7 @@
 #SBATCH --time=2-00:00:00
 #SBATCH --requeue
 #SBATCH --nodes=1
-#SBATCH --mincpus=32
+#SBATCH --mincpus=128
 #SBATCH --mem=10G
 #SBATCH --nice=100
 #SBATCH --job-name  bb

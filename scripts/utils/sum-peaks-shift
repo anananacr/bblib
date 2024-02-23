@@ -36,9 +36,7 @@ for count, line in enumerate(stream):
             reading_peaks = True
         elif reading_peaks:
             fs, ss, dump, intensity = [float(i) for i in line.split()[:4]]
-            print(line.split()[:4])
-            if intensity<0: print(intensity)
-            powder[int(ss), int(fs+shift_vertical_px)] += 1e0*intensity
+            powder[int(ss), int(fs - shift_vertical_px)] += 1e0*intensity
         elif line.split(': ')[0]=='Image filename':
             file_name=line.split(': ')[-1][:-1]
         elif line.split(': ')[0]=='Event':

@@ -4,8 +4,6 @@ from dataclasses import dataclass, field
 import math
 from om.algorithms.crystallography import TypePeakList, Peakfinder8PeakDetection
 
-## Some abstractions to shift detector center for peakfinder8
-
 
 @dataclass
 class PF8Info:
@@ -24,13 +22,15 @@ class PF8Info:
 
     def modify_radius(self, detector_shift_x: int, detector_shift_y: int):
         self._data_shape = self.pixel_maps["x"].shape
+        self._flattened_data_shape = self.pixel_maps["x"].flatten().shape[0]
         self.pixel_maps["x"] = (
-            self.pixel_maps["x"].flatten() + detector_shift_x
+            self.pixel_maps["x"].flatten() - detector_shift_x
         ).reshape(self._data_shape)
         self.pixel_maps["y"] = (
-            self.pixel_maps["y"].flatten() + detector_shift_y
+            self.pixel_maps["y"].flatten() - detector_shift_y
         ).reshape(self._data_shape)
-
+        #self.pixel_maps["radius"] = np.sqrt(self.pixel_maps["x"]**2 + self.pixel_maps["y"]**2).reshape(self._data_shape)
+        
     def get(self, parameter: str):
         if parameter == "max_num_peaks":
             return self.max_num_peaks

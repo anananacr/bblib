@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 from utils import open_distance_map_global_min
+
 plt.switch_backend("agg")
 import multiprocessing
 
@@ -243,6 +244,6 @@ def calculate_center_friedel_pairs(
     inverted_shifted_peaks_x = [k + ref_center[0] + shift_x for k in inverted_peaks_x]
     inverted_shifted_peaks_y = [k + ref_center[1] + shift_y for k in inverted_peaks_y]
     if converged == 1:
-        return [xc , yc ]
+        return [xc, yc]
     else:
         return None

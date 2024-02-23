@@ -380,7 +380,7 @@ class FriedelPairs(CenteringMethod):
                 radius += 1
             if found_peak:
                 peaks.append((found_peak, i))
-        peaks = self._remove_repeated_pairs(peaks)
+        #peaks = self._remove_repeated_pairs(peaks)
         return peaks
 
     def _find_a_peak_in_the_surrounding(self, 

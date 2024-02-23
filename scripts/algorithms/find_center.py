@@ -1,22 +1,18 @@
-from typing import List, Optional, Callable, Tuple, Any, Dict
 import fabio
 import os
-from find_center_friedel import calculate_center_friedel_pairs
 import om.lib.geometry as geometry
 import argparse
 import numpy as np
 from utils import mask_peaks, correct_polarization
 from models import PF8
 import matplotlib.pyplot as plt
-
 plt.switch_backend("agg")
 import subprocess as sub
 import h5py
 import hdf5plugin
 import multiprocessing
 import settings
-from methods import CenterOfMass, CircleDetection, MinimizePeakFWHM
-
+from methods import CenterOfMass, CircleDetection, MinimizePeakFWHM, FriedelPairs
 
 config = settings.read("config.yaml")
 BeambustersParam = settings.parse(config)
@@ -25,21 +21,21 @@ PF8Config = settings.get_pf8_info(config)
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Calculate center of diffraction patterns fro MHz beam sweeping serial crystallography using the beambusters software."
+        description="Calculate center of diffraction patterns forthe MHz beam sweeping serial crystallography using the beambusters software"
     )
     parser.add_argument(
         "-i",
         "--input",
         type=str,
         action="store",
-        help="path to list of data files .lst",
+        help="path to list of data files .lst"
     )
     parser.add_argument(
         "-g",
         "--geom",
         type=str,
         action="store",
-        help="CrystFEL geometry filename",
+        help="CrystFEL geometry filename"
     )
 
     parser.add_argument(
@@ -47,18 +43,17 @@ def main():
         "--output",
         type=str,
         action="store",
-        help="path to output folder for processed data",
+        help="path to output folder for processed data"
     )
     parser.add_argument(
         "-s",
         "--scratch",
         type=str,
         action="store",
-        help="path to output folder for scratch_cc where I save plots of each processed image ",
+        help="path to output folder for scratch_cc where I save plots of a few processed images"
     )
 
     args = parser.parse_args()
-    plot_flag = False
 
     files = open(args.input, "r")
     paths = files.readlines()
@@ -173,18 +168,17 @@ def main():
             )
             if not config["skip_pol"]:
                 pol_correct_data = np.ndarray((_data_shape), dtype=np.int32)
-            center_data = np.ndarray((max_frame, 2), dtype=np.float32)
-            center_data_method_zero = np.ndarray((max_frame, 2), dtype=np.float32)
-            center_data_method_one = np.ndarray((max_frame, 2), dtype=np.float32)
-            center_data_method_two = np.ndarray((max_frame, 2), dtype=np.float32)
-            center_data_method_three = np.ndarray((max_frame, 2), dtype=np.float32)
+            refined_detector_center = np.ndarray((max_frame, 2), dtype=np.int16)
+            detector_center_from_center_of_mass = np.ndarray((max_frame, 2), dtype=np.int16)
+            detector_center_from_circle_detection = np.ndarray((max_frame, 2), dtype=np.int16)
+            detector_center_from_minimize_peak_fwhm = np.ndarray((max_frame, 2), dtype=np.int16)
+            detector_center_from_friedel_pairs = np.ndarray((max_frame, 2), dtype=np.int16)
             shift_x_mm = np.ndarray((max_frame,), dtype=np.float32)
             shift_y_mm = np.ndarray((max_frame,), dtype=np.float32)
 
             for frame_index in range(max_frame):
                 ## Path where plots will be saved
                 plots_info = {
-                    "plot_flag": plot_flag,
                     "file_label": file_label,
                     "run_label": run_label,
                     "frame_index": frame_index,
@@ -194,50 +188,51 @@ def main():
                 frame = np.array(data[starting_frame + frame_index])
                 raw_data[frame_index, :, :] = frame
 
-                corrected_data = data_visualize.visualize_data(data=frame * mask)
+                visual_data = data_visualize.visualize_data(data=frame * mask)
                 visual_mask = data_visualize.visualize_data(data=mask).astype(int)
-                visual_mask[np.where(corrected_data < 0)] = 0
+                visual_mask[np.where(visual_data < 0)] = 0
 
                 ## Precentering methods for first detector center approximation
-                if 0 not in config["skip_method"]:
+                if "center_of_mass" not in config["skip_method"]:
                     centering_method = CenterOfMass(config=config, PF8Config=PF8Config)
-                    converged, center_from_method_zero = centering_method.__call__(
+                    center_coordinates_from_center_of_mass = centering_method.__call__(
                         data=frame, initial_center=DetectorCenter
                     )
                 else:
-                    center_from_method_zero = [0, 0]
+                    center_coordinates_from_center_of_mass = [-1, -1]
 
-                center_data_method_zero[frame_index, :] = center_from_method_zero
+                detector_center_from_center_of_mass[frame_index, :] = center_coordinates_from_center_of_mass
 
-                if 1 not in config["skip_method"]:
+                if "circle_detection" not in config["skip_method"]:
                     centering_method = CircleDetection(
                         config=config, PF8Config=PF8Config, plots_info=plots_info
                     )
-                    converged, center_from_method_one = centering_method.__call__(
+                    center_coordinates_from_circle_detection = centering_method.__call__(
                         data=frame, initial_center=DetectorCenter
                     )
                 else:
-                    center_from_method_one = [0, 0]
+                    center_coordinates_from_circle_detection = [-1, -1]
 
-                center_data_method_one[frame_index, :] = center_from_method_one
+                detector_center_from_circle_detection[frame_index, :] = center_coordinates_from_circle_detection
 
-                if 2 not in config["skip_method"]:
+                if "minimize_peak_fwhm" not in config["skip_method"]:
                     centering_method = MinimizePeakFWHM(
                         config=config, PF8Config=PF8Config, plots_info=plots_info
                     )
-                    converged, center_from_method_two = centering_method.__call__(
+                    center_coordinates_from_minimize_peak_fwhm = centering_method.__call__(
                         data=frame, initial_center=DetectorCenter
                     )
                 else:
-                    center_from_method_two = [0, 0]
-                center_data_method_two[frame_index, :] = center_from_method_two
+                    center_coordinates_from_minimize_peak_fwhm = [-1, -1]
+                detector_center_from_minimize_peak_fwhm[frame_index, :] = center_coordinates_from_minimize_peak_fwhm
 
-                if config["method"] == 0:
-                    xc, yc = center_from_method_zero
-                elif config["method"] == 1:
-                    xc, yc = center_from_method_one
-                elif config["method"] == 2:
-                    xc, yc = center_from_method_two
+                ## First approximation
+                if config["method"] == "center_of_mass":
+                    xc, yc = center_coordinates_from_center_of_mass
+                elif config["method"] == "circle_detection":
+                    xc, yc = center_coordinates_from_circle_detection
+                elif config["method"] == "minimize_peak_fwhm":
+                    xc, yc = center_coordinates_from_minimize_peak_fwhm
 
                 if config["force_center"]["mode"]:
                     xc = config["force_center"]["x"]
@@ -250,42 +245,40 @@ def main():
                 pf8 = PF8(PF8Config)
                 peak_list = pf8.get_peaks_pf8(data=frame)
 
-                if peak_list["num_peaks"] >= 4:
+                if peak_list["num_peaks"] >= 4 and 'friedel_pairs' not in config["skip_method"]:
                     peak_list_in_slab = pf8.peak_list_in_slab(peak_list)
-                    center_from_method_three = calculate_center_friedel_pairs(
-                        corrected_data,
-                        visual_mask,
-                        peak_list_in_slab,
-                        [xc, yc],
-                        config["search_radius"],
-                        config["outlier_distance"],
-                        config["plots_flag"],
-                        f"{args.scratch}/center_refinement/plots/{run_label}",
-                        f"{file_label}_{frame_index}",
+                    centering_method = FriedelPairs(
+                        config=config, PF8Config=PF8Config, plots_info=plots_info
+                    )
+                    center_coordinates_from_friedel_pairs = centering_method.__call__(
+                        data=frame, initial_center=[xc, yc]
                     )
                 else:
-                    center_from_method_three = None
-                if center_from_method_three:
-                    center_data_method_three[frame_index, :] = center_from_method_three
-                    xc, yc = center_from_method_three
+                    center_coordinates_from_friedel_pairs = None
+                
+                ## Final center
+                if center_coordinates_from_friedel_pairs:
+                    detector_center_from_friedel_pairs[frame_index, :] = center_coordinates_from_friedel_pairs
+                    xc, yc = center_coordinates_from_friedel_pairs
                 else:
-                    center_data_method_three[frame_index, :] = [-1, -1]
-
+                    detector_center_from_friedel_pairs[frame_index, :] = [-1, -1]
                     if config["force_center"]["mode"]:
                         xc = config["force_center"]["x"]
                         yc = config["force_center"]["y"]
                     else:
-                        if config["method"] == 0:
-                            xc, yc = center_from_method_zero
-                        elif config["method"] == 1:
-                            xc, yc = center_from_method_one
-                        elif config["method"] == 2:
-                            xc, yc = center_from_method_two
+                        if config["method"] == "center_of_mass":
+                            xc, yc = center_coordinates_from_center_of_mass
+                        elif config["method"] == "circle_detection":
+                            xc, yc = center_coordinates_from_circle_detection
+                        elif config["method"] == "minimize_peak_fwhm":
+                            xc, yc = center_coordinates_from_minimize_peak_fwhm
 
-                ## Here you get the direct beam position in detector coordinates.
+                ## Here you get the direct beam position in the visual map coordinates
                 refined_center = (np.round(xc, 4), np.round(yc, 4))
-                center_data[frame_index, :] = refined_center
-
+                refined_detector_center[frame_index, :] = refined_center
+                print(refined_center)
+                
+                ## Calculate the shift of the detector center in mm
                 detector_shift_x = (
                     (refined_center[0] - DetectorCenter[0]) * 1e3 / pixel_resolution
                 )
@@ -296,7 +289,7 @@ def main():
                 shift_x_mm[frame_index] = np.round(detector_shift_x, 4)
                 shift_y_mm[frame_index] = np.round(detector_shift_y, 4)
 
-                ## Display plots to check peaksearch and if the center refinement looks good.
+                ## Display plots to check peaksearch and if the center refinement looks good
                 if config["plots_flag"]:
                     peak_list_x_in_frame, peak_list_y_in_frame = peak_list_in_slab
                     indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
@@ -307,11 +300,11 @@ def main():
                         indices[0, idx] = row_peak
                         indices[1, idx] = col_peak
 
-                    xr = center_from_method_zero[0]
-                    yr = center_from_method_zero[1]
+                    xr = center_coordinates_from_center_of_mass[0]
+                    yr = center_coordinates_from_center_of_mass[1]
                     fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
                     pos1 = ax1.imshow(
-                        corrected_data * visual_mask, vmax=200, cmap="YlGn"
+                        visual_data * visual_mask, vmax=200, cmap="YlGn"
                     )
 
                     ax1.scatter(
@@ -323,32 +316,32 @@ def main():
                         linewidth=1,
                         label=f"Initial detector center:({round(DetectorCenter[0])},{round(DetectorCenter[1])})",
                     )
-                    if 0 not in config["skip_method"]:
+                    if "center_of_mass" not in config["skip_method"]:
                         ax1.scatter(
-                            round(center_from_method_zero[0]),
-                            round(center_from_method_zero[1]),
+                            round(center_coordinates_from_center_of_mass[0]),
+                            round(center_coordinates_from_center_of_mass[1]),
                             color="magenta",
                             marker="+",
                             s=150,
-                            label=f"First center:({round(center_from_method_zero[0])},{round(center_from_method_zero[1])})",
+                            label=f"First center:({round(center_coordinates_from_center_of_mass[0])},{round(center_coordinates_from_center_of_mass[1])})",
                         )
-                    if 1 not in config["skip_method"]:
+                    if "circle_detection" not in config["skip_method"]:
                         ax1.scatter(
-                            round(center_from_method_one[0]),
-                            round(center_from_method_one[1]),
-                            color="magenta",
+                            round(center_coordinates_from_circle_detection[0]),
+                            round(center_coordinates_from_circle_detection[1]),
+                            color="k",
                             marker="+",
                             s=150,
-                            label=f"Second center:({round(center_from_method_one[0])},{round(center_from_method_one[1])})",
+                            label=f"Second center:({round(center_coordinates_from_circle_detection[0])},{round(center_coordinates_from_circle_detection[1])})",
                         )
-                    if 2 not in config["skip_method"]:
+                    if "minimize_peak_fwhm" not in config["skip_method"]:
                         ax1.scatter(
-                            round(center_from_method_two[0]),
-                            round(center_from_method_two[1]),
+                            round(center_coordinates_from_minimize_peak_fwhm[0]),
+                            round(center_coordinates_from_minimize_peak_fwhm[1]),
                             color="green",
                             marker="+",
                             s=150,
-                            label=f"Third center:({round(center_from_method_two[0])}, {round(center_from_method_two[1])})",
+                            label=f"Third center:({round(center_coordinates_from_minimize_peak_fwhm[0])}, {round(center_coordinates_from_minimize_peak_fwhm[1])})",
                         )
                     ax1.scatter(
                         indices[1],
@@ -380,8 +373,14 @@ def main():
                     plt.close()
 
                 if not config["skip_pol"]:
+                    geometry_txt = open(args.geom, "r").readlines()
+                    geom = geometry.GeometryInformation(
+                    geometry_description=geometry_txt, geometry_format="crystfel"
+                    )
+                    pixel_maps = geom.get_pixel_maps()
+                    PF8Config.pixel_maps = pixel_maps
                     PF8Config.modify_radius(
-                        -xc + refined_center[0], -yc + refined_center[1]
+                        - refined_center[0] + DetectorCenter[0], -refined_center[1] + DetectorCenter[1]
                     )
                     pf8 = PF8(PF8Config)
                     pixel_maps = pf8.pf8_param.pixel_maps
@@ -397,7 +396,7 @@ def main():
                         pol_corrected_frame, dtype=np.int32
                     )
 
-                ## Reset geom
+                ## Reset geometry pixel maps as defined in the geomtry file
                 geometry_txt = open(args.geom, "r").readlines()
                 geom = geometry.GeometryInformation(
                     geometry_description=geometry_txt, geometry_format="crystfel"
@@ -411,8 +410,9 @@ def main():
             else:
                 output_folder = f"{args.output}/centered/{run_label}"
 
+            ## Write data and detector shift for CrystFEL processing, also saving preprocessing configuration
             with h5py.File(f"{output_folder}/{file_label}.h5", "w") as f:
-                ## Here comes everything needed to pass to CrystFEL.
+               
                 entry = f.create_group("entry")
                 entry.attrs["NX_class"] = "NXentry"
                 grp_data = entry.create_group("data")
@@ -435,31 +435,31 @@ def main():
                 for key, value in BeambustersParam.items():
                     grp_config.create_dataset(key, data=value)
                 grp_config.create_dataset(
-                    "refined_center", data=center_data, compression="gzip"
+                    "refined_detector_center", data=refined_detector_center, compression="gzip"
                 )
                 grp_config.create_dataset(
-                    "center_from_method_zero",
-                    data=center_data_method_zero,
+                    "center_from_center_of_mass",
+                    data=detector_center_from_center_of_mass,
                     compression="gzip",
                 )
                 grp_config.create_dataset(
-                    "center_from_method_one",
-                    data=center_data_method_one,
+                    "center_from_circle_detection",
+                    data=detector_center_from_circle_detection,
                     compression="gzip",
                 )
                 grp_config.create_dataset(
-                    "center_from_method_two",
-                    data=center_data_method_two,
+                    "center_from_minimize_peak_fwhm",
+                    data=detector_center_from_minimize_peak_fwhm,
                     compression="gzip",
                 )
                 grp_config.create_dataset(
-                    "center_from_method_three",
-                    data=center_data_method_three,
+                    "center_from_friedel_pairs",
+                    data=detector_center_from_friedel_pairs,
                     compression="gzip",
                 )
                 grp_config.create_dataset("geometry_file", data=args.geom)
                 grp_config.create_dataset(
-                    "detector_center", data=DetectorCenter, compression="gzip"
+                    "detector_center_from_geometry_file", data=DetectorCenter, compression="gzip"
                 )
                 grp_config.create_dataset("pixel_resolution", data=pixel_resolution)
                 grp_config.create_dataset("camera_length", data=clen)

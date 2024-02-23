@@ -33,11 +33,10 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> List[int]:
     yc = np.sum(data[indices] * indices[0]) / np.sum(data[indices])
 
     if np.isnan(xc) or np.isnan(yc):
-        converged = 0
-    else:
-        converged = 1
+        xc = -1 
+        yc = -1
 
-    return converged, [xc, yc]
+    return [xc, yc]
 
 
 def azimuthal_average(
@@ -354,15 +353,14 @@ def open_fwhm_map_global_min(
     fig.colorbar(pos1, ax=ax1, shrink=0.6)
     fig.colorbar(pos2, ax=ax2, shrink=0.6)
 
-    # Display the figure
     if int(np.sum(proj_y)) == 0 or int(np.sum(proj_x)) == 0:
-        converged = 0
+        xc = -1
+        yc = -1
     else:
-        converged = 1
         if plots_flag:
             plt.savefig(f"{output_folder}/fwhm_map/{label}.png")
     plt.close()
-    return converged, (xc, yc)
+    return [xc, yc]
 
 
 def open_distance_map_global_min(
@@ -441,19 +439,17 @@ def open_distance_map_global_min(
 
     fig.colorbar(pos1, ax=ax1, shrink=0.6)
 
-    # Display the figure
-
-    # plt.show()
 
     if int(np.sum(proj_y)) == 0 or int(np.sum(proj_x)) == 0:
         converged = 0
+        xc = -1
+        yc = -1
     else:
         converged = 1
         if plots_flag:
             plt.savefig(f"{output_folder}/distance_map/{label}.png")
-
     plt.close()
-    return xc, yc, converged
+    return [xc, yc]
 
 
 def shift_image_by_n_pixels(data: np.ndarray, n: int, axis: int) -> np.ndarray:

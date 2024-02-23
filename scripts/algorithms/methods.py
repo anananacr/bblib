@@ -6,7 +6,9 @@ from utils import (
     azimuthal_average,
     gaussian_lin,
     open_fwhm_map_global_min,
+    open_distance_map_global_min
 )
+import math
 from models import PF8Info, PF8
 import h5py
 import numpy as np
@@ -29,7 +31,12 @@ class CenteringMethod(ABC):
     def __call__(self, **kwargs) -> tuple:
         self._prep_for_centering(**kwargs)
         return self._run_centering()
-
+    
+    def centering_converged(self, center) -> bool:
+        if center == [-1,-1]:
+            return False
+        else:
+            return True
 
 class CenterOfMass(CenteringMethod):
     def __init__(self, config: dict, PF8Config: PF8Info):
@@ -55,11 +62,11 @@ class CenterOfMass(CenteringMethod):
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
-        self.corrected_data = data_visualize.visualize_data(data=data * mask)
+        self.visual_data = data_visualize.visualize_data(data=data * mask)
         visual_mask = data_visualize.visualize_data(data=mask).astype(int)
 
         # JF for safety
-        visual_mask[np.where(self.corrected_data < 0)] = 0
+        visual_mask[np.where(self.visual_data < 0)] = 0
 
         # Mask Bragg peaks
         peaks_mask = mask_peaks(
@@ -71,14 +78,13 @@ class CenterOfMass(CenteringMethod):
         self.mask_for_center_of_mass = peaks_mask * visual_mask
 
     def _run_centering(self, **kwargs) -> tuple:
-        converged, center = center_of_mass(
-            self.corrected_data, self.mask_for_center_of_mass
+        center = center_of_mass(
+            self.visual_data, self.mask_for_center_of_mass
         )
-        if converged == 0:
-            center = self.initial_center.copy()
-        center[0] += self.config["offset"]["x"]
-        center[1] += self.config["offset"]["y"]
-        return converged, np.round(center, 1)
+        if self.centering_converged(center):
+            center[0] += self.config["offset"]["x"]
+            center[1] += self.config["offset"]["y"]
+        return np.round(center, 1)
 
 
 class CircleDetection(CenteringMethod):
@@ -107,11 +113,11 @@ class CircleDetection(CenteringMethod):
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
-        self.corrected_data = data_visualize.visualize_data(data=data * mask)
+        self.visual_data = data_visualize.visualize_data(data=data * mask)
         visual_mask = data_visualize.visualize_data(data=mask).astype(int)
 
         # JF for safety
-        visual_mask[np.where(self.corrected_data < 0)] = 0
+        visual_mask[np.where(self.visual_data < 0)] = 0
         only_peaks_mask = mask_peaks(
             visual_mask, indices, bragg=0, n=self.config["pixels_per_peak"]
         )
@@ -120,7 +126,7 @@ class CircleDetection(CenteringMethod):
     def _run_centering(self, **kwargs) -> tuple:
         ## Scikit-image circle detection
         edges = canny(
-            self.corrected_data,
+            self.visual_data,
             mask=self.mask_for_circle_detection,
             sigma=self.config["canny"]["sigma"],
             use_quantiles=True,
@@ -141,17 +147,19 @@ class CircleDetection(CenteringMethod):
         )
         hough_res = hough_circle(edges, hough_radii)
         # Select the most prominent 1 circle
-        accums, cx, cy, radii = hough_circle_peaks(
+        accums, xc, yc, radii = hough_circle_peaks(
             hough_res, hough_radii, total_num_peaks=1
         )
-        if len(cx) > 0:
-            center = [cx[0], cy[0]]
-            converged = 1
-        else:
-            center = self.initial_center.copy()
-            converged = 0
 
-        return converged, center
+        if len(xc) > 0:
+            xc = xc[0]
+            yc = yc[0]
+        else:
+            xc = -1
+            yc =-1
+
+        center = [xc, yc]
+        return center
 
 
 class MinimizePeakFWHM(CenteringMethod):
@@ -165,7 +173,7 @@ class MinimizePeakFWHM(CenteringMethod):
         center_to_radial_average = coordinate
         try:
             x_all, y_all = azimuthal_average(
-                self.corrected_data,
+                self.visual_data,
                 center=center_to_radial_average,
                 mask=self.mask_for_fwhm_min,
             )
@@ -264,11 +272,11 @@ class MinimizePeakFWHM(CenteringMethod):
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
-        self.corrected_data = data_visualize.visualize_data(data=data * mask)
+        self.visual_data = data_visualize.visualize_data(data=data * mask)
         visual_mask = data_visualize.visualize_data(data=mask).astype(int)
 
         # JF for safety
-        visual_mask[np.where(self.corrected_data < 0)] = 0
+        visual_mask[np.where(self.visual_data < 0)] = 0
 
         only_peaks_mask = mask_peaks(
             visual_mask, indices, bragg=0, n=self.config["pixels_per_peak"]
@@ -301,7 +309,7 @@ class MinimizePeakFWHM(CenteringMethod):
             self.fwhm_summary = pool.map(self._calculate_fwhm, coordinates)
 
     def _run_centering(self, **kwargs) -> tuple:
-        converged, center = open_fwhm_map_global_min(
+        center = open_fwhm_map_global_min(
             self.fwhm_summary,
             f'{self.plots_info["args"].scratch}/center_refinement/plots/{self.plots_info["run_label"]}',
             f'{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}',
@@ -309,10 +317,238 @@ class MinimizePeakFWHM(CenteringMethod):
             self.config["plots_flag"],
         )
 
-        if converged:
+        if self.centering_converged(center):
             self.plot_fwhm_flag = True
             self._calculate_fwhm(center)
             self.plot_fwhm_flag = False
-        return converged, center
+
+        return center
+
+
+class FriedelPairs(CenteringMethod):
+    def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict):
+        self.config = config
+        self.PF8Config = PF8Config
+        self.plots_info = plots_info
+
+    def _remove_repeated_pairs(self, pairs_list: list) -> list:
+        x_vector = []
+        y_vector = []
+        unique_pairs = []
+
+        for pair in pairs_list:
+            peak_0, peak_1 = pair
+            x = peak_0[0] - peak_1[0]
+            y = peak_0[1] - peak_1[1]
+            if x not in x_vector and y not in y_vector:
+                x_vector.append(x)
+                y_vector.append(y)
+                unique_pairs.append((peak_0, peak_1))
+        return unique_pairs
+
+    def _shift_inverted_peaks_and_calculate_minimum_distance(self,
+        shift: list,
+    ) -> dict:
+        peaks_list = self.peaks_list_original
+        inverted_peaks =self.peaks_list_inverted
+
+        shifted_inverted_peaks = [(x + shift[0], y + shift[1]) for x, y in inverted_peaks]
+        distance = self.calculate_pair_distance(peaks_list, shifted_inverted_peaks)
+
+        return {
+            "shift_x": shift[0],
+            "xc": (shift[0] / 2) + self.initial_center[0] + 0.5,
+            "shift_y": shift[1],
+            "yc": (shift[1] / 2) + self.initial_center[1] + 0.5,
+            "d": distance,
+        }
+
+    def calculate_pair_distance(self, peaks_list: list, shifted_peaks_list: list) -> float:
+        d = [
+            math.sqrt((peaks_list[idx][0] - i[0]) ** 2 + (peaks_list[idx][1] - i[1]) ** 2)
+            for idx, i in enumerate(shifted_peaks_list)
+        ]
+        return sum(d)
+
+    def _select_closest_peaks(self, peaks_list: list, inverted_peaks: list) -> list:
+        peaks = []
+        for i in inverted_peaks:
+            radius = 1
+            found_peak = False
+            while not found_peak and radius <= self.config["search_radius"]:
+                found_peak = self._find_a_peak_in_the_surrounding(peaks_list, i, radius)
+                radius += 1
+            if found_peak:
+                peaks.append((found_peak, i))
+        peaks = self._remove_repeated_pairs(peaks)
+        return peaks
+
+    def _find_a_peak_in_the_surrounding(self, 
+        peaks_list: list, inverted_peak: list, radius: int
+    ) -> list:
+        cut_peaks_list = []
+        cut_peaks_list = [
+            (
+                peak,
+                math.sqrt(
+                    (peak[0] - inverted_peak[0]) ** 2 + (peak[1] - inverted_peak[1]) ** 2
+                ),
+            )
+            for peak in peaks_list
+            if math.sqrt(
+                (peak[0] - inverted_peak[0]) ** 2 + (peak[1] - inverted_peak[1]) ** 2
+            )
+            <= radius
+        ]
+        cut_peaks_list.sort(key=lambda x: x[1])
+
+        if cut_peaks_list == []:
+            return False
+        else:
+            return cut_peaks_list[0][0]
+
+    def _prep_for_centering(self, data: np.ndarray, initial_center: tuple) -> None:
+
+        self.initial_center = initial_center
+        ## Find peaks
+        pf8 = PF8(self.PF8Config)
+        peak_list = pf8.get_peaks_pf8(data=data)
+        self.peak_list_x_in_frame, self.peak_list_y_in_frame = pf8.peak_list_in_slab(peak_list)
+
+        # Assemble data and mask
+        data_visualize = geometry.DataVisualizer(pixel_maps=self.PF8Config.pixel_maps)
+
+        with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
+            mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
+
+        self.visual_data = data_visualize.visualize_data(data=data * mask)
+        visual_mask = data_visualize.visualize_data(data=mask).astype(int)
+
+        # JF for safety
+        visual_mask[np.where(self.visual_data < 0)] = 0
+        self.mask_for_fridel_pairs = visual_mask
+        
+        
+    def _run_centering(self, **kwargs) -> tuple:
+
+        peaks = list(zip(self.peak_list_x_in_frame, self.peak_list_y_in_frame))
+        inverted_peaks_x = [-1 * k for k in self.peak_list_x_in_frame]
+        inverted_peaks_y = [-1 * k for k in self.peak_list_y_in_frame]
+        inverted_peaks = list(zip(inverted_peaks_x, inverted_peaks_y))
+        pairs_list = self._select_closest_peaks(peaks, inverted_peaks)
+
+        ## Grid search of shifts around the detector center
+        self.pixel_step = 0.2
+        xx, yy = np.meshgrid(
+            np.arange(-self.config["outlier_distance"], self.config["outlier_distance"] + 0.2, self.pixel_step, dtype=float),
+            np.arange(-self.config["outlier_distance"], self.config["outlier_distance"] + 0.2, self.pixel_step, dtype=float),
+        )
+        coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
+        self.peaks_list_original = [x for x, y in pairs_list]
+        self.peaks_list_inverted = [y for x, y in pairs_list]
+
+        pool = multiprocessing.Pool()
+        with pool:
+            distance_summary = pool.map(
+                self._shift_inverted_peaks_and_calculate_minimum_distance,
+                coordinates
+            )
+
+        ## Minimize distance
+        center = open_distance_map_global_min( distance_summary,
+            f'{self.plots_info["args"].scratch}/center_refinement/plots/{self.plots_info["run_label"]}',
+            f'{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}',
+            self.pixel_step,
+            self.config["plots_flag"]
+        )
+
+        
+        if self.config["plots_flag"] and self.centering_converged(center):
+            shift_x = 2 * (center[0] - self.initial_center[0])
+            shift_y = 2 * (center[1] - self.initial_center[1])
+
+            fig, ax = plt.subplots(1, 1, figsize=(8, 8))
+            pos = ax.imshow(self.visual_data, vmin=0, vmax=100, cmap="YlGnBu")
+            ax.scatter(
+                self.initial_center[0],
+                self.initial_center[1],
+                color="lime",
+                marker="+",
+                s=150,
+                label=f"Initial center:({np.round(self.initial_center[0],1)},{np.round(self.initial_center[1], 1)})",
+            )
+            ax.scatter(
+                center[0],
+                center[1],
+                color="r",
+                marker="o",
+                s=25,
+                label=f"Refined center:({np.round(center[0],1)}, {np.round(center[1],1)})",
+            )
+            ax.set_xlim(200, 900)
+            ax.set_ylim(900, 200)
+            plt.title("Center refinement: autocorrelation of Friedel pairs")
+            fig.colorbar(pos, shrink=0.6)
+            ax.legend()
+            plt.savefig(f'{self.plots_info["args"].scratch}/center_refinement/plots/{self.plots_info["run_label"]}/centered_friedel/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png')
+            plt.close("all")
+
+            original_peaks_x = [np.round(k + self.initial_center[0]) for k in self.peak_list_x_in_frame]
+            original_peaks_y = [np.round(k + self.initial_center[1]) for k in self.peak_list_y_in_frame]
+            inverted_non_shifted_peaks_x = [
+                np.round(k + self.initial_center[0]) for k in inverted_peaks_x
+            ]
+            inverted_non_shifted_peaks_y = [
+                np.round(k + self.initial_center[1]) for k in inverted_peaks_y
+            ]
+            inverted_shifted_peaks_x = [
+                np.round(k + self.initial_center[0] + shift_x) for k in inverted_peaks_x
+            ]
+            inverted_shifted_peaks_y = [
+                np.round(k + self.initial_center[1] + shift_y) for k in inverted_peaks_y
+            ]
+            ## Check pairs alignement
+            fig, ax = plt.subplots(1, 1, figsize=(8, 8))
+            pos = ax.imshow(self.visual_data, vmin=0, vmax=100, cmap="YlGn")
+            ax.scatter(
+                original_peaks_x,
+                original_peaks_y,
+                facecolor="none",
+                s=50,
+                marker="s",
+                edgecolor="tab:red",
+                linewidth=1.5,
+                label="original peaks",
+            )
+            ax.scatter(
+                inverted_non_shifted_peaks_x,
+                inverted_non_shifted_peaks_y,
+                s=70,
+                facecolor="none",
+                marker="s",
+                edgecolor="tab:orange",
+                linewidth=1.5,
+                label="inverted peaks",
+                alpha=0.8,
+            )
+            ax.scatter(
+                inverted_shifted_peaks_x,
+                inverted_shifted_peaks_y,
+                facecolor="none",
+                s=120,
+                marker="D",
+                linewidth=1.8,
+                alpha=0.8,
+                edgecolor="blue",
+                label="shift of inverted peaks",
+            )
+            ax.set_xlim(200, 900)
+            ax.set_ylim(900, 200)
+            plt.title("Bragg peaks alignement")
+            fig.colorbar(pos, shrink=0.6)
+            ax.legend()
+            plt.savefig(f'{self.plots_info["args"].scratch}/center_refinement/plots/{self.plots_info["run_label"]}/peaks/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png')
+            plt.close()
+        return center
 
 

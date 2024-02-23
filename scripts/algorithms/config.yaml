@@ -1,4 +1,4 @@
-plots_flag: true
+plots_flag: false
 force_center:
   mode: true
   x: 540
@@ -33,14 +33,14 @@ canny:
   low_threshold: 0
   high_threshold: 0
 
-method: 0
+method: center_of_mass
 
 bragg_pos_center_of_mass: -1
 
 pixels_per_peak: 8
 
 skip_method:
-  - 0
-  - 1
+  - minimize_peak_fwhm
+  - circle_detection
 
 skip_pol: true

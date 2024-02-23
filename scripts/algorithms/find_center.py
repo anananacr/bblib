@@ -239,18 +239,19 @@ def main():
 
                 ## Center refinement by Friedel pairs inversion symmetry
                 PF8Config.modify_radius(
-                    xc - DetectorCenter[0], yc - DetectorCenter[1]
+                    xc - DetectorCenter[0],   yc - DetectorCenter[1]
                 )
                 pf8 = PF8(PF8Config)
                 peak_list = pf8.get_peaks_pf8(data=frame)
+                peak_list_in_slab = pf8.peak_list_in_slab(peak_list)
 
                 if peak_list["num_peaks"] >= 4 and 'friedel_pairs' not in config["skip_method"]:
-                    peak_list_in_slab = pf8.peak_list_in_slab(peak_list)
+                    
                     centering_method = FriedelPairs(
                         config=config, PF8Config=PF8Config, plots_info=plots_info
                     )
                     center_coordinates_from_friedel_pairs = centering_method.__call__(
-                        data=frame, initial_center=[xc, yc]
+                        data=frame, initial_center=[xc, yc], peak_list=peak_list_in_slab
                     )
                 else:
                     center_coordinates_from_friedel_pairs = None
@@ -290,6 +291,15 @@ def main():
 
                 ## Display plots to check peaksearch and if the center refinement looks good
                 if config["plots_flag"]:
+                    geometry_txt = open(args.geom, "r").readlines()
+                    geom = geometry.GeometryInformation(
+                    geometry_description=geometry_txt, geometry_format="crystfel"
+                    )
+                    pixel_maps = geom.get_pixel_maps()
+                    PF8Config.pixel_maps = pixel_maps
+                    peak_list = pf8.get_peaks_pf8(data=frame)
+                    peak_list_in_slab = pf8.peak_list_in_slab(peak_list)
+
                     peak_list_x_in_frame, peak_list_y_in_frame = peak_list_in_slab
                     indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
 
@@ -347,8 +357,8 @@ def main():
                         indices[0],
                         facecolor="none",
                         s=100,
-                        marker="o",
-                        edgecolor="orangered",
+                        marker="D",
+                        edgecolor="red",
                         label="Bragg peaks",
                     )
                     ax1.scatter(
@@ -378,12 +388,12 @@ def main():
                     )
                     pixel_maps = geom.get_pixel_maps()
                     PF8Config.pixel_maps = pixel_maps
-                    PF8Config.modify_radius(
-                        refined_center[0] - DetectorCenter[0], refined_center[1] - DetectorCenter[1]
-                    )
+                    #PF8Config.modify_radius(
+                    #    refined_center[0] - DetectorCenter[0], refined_center[1] - DetectorCenter[1]
+                    #)
                     pf8 = PF8(PF8Config)
                     pixel_maps = pf8.pf8_param.pixel_maps
-                    pol_corrected_frame, pol_array_first = correct_polarization_python(
+                    pol_corrected_frame, pol_array_first = correct_polarization(
                         pixel_maps["x"],
                         pixel_maps["y"],
                         float(clen * pixel_resolution),

@@ -1,4 +1,4 @@
-plots_flag: false
+plots_flag: true
 force_center:
   mode: true
   x: 545

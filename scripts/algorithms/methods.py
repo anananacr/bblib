@@ -349,8 +349,8 @@ class FriedelPairs(CenteringMethod):
     def _shift_inverted_peaks_and_calculate_minimum_distance(self,
         shift: list,
     ) -> dict:
-        peaks_list = self.peaks_list_original
-        inverted_peaks =self.peaks_list_inverted
+        peaks_list = self.peaks_list_original.copy()
+        inverted_peaks =self.peaks_list_inverted.copy()
 
         shifted_inverted_peaks = [(x + shift[0], y + shift[1]) for x, y in inverted_peaks]
         distance = self.calculate_pair_distance(peaks_list, shifted_inverted_peaks)
@@ -407,14 +407,13 @@ class FriedelPairs(CenteringMethod):
         else:
             return cut_peaks_list[0][0]
 
-    def _prep_for_centering(self, data: np.ndarray, initial_center: tuple) -> None:
+    def _prep_for_centering(self, data: np.ndarray, initial_center: tuple, peak_list: list) -> None:
 
         self.initial_center = initial_center
         ## Find peaks
-        pf8 = PF8(self.PF8Config)
-        peak_list = pf8.get_peaks_pf8(data=data)
-        self.peak_list_x_in_frame, self.peak_list_y_in_frame = pf8.peak_list_in_slab(peak_list)
+        self.peak_list_x_in_frame, self.peak_list_y_in_frame = peak_list
 
+        print(self.peak_list_x_in_frame, self.peak_list_y_in_frame)
         # Assemble data and mask
         data_visualize = geometry.DataVisualizer(pixel_maps=self.PF8Config.pixel_maps)
 
@@ -422,18 +421,15 @@ class FriedelPairs(CenteringMethod):
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
         self.visual_data = data_visualize.visualize_data(data=data * mask)
-        visual_mask = data_visualize.visualize_data(data=mask).astype(int)
-
-        # JF for safety
-        visual_mask[np.where(self.visual_data < 0)] = 0
-        self.mask_for_fridel_pairs = visual_mask
         
         
     def _run_centering(self, **kwargs) -> tuple:
+        peak_list_x_in_frame=self.peak_list_x_in_frame.copy()
+        peak_list_y_in_frame=self.peak_list_y_in_frame.copy()
 
-        peaks = list(zip(self.peak_list_x_in_frame, self.peak_list_y_in_frame))
-        inverted_peaks_x = [-1 * k for k in self.peak_list_x_in_frame]
-        inverted_peaks_y = [-1 * k for k in self.peak_list_y_in_frame]
+        peaks = list(zip(peak_list_x_in_frame, peak_list_y_in_frame))
+        inverted_peaks_x = [-1 * k for k in peak_list_x_in_frame]
+        inverted_peaks_y = [-1 * k for k in peak_list_y_in_frame]
         inverted_peaks = list(zip(inverted_peaks_x, inverted_peaks_y))
         pairs_list = self._select_closest_peaks(peaks, inverted_peaks)
 
@@ -464,8 +460,8 @@ class FriedelPairs(CenteringMethod):
 
         
         if self.config["plots_flag"] and self.centering_converged(center):
-            shift_x = 2 * (center[0] - self.initial_center[0])
-            shift_y = 2 * (center[1] - self.initial_center[1])
+            shift_x =  2 * (center[0] - self.initial_center[0] )
+            shift_y =  2 * (center[1] - self.initial_center[1])
 
             fig, ax = plt.subplots(1, 1, figsize=(8, 8))
             pos = ax.imshow(self.visual_data, vmin=0, vmax=100, cmap="YlGnBu")
@@ -493,8 +489,9 @@ class FriedelPairs(CenteringMethod):
             plt.savefig(f'{self.plots_info["args"].scratch}/center_refinement/plots/{self.plots_info["run_label"]}/centered_friedel/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png')
             plt.close("all")
 
-            original_peaks_x = [np.round(k + self.initial_center[0]) for k in self.peak_list_x_in_frame]
-            original_peaks_y = [np.round(k + self.initial_center[1]) for k in self.peak_list_y_in_frame]
+            original_peaks_x = [np.round(k + self.initial_center[0]) for k in peak_list_x_in_frame]
+            original_peaks_y = [np.round(k + self.initial_center[1]) for k in peak_list_y_in_frame]
+
             inverted_non_shifted_peaks_x = [
                 np.round(k + self.initial_center[0]) for k in inverted_peaks_x
             ]
@@ -507,6 +504,7 @@ class FriedelPairs(CenteringMethod):
             inverted_shifted_peaks_y = [
                 np.round(k + self.initial_center[1] + shift_y) for k in inverted_peaks_y
             ]
+
             ## Check pairs alignement
             fig, ax = plt.subplots(1, 1, figsize=(8, 8))
             pos = ax.imshow(self.visual_data, vmin=0, vmax=100, cmap="YlGn")
@@ -514,16 +512,16 @@ class FriedelPairs(CenteringMethod):
                 original_peaks_x,
                 original_peaks_y,
                 facecolor="none",
-                s=50,
+                s=80,
                 marker="s",
-                edgecolor="tab:red",
+                edgecolor="red",
                 linewidth=1.5,
                 label="original peaks",
             )
             ax.scatter(
                 inverted_non_shifted_peaks_x,
                 inverted_non_shifted_peaks_y,
-                s=70,
+                s=80,
                 facecolor="none",
                 marker="s",
                 edgecolor="tab:orange",

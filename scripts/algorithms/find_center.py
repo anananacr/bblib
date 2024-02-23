@@ -5,115 +5,22 @@ from find_center_friedel import calculate_center_friedel_pairs
 import om.lib.geometry as geometry
 import argparse
 import numpy as np
-from utils import (
-    mask_peaks,
-    gaussian,
-    gaussian_lin,
-    center_of_mass,
-    azimuthal_average,
-    open_fwhm_map_global_min,
-    open_r_sqrd_map_global_max,
-    circle_mask,
-    update_corner_in_geom,
-    correct_polarization_python,
-    ring_mask,
-)
-from skimage.transform import hough_circle, hough_circle_peaks
-from skimage.feature import canny
+from utils import mask_peaks, correct_polarization
 from models import PF8
-from scipy.optimize import curve_fit
-import math
 import matplotlib.pyplot as plt
 
 plt.switch_backend("agg")
-from scipy import signal
 import subprocess as sub
 import h5py
 import hdf5plugin
 import multiprocessing
 import settings
+from methods import CenterOfMass, CircleDetection, MinimizePeakFWHM
 
-config=settings.read("config.yaml")
 
-BeambustersParam=settings.parse(config)
-
+config = settings.read("config.yaml")
+BeambustersParam = settings.parse(config)
 PF8Config = settings.get_pf8_info(config)
-
-def calculate_fwhm(data_and_coordinates: tuple) -> Dict[str, int]:
-    corrected_data, mask, center_to_radial_average, plots_info = data_and_coordinates
-
-    x, y = azimuthal_average(corrected_data, center=center_to_radial_average, mask=mask)
-    x_all = x.copy()
-    y_all = y.copy()
-
-    if plots_info["plot_flag"]:
-        fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
-        plt.plot(x, y)
-
-    ## Define background peak region
-    x_min = config["peak_region"]["min"]
-    x_max = config["peak_region"]["max"]
-    x = x[x_min:x_max]
-    y = y[x_min:x_max]
-    ## Estimation of initial parameters
-
-    m0 = 0
-    n0 = 2
-    y_linear = m0 * x + n0
-    y_gaussian = y - y_linear
-
-    mean = sum(x * y_gaussian) / sum(y_gaussian)
-    sigma = np.sqrt(sum(y_gaussian * (x - mean) ** 2) / sum(y_gaussian))
-    try:
-        popt, pcov = curve_fit(
-            gaussian_lin, x, y, p0=[max(y_gaussian), mean, sigma, m0, n0]
-        )
-        fwhm = popt[2] * math.sqrt(8 * np.log(2))
-        ## Divide by radius of the peak to get shasrpness ratio
-        fwhm_over_radius = fwhm / popt[1]
-
-        ##Calculate residues
-        residuals = y - gaussian_lin(x, *popt)
-        ss_res = np.sum(residuals**2)
-        ss_tot = np.sum((y - np.mean(y)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
-    except:
-        r_squared = 0
-        fwhm = 1000
-        fwhm_over_radius = 1000
-        popt = []
-
-    ## Display plots
-    if plots_info["plot_flag"] and len(popt) > 0:
-        x_fit = x.copy()
-        y_fit = gaussian_lin(x_fit, *popt)
-
-        plt.vlines([x[0], x[-1]], 0, round(popt[0]) + 2, "r")
-
-        plt.plot(
-            x_fit,
-            y_fit,
-            "r--",
-            label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM : {round(fwhm,3)}",
-        )
-
-        plt.title("Azimuthal integration")
-        plt.xlim(0, 500)
-        # plt.ylim(0, round(popt[0])+2)
-        plt.legend()
-        plt.savefig(
-            f'{plots_info["args"].scratch}/center_refinement/plots/{plots_info["run_label"]}/radial_average/{plots_info["file_label"]}_{plots_info["frame_index"]}.png'
-        )
-        # plt.show()
-        plt.close()
-
-    return {
-        "xc": center_to_radial_average[0],
-        "yc": center_to_radial_average[1],
-        "fwhm": fwhm,
-        "fwhm_over_radius": fwhm_over_radius,
-        "r_squared": r_squared,
-    }
 
 
 def main():
@@ -189,8 +96,7 @@ def main():
     pixel_maps = geom.get_pixel_maps()
     detector_layout = geom.get_layout_info()
 
-    
-    if detector_layout["nasics_x"] * detector_layout["nasics_y"]>1:
+    if detector_layout["nasics_x"] * detector_layout["nasics_y"] > 1:
         # Multiple panels
         # Get minimum array shape
         y_minimum = (
@@ -200,13 +106,13 @@ def main():
             2 * int(max(abs(pixel_maps["x"].max()), abs(pixel_maps["x"].min()))) + 2
         )
         visual_img_shape = (y_minimum, x_minimum)
-        # Detector center in the middle of the minimum array 
+        # Detector center in the middle of the minimum array
         _img_center_x = int(visual_img_shape[1] / 2)
         _img_center_y = int(visual_img_shape[0] / 2)
     else:
         # Single panel
-        _img_center_x = int(abs(pixel_maps["x"][0,0]))
-        _img_center_y = int(abs(pixel_maps["y"][0,0]))
+        _img_center_x = int(abs(pixel_maps["x"][0, 0]))
+        _img_center_y = int(abs(pixel_maps["y"][0, 0]))
 
     DetectorCenter = [_img_center_x, _img_center_y]
 
@@ -236,7 +142,7 @@ def main():
             if not os.path.exists(f"{args.output}/centered/{run_label}"):
                 cmd = f"mkdir {args.output}/centered/{split_path[-2]}; mkdir {args.output}/centered/{run_label}"
                 sub.call(cmd, shell=True)
-            if os.path.exists(os.path.dirname(file_name)+"/info.txt"):
+            if os.path.exists(os.path.dirname(file_name) + "/info.txt"):
                 cmd = f"cp {os.path.dirname(file_name)+'/info.txt'} {args.output}/centered/{run_label}"
                 sub.call(cmd, shell=True)
             if config["plots_flag"] and not os.path.exists(
@@ -258,11 +164,13 @@ def main():
                 starting_frame = 0
             else:
                 max_frame = 10
-                starting_frame =config["starting_frame"]
+                starting_frame = config["starting_frame"]
             _data_shape = data.shape
-            
+
             ## Initialize collecting arrays
-            raw_data = np.ndarray((max_frame,_data_shape[1], _data_shape[2]), dtype=np.int32)
+            raw_data = np.ndarray(
+                (max_frame, _data_shape[1], _data_shape[2]), dtype=np.int32
+            )
             if not config["skip_pol"]:
                 pol_correct_data = np.ndarray((_data_shape), dtype=np.int32)
             center_data = np.ndarray((max_frame, 2), dtype=np.float32)
@@ -274,7 +182,7 @@ def main():
             shift_y_mm = np.ndarray((max_frame,), dtype=np.float32)
 
             for frame_index in range(max_frame):
-                ## For plots info path
+                ## Path where plots will be saved
                 plots_info = {
                     "plot_flag": plot_flag,
                     "file_label": file_label,
@@ -283,134 +191,42 @@ def main():
                     "args": args,
                 }
 
-                frame = np.array(data[starting_frame+frame_index])
+                frame = np.array(data[starting_frame + frame_index])
                 raw_data[frame_index, :, :] = frame
 
                 corrected_data = data_visualize.visualize_data(data=frame * mask)
                 visual_mask = data_visualize.visualize_data(data=mask).astype(int)
                 visual_mask[np.where(corrected_data < 0)] = 0
-                ## Peakfinder8 detector information and bad_pixel_map
-                ## Performing peak search
 
-                pf8 = PF8(PF8Config)
-                peak_list = pf8.get_peaks_pf8(data=frame)
-                peak_list_x_in_frame, peak_list_y_in_frame = pf8.peak_list_in_slab(
-                    peak_list
-                )
-                indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
-
-                for idx, k in enumerate(peak_list_y_in_frame):
-                    row_peak = int(k + DetectorCenter[1])
-                    col_peak = int(peak_list_x_in_frame[idx] + DetectorCenter[0])
-                    indices[0, idx] = row_peak
-                    indices[1, idx] = col_peak
-
+                ## Precentering methods for first detector center approximation
                 if 0 not in config["skip_method"]:
-                    # Mask Bragg  peaks
-                    if config["bragg_pos_center_of_mass"] == 1:
-                        only_peaks_mask = mask_peaks(
-                            visual_mask, indices, bragg=1, n=config["pixels_per_peak"]
-                        )
-                    elif config["bragg_pos_center_of_mass"] == 0:
-                        only_peaks_mask = mask_peaks(
-                            visual_mask, indices, bragg=0, n=config["pixels_per_peak"]
-                        )
-                    elif config["bragg_pos_center_of_mass"] == -1:
-                        only_peaks_mask = mask_peaks(
-                            visual_mask, indices, bragg=-1, n=config["pixels_per_peak"]
-                        )
-                    first_mask = only_peaks_mask * visual_mask
-
-                    ## TEST set intesities to one
-                    #unity_data= corrected_data.copy()
-                    #unity_data[first_mask]=1
-                    #converged,center_from_method_zero = center_of_mass(unity_data, first_mask)
-
-                    converged, center_from_method_zero = center_of_mass(
-                        corrected_data, first_mask
+                    centering_method = CenterOfMass(config=config, PF8Config=PF8Config)
+                    converged, center_from_method_zero = centering_method.__call__(
+                        data=frame, initial_center=DetectorCenter
                     )
-                    if converged == 0:
-                        center_from_method_zero = DetectorCenter.copy()
-                    center_from_method_zero[0] += config["offset"]["x"]
-                    center_from_method_zero[1] += config["offset"]["y"]
                 else:
                     center_from_method_zero = [0, 0]
 
                 center_data_method_zero[frame_index, :] = center_from_method_zero
 
                 if 1 not in config["skip_method"]:
-                    only_peaks_mask = mask_peaks(
-                        visual_mask, indices, bragg=0, n=config["pixels_per_peak"]
+                    centering_method = CircleDetection(
+                        config=config, PF8Config=PF8Config, plots_info=plots_info
                     )
-                    pf8_mask = only_peaks_mask * visual_mask
-                    ## Scikit-image circle detection
-                    edges = canny(
-                        corrected_data,
-                        mask=pf8_mask,
-                        sigma=config["canny"]["sigma"],
-                        use_quantiles=True,
-                        low_threshold=config["canny"]["low_threshold"],
-                        high_threshold=config["canny"]["high_threshold"],
+                    converged, center_from_method_one = centering_method.__call__(
+                        data=frame, initial_center=DetectorCenter
                     )
-                    if config["plots_flag"]:
-                        fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-                        ax1.imshow(edges)
-                        plt.savefig(
-                            f"{args.scratch}/center_refinement/plots/{run_label}/edges/{file_label}_{frame_index}.png"
-                        )
-                        plt.close()
-                    # Detect radii
-                    hough_radii = np.arange(config["peak_region"]["min"], config["peak_region"]["max"], 1)
-                    hough_res = hough_circle(edges, hough_radii)
-                    # Select the most prominent 1 circle
-                    accums, cx, cy, radii = hough_circle_peaks(
-                        hough_res, hough_radii, total_num_peaks=1
-                    )
-                    if len(cx) > 0:
-                        center_from_method_one = [cx[0], cy[0]]
-                    else:
-                        center_from_method_one = center_from_method_zero.copy()
                 else:
                     center_from_method_one = [0, 0]
+
                 center_data_method_one[frame_index, :] = center_from_method_one
-                ## Calculate FWHM of the background peak for each coordinate in a box of OutlierDistance around the pixel coordinates defined in center_from_method_zero
+
                 if 2 not in config["skip_method"]:
-                    pixel_step = 1
-                    xx, yy = np.meshgrid(
-                        np.arange(
-                            center_from_method_one[0] - config["outlier_distance"],
-                            center_from_method_one[0] + config["outlier_distance"] + 1,
-                            pixel_step,
-                            dtype=int,
-                        ),
-                        np.arange(
-                            center_from_method_one[1] - config["outlier_distance"],
-                            center_from_method_one[1] + config["outlier_distance"] + 1,
-                            pixel_step,
-                            dtype=int,
-                        ),
+                    centering_method = MinimizePeakFWHM(
+                        config=config, PF8Config=PF8Config, plots_info=plots_info
                     )
-                    coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
-                    masked_data = corrected_data.copy()
-
-                    ## TEST avoid effects from secondary peaks
-                    # ring_mask_array=ring_mask(masked_data,center_from_method_one, config["peak_region"]["min"], config["peak_region"]["max"])
-                    # masked_data[~ring_mask_array]=0
-
-                    coordinates_anchor_data = [
-                        (masked_data, pf8_mask, shift, plots_info)
-                        for shift in coordinates
-                    ]
-                    fwhm_summary = []
-                    pool = multiprocessing.Pool()
-                    with pool:
-                        fwhm_summary = pool.map(calculate_fwhm, coordinates_anchor_data)
-
-                    center_from_method_two = open_fwhm_map_global_min(
-                        fwhm_summary,
-                        f"{args.scratch}/center_refinement/plots/{run_label}/fwhm_map/{file_label}_{frame_index}",
-                        pixel_step,
-                        config["plots_flag"],
+                    converged, center_from_method_two = centering_method.__call__(
+                        data=frame, initial_center=DetectorCenter
                     )
                 else:
                     center_from_method_two = [0, 0]
@@ -424,15 +240,17 @@ def main():
                     xc, yc = center_from_method_two
 
                 if config["force_center"]["mode"]:
-                    xc=config["force_center"]["x"]
-                    yc=config["force_center"]["y"]
+                    xc = config["force_center"]["x"]
+                    yc = config["force_center"]["y"]
+
+                ## Center refinement by Friedel pairs inversion symmetry
+                PF8Config.modify_radius(
+                    -xc + DetectorCenter[0], -yc + DetectorCenter[1]
+                )
+                pf8 = PF8(PF8Config)
+                peak_list = pf8.get_peaks_pf8(data=frame)
 
                 if peak_list["num_peaks"] >= 4:
-                    PF8Config.modify_radius(
-                        -xc + DetectorCenter[0], -yc + DetectorCenter[1]
-                    )
-                    pf8 = PF8(PF8Config)
-                    peak_list = pf8.get_peaks_pf8(data=frame)
                     peak_list_in_slab = pf8.peak_list_in_slab(peak_list)
                     center_from_method_three = calculate_center_friedel_pairs(
                         corrected_data,
@@ -452,7 +270,7 @@ def main():
                     xc, yc = center_from_method_three
                 else:
                     center_data_method_three[frame_index, :] = [-1, -1]
-                    
+
                     if config["force_center"]["mode"]:
                         xc = config["force_center"]["x"]
                         yc = config["force_center"]["y"]
@@ -469,31 +287,33 @@ def main():
                 center_data[frame_index, :] = refined_center
 
                 detector_shift_x = (
-                    refined_center[0] - DetectorCenter[0]
-                ) * 1e3 / pixel_resolution
+                    (refined_center[0] - DetectorCenter[0]) * 1e3 / pixel_resolution
+                )
                 detector_shift_y = (
-                    refined_center[1] - DetectorCenter[1]
-                )  * 1e3 / pixel_resolution
+                    (refined_center[1] - DetectorCenter[1]) * 1e3 / pixel_resolution
+                )
 
-                shift_x_mm[frame_index] = np.round(detector_shift_x,4)
-                shift_y_mm[frame_index] = np.round(detector_shift_y,4)
-                ## For the calculated direct beam postion I do the azimuthal integration and save the plot to check results.
+                shift_x_mm[frame_index] = np.round(detector_shift_x, 4)
+                shift_y_mm[frame_index] = np.round(detector_shift_y, 4)
 
-                if config["plots_flag"] and 2 not in config["skip_method"]:
-                    plot_flag = True
-                    results = calculate_fwhm(
-                        (corrected_data, pf8_mask, (refined_center))
-                    )
-                    plot_flag = False
-
-                ## Display plots to check peaksearch and if the refined center converged.
+                ## Display plots to check peaksearch and if the center refinement looks good.
                 if config["plots_flag"]:
+                    peak_list_x_in_frame, peak_list_y_in_frame = peak_list_in_slab
+                    indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
+
+                    for idx, k in enumerate(peak_list_y_in_frame):
+                        row_peak = int(k + DetectorCenter[1])
+                        col_peak = int(peak_list_x_in_frame[idx] + DetectorCenter[0])
+                        indices[0, idx] = row_peak
+                        indices[1, idx] = col_peak
+
                     xr = center_from_method_zero[0]
                     yr = center_from_method_zero[1]
                     fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
                     pos1 = ax1.imshow(
                         corrected_data * visual_mask, vmax=200, cmap="YlGn"
                     )
+
                     ax1.scatter(
                         round(DetectorCenter[0]),
                         round(DetectorCenter[1]),
@@ -571,7 +391,7 @@ def main():
                         float(clen * pixel_resolution),
                         frame,
                         mask=mask,
-                        p=0.5,
+                        p=0.99,
                     )
                     pol_correct_data[frame_index, :, :] = np.array(
                         pol_corrected_frame, dtype=np.int32
@@ -641,12 +461,8 @@ def main():
                 grp_config.create_dataset(
                     "detector_center", data=DetectorCenter, compression="gzip"
                 )
-                grp_config.create_dataset(
-                    "pixel_resolution", data=pixel_resolution
-                )
-                grp_config.create_dataset(
-                    "clen", data=clen
-                )
+                grp_config.create_dataset("pixel_resolution", data=pixel_resolution)
+                grp_config.create_dataset("camera_length", data=clen)
 
 
 if __name__ == "__main__":

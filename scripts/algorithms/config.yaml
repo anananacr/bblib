@@ -1,4 +1,4 @@
-plots_flag: false
+plots_flag: true
 force_center:
   mode: true
   x: 540
@@ -40,7 +40,7 @@ bragg_pos_center_of_mass: -1
 pixels_per_peak: 8
 
 skip_method:
+  - 0
   - 1
-  - 2
 
 skip_pol: true

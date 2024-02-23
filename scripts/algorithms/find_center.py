@@ -3,14 +3,13 @@ import os
 import om.lib.geometry as geometry
 import argparse
 import numpy as np
-from utils import mask_peaks, correct_polarization
+from utils import correct_polarization
 from models import PF8
 import matplotlib.pyplot as plt
 plt.switch_backend("agg")
 import subprocess as sub
 import h5py
 import hdf5plugin
-import multiprocessing
 import settings
 from methods import CenterOfMass, CircleDetection, MinimizePeakFWHM, FriedelPairs
 
@@ -240,7 +239,7 @@ def main():
 
                 ## Center refinement by Friedel pairs inversion symmetry
                 PF8Config.modify_radius(
-                    -xc + DetectorCenter[0], -yc + DetectorCenter[1]
+                    xc - DetectorCenter[0], yc - DetectorCenter[1]
                 )
                 pf8 = PF8(PF8Config)
                 peak_list = pf8.get_peaks_pf8(data=frame)
@@ -257,7 +256,7 @@ def main():
                     center_coordinates_from_friedel_pairs = None
                 
                 ## Final center
-                if center_coordinates_from_friedel_pairs:
+                if center_coordinates_from_friedel_pairs and 'friedel_pairs' not in config["skip_method"]:
                     detector_center_from_friedel_pairs[frame_index, :] = center_coordinates_from_friedel_pairs
                     xc, yc = center_coordinates_from_friedel_pairs
                 else:
@@ -380,7 +379,7 @@ def main():
                     pixel_maps = geom.get_pixel_maps()
                     PF8Config.pixel_maps = pixel_maps
                     PF8Config.modify_radius(
-                        - refined_center[0] + DetectorCenter[0], -refined_center[1] + DetectorCenter[1]
+                        refined_center[0] - DetectorCenter[0], refined_center[1] - DetectorCenter[1]
                     )
                     pf8 = PF8(PF8Config)
                     pixel_maps = pf8.pf8_param.pixel_maps
@@ -396,7 +395,7 @@ def main():
                         pol_corrected_frame, dtype=np.int32
                     )
 
-                ## Reset geometry pixel maps as defined in the geomtry file
+                ## Reset geometry pixel maps as defined in the geometry file
                 geometry_txt = open(args.geom, "r").readlines()
                 geom = geometry.GeometryInformation(
                     geometry_description=geometry_txt, geometry_format="crystfel"

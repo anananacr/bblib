@@ -171,7 +171,7 @@ def main():
             detector_center_from_center_of_mass = np.ndarray((max_frame, 2), dtype=np.int16)
             detector_center_from_circle_detection = np.ndarray((max_frame, 2), dtype=np.int16)
             detector_center_from_minimize_peak_fwhm = np.ndarray((max_frame, 2), dtype=np.int16)
-            detector_center_from_friedel_pairs = np.ndarray((max_frame, 2), dtype=np.int16)
+            detector_center_from_friedel_pairs = np.ndarray((max_frame, 2), dtype=np.float32)
             shift_x_mm = np.ndarray((max_frame,), dtype=np.float32)
             shift_y_mm = np.ndarray((max_frame,), dtype=np.float32)
 

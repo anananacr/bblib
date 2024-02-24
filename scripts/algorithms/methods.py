@@ -461,7 +461,7 @@ class FriedelPairs(CenteringMethod):
 
         
         if self.config["plots_flag"] and self.centering_converged(center):
-            shift_x =  2 * (center[0] - self.initial_center[0] )
+            shift_x =  2 * (center[0] - self.initial_center[0])
             shift_y =  2 * (center[1] - self.initial_center[1])
 
             fig, ax = plt.subplots(1, 1, figsize=(8, 8))

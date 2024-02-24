@@ -257,7 +257,7 @@ def main():
                     center_coordinates_from_friedel_pairs = None
                 
                 ## Final center
-                if center_coordinates_from_friedel_pairs and 'friedel_pairs' not in config["skip_method"]:
+                if center_coordinates_from_friedel_pairs and center_coordinates_from_friedel_pairs!=[-1, -1] and 'friedel_pairs' not in config["skip_method"]:
                     detector_center_from_friedel_pairs[frame_index, :] = center_coordinates_from_friedel_pairs
                     xc, yc = center_coordinates_from_friedel_pairs
                 else:
@@ -266,12 +266,14 @@ def main():
                         xc = config["force_center"]["x"]
                         yc = config["force_center"]["y"]
                     else:
-                        if config["method"] == "center_of_mass":
+                        if config["method"] == "center_of_mass" and center_coordinates_from_center_of_mass != [-1, -1]:
                             xc, yc = center_coordinates_from_center_of_mass
-                        elif config["method"] == "circle_detection":
+                        elif config["method"] == "circle_detection" and center_coordinates_from_circle_detection != [-1, -1]:
                             xc, yc = center_coordinates_from_circle_detection
-                        elif config["method"] == "minimize_peak_fwhm":
+                        elif config["method"] == "minimize_peak_fwhm" and center_coordinates_from_minimize_peak_fwhm != [-1, -1]:
                             xc, yc = center_coordinates_from_minimize_peak_fwhm
+                        else:
+                            xc, yc = DetectorCenter
 
                 ## Here you get the direct beam position in the visual map coordinates
                 refined_center = (np.round(xc, 4), np.round(yc, 4))

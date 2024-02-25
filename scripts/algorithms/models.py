@@ -29,7 +29,7 @@ class PF8Info:
         self.pixel_maps["y"] = (
             self.pixel_maps["y"].flatten() - detector_shift_y
         ).reshape(self._data_shape)
-        self.pixel_maps["radius"] = np.sqrt(self.pixel_maps["x"]**2 + self.pixel_maps["y"]**2).reshape(self._data_shape)
+        self.pixel_maps["radius"] = np.sqrt(np.square(self.pixel_maps["x"]) + np.square(self.pixel_maps["y"])).reshape(self._data_shape)
         
     def get(self, parameter: str):
         if parameter == "max_num_peaks":

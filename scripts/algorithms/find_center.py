@@ -167,7 +167,7 @@ def main():
             )
             if not config["skip_pol"]:
                 pol_correct_data = np.ndarray((_data_shape), dtype=np.int32)
-            refined_detector_center = np.ndarray((max_frame, 2), dtype=np.int16)
+            refined_detector_center = np.ndarray((max_frame, 2), dtype=np.float32)
             detector_center_from_center_of_mass = np.ndarray((max_frame, 2), dtype=np.int16)
             detector_center_from_circle_detection = np.ndarray((max_frame, 2), dtype=np.int16)
             detector_center_from_minimize_peak_fwhm = np.ndarray((max_frame, 2), dtype=np.int16)

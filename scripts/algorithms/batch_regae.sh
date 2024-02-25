@@ -21,4 +21,4 @@ SCRATCH=/asap3/fs-bmx/gpfs/regae/2023/data/11018148/scratch_cc/rodria/test
 source /etc/profile.d/modules.sh
 source /home/rodria/scripts/p09/env-p09/bin/activate
 
-python find_center.py -i ${ROOT}/lists/${INPUT} -o ${ROOT}/test -s ${SCRATCH} -g ${ROOT}/geoms/JF_regae_v4_altered.geom
+python find_center.py -i ${ROOT}/lists/${INPUT} -o ${ROOT}/../test -s ${SCRATCH} -g ${ROOT}/geoms/JF_regae_v4_altered.geom

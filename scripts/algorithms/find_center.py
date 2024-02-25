@@ -167,11 +167,11 @@ def main():
             )
             if not config["skip_pol"]:
                 pol_correct_data = np.ndarray((_data_shape), dtype=np.int32)
-            refined_detector_center = np.ndarray((max_frame, 2), dtype=np.int16)
+            refined_detector_center = np.ndarray((max_frame, 2), dtype=np.float32)
             detector_center_from_center_of_mass = np.ndarray((max_frame, 2), dtype=np.int16)
             detector_center_from_circle_detection = np.ndarray((max_frame, 2), dtype=np.int16)
             detector_center_from_minimize_peak_fwhm = np.ndarray((max_frame, 2), dtype=np.int16)
-            detector_center_from_friedel_pairs = np.ndarray((max_frame, 2), dtype=np.int16)
+            detector_center_from_friedel_pairs = np.ndarray((max_frame, 2), dtype=np.float32)
             shift_x_mm = np.ndarray((max_frame,), dtype=np.float32)
             shift_y_mm = np.ndarray((max_frame,), dtype=np.float32)
 
@@ -257,7 +257,7 @@ def main():
                     center_coordinates_from_friedel_pairs = None
                 
                 ## Final center
-                if center_coordinates_from_friedel_pairs and 'friedel_pairs' not in config["skip_method"]:
+                if center_coordinates_from_friedel_pairs and center_coordinates_from_friedel_pairs!=[-1, -1] and 'friedel_pairs' not in config["skip_method"]:
                     detector_center_from_friedel_pairs[frame_index, :] = center_coordinates_from_friedel_pairs
                     xc, yc = center_coordinates_from_friedel_pairs
                 else:
@@ -266,12 +266,14 @@ def main():
                         xc = config["force_center"]["x"]
                         yc = config["force_center"]["y"]
                     else:
-                        if config["method"] == "center_of_mass":
+                        if config["method"] == "center_of_mass" and center_coordinates_from_center_of_mass != [-1, -1]:
                             xc, yc = center_coordinates_from_center_of_mass
-                        elif config["method"] == "circle_detection":
+                        elif config["method"] == "circle_detection" and center_coordinates_from_circle_detection != [-1, -1]:
                             xc, yc = center_coordinates_from_circle_detection
-                        elif config["method"] == "minimize_peak_fwhm":
+                        elif config["method"] == "minimize_peak_fwhm" and center_coordinates_from_minimize_peak_fwhm != [-1, -1]:
                             xc, yc = center_coordinates_from_minimize_peak_fwhm
+                        else:
+                            xc, yc = DetectorCenter
 
                 ## Here you get the direct beam position in the visual map coordinates
                 refined_center = (np.round(xc, 4), np.round(yc, 4))
@@ -291,15 +293,6 @@ def main():
 
                 ## Display plots to check peaksearch and if the center refinement looks good
                 if config["plots_flag"]:
-                    geometry_txt = open(args.geom, "r").readlines()
-                    geom = geometry.GeometryInformation(
-                    geometry_description=geometry_txt, geometry_format="crystfel"
-                    )
-                    pixel_maps = geom.get_pixel_maps()
-                    PF8Config.pixel_maps = pixel_maps
-                    peak_list = pf8.get_peaks_pf8(data=frame)
-                    peak_list_in_slab = pf8.peak_list_in_slab(peak_list)
-
                     peak_list_x_in_frame, peak_list_y_in_frame = peak_list_in_slab
                     indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
 
@@ -309,8 +302,6 @@ def main():
                         indices[0, idx] = row_peak
                         indices[1, idx] = col_peak
 
-                    xr = center_coordinates_from_center_of_mass[0]
-                    yr = center_coordinates_from_center_of_mass[1]
                     fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
                     pos1 = ax1.imshow(
                         visual_data * visual_mask, vmax=200, cmap="YlGn"
@@ -388,9 +379,9 @@ def main():
                     )
                     pixel_maps = geom.get_pixel_maps()
                     PF8Config.pixel_maps = pixel_maps
-                    #PF8Config.modify_radius(
-                    #    refined_center[0] - DetectorCenter[0], refined_center[1] - DetectorCenter[1]
-                    #)
+                    PF8Config.modify_radius(
+                        refined_center[0] - DetectorCenter[0], refined_center[1] - DetectorCenter[1]
+                    )
                     pf8 = PF8(PF8Config)
                     pixel_maps = pf8.pf8_param.pixel_maps
                     pol_corrected_frame, pol_array_first = correct_polarization(

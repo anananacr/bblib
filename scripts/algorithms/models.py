@@ -7,14 +7,14 @@ from om.algorithms.crystallography import TypePeakList, Peakfinder8PeakDetection
 
 @dataclass
 class PF8Info:
-    max_num_peaks: int
-    adc_threshold: float
-    minimum_snr: int
-    min_pixel_count: int
-    max_pixel_count: int
-    local_bg_radius: int
-    min_res: float
-    max_res: float
+    max_num_peaks: np.int32
+    adc_threshold: np.int32
+    minimum_snr: np.float32
+    min_pixel_count: np.int16
+    max_pixel_count: np.int16
+    local_bg_radius: np.int16
+    min_res: np.int16
+    max_res: np.int16
     pf8_detector_info: dict = None
     bad_pixel_map_filename: str = None
     bad_pixel_map_hdf5_path: str = None
@@ -29,7 +29,7 @@ class PF8Info:
         self.pixel_maps["y"] = (
             self.pixel_maps["y"].flatten() - detector_shift_y
         ).reshape(self._data_shape)
-        self.pixel_maps["radius"] = np.sqrt(self.pixel_maps["x"]**2 + self.pixel_maps["y"]**2).reshape(self._data_shape)
+        self.pixel_maps["radius"] = np.sqrt(np.square(self.pixel_maps["x"]) + np.square(self.pixel_maps["y"])).reshape(self._data_shape)
         
     def get(self, parameter: str):
         if parameter == "max_num_peaks":

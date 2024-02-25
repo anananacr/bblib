@@ -12,10 +12,13 @@
 #SBATCH --error    /asap3/fs-bmx/gpfs/regae/2022/data/11016614/processed/test/rodria/error/bb-%N-%j.err
 
 INPUT=$1
-ROOT=/asap3/fs-bmx/gpfs/regae/2022/data/11016614/processed/test/rodria
-SCRATCH=/asap3/fs-bmx/gpfs/regae/2022/data/11016614/scratch_cc/rodria/test
+#ROOT=/asap3/fs-bmx/gpfs/regae/2022/data/11016614/processed/test/rodria
+#SCRATCH=/asap3/fs-bmx/gpfs/regae/2022/data/11016614/scratch_cc/rodria/test
+
+ROOT=/asap3/fs-bmx/gpfs/regae/2023/data/11018148/processed/rodria
+SCRATCH=/asap3/fs-bmx/gpfs/regae/2023/data/11018148/scratch_cc/rodria/test
 
 source /etc/profile.d/modules.sh
 source /home/rodria/scripts/p09/env-p09/bin/activate
 
-python find_center.py -i ${ROOT}/lists/${INPUT} -o ${ROOT}/.. -s ${SCRATCH} -g ${ROOT}/geoms/JF_regae_v4_altered.geom
+python find_center.py -i ${ROOT}/lists/${INPUT} -o ${ROOT}/../test -s ${SCRATCH} -g ${ROOT}/geoms/JF_regae_v4_altered.geom

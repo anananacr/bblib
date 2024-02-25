@@ -1,8 +1,8 @@
 plots_flag: false
 force_center:
   mode: true
-  x: 540
-  y: 531
+  x: 589
+  y: 529
 
 search_radius: 18
 

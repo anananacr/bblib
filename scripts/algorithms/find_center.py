@@ -293,15 +293,6 @@ def main():
 
                 ## Display plots to check peaksearch and if the center refinement looks good
                 if config["plots_flag"]:
-                    geometry_txt = open(args.geom, "r").readlines()
-                    geom = geometry.GeometryInformation(
-                    geometry_description=geometry_txt, geometry_format="crystfel"
-                    )
-                    pixel_maps = geom.get_pixel_maps()
-                    PF8Config.pixel_maps = pixel_maps
-                    peak_list = pf8.get_peaks_pf8(data=frame)
-                    peak_list_in_slab = pf8.peak_list_in_slab(peak_list)
-
                     peak_list_x_in_frame, peak_list_y_in_frame = peak_list_in_slab
                     indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
 
@@ -311,8 +302,6 @@ def main():
                         indices[0, idx] = row_peak
                         indices[1, idx] = col_peak
 
-                    xr = center_coordinates_from_center_of_mass[0]
-                    yr = center_coordinates_from_center_of_mass[1]
                     fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
                     pos1 = ax1.imshow(
                         visual_data * visual_mask, vmax=200, cmap="YlGn"
@@ -390,9 +379,9 @@ def main():
                     )
                     pixel_maps = geom.get_pixel_maps()
                     PF8Config.pixel_maps = pixel_maps
-                    #PF8Config.modify_radius(
-                    #    refined_center[0] - DetectorCenter[0], refined_center[1] - DetectorCenter[1]
-                    #)
+                    PF8Config.modify_radius(
+                        refined_center[0] - DetectorCenter[0], refined_center[1] - DetectorCenter[1]
+                    )
                     pf8 = PF8(PF8Config)
                     pixel_maps = pf8.pf8_param.pixel_maps
                     pol_corrected_frame, pol_array_first = correct_polarization(

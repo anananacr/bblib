@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import om.lib.geometry as geometry
-from utils import (
+from bblib.utils import (
     mask_peaks,
     center_of_mass,
     azimuthal_average,
@@ -9,7 +9,7 @@ from utils import (
     open_distance_map_global_min
 )
 import math
-from models import PF8Info, PF8
+from bblib.models import PF8Info, PF8
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
@@ -43,16 +43,16 @@ class CenterOfMass(CenteringMethod):
         self.config = config
         self.PF8Config = PF8Config
 
-    def _prep_for_centering(self, data: np.ndarray, initial_center: tuple) -> None:
-        self.initial_center = initial_center
+    def _prep_for_centering(self, data: np.ndarray) -> None:
+        self.initial_detector_center = self.PF8Config.get_detector_center()
         pf8 = PF8(self.PF8Config)
         peak_list = pf8.get_peaks_pf8(data=data)
         peak_list_x_in_frame, peak_list_y_in_frame = pf8.peak_list_in_slab(peak_list)
         indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
 
         for idx, k in enumerate(peak_list_y_in_frame):
-            row_peak = int(k + self.initial_center[1])
-            col_peak = int(peak_list_x_in_frame[idx] + self.initial_center[0])
+            row_peak = int(k + self.initial_detector_center[1])
+            col_peak = int(peak_list_x_in_frame[idx] + self.initial_detector_center[0])
             indices[0, idx] = row_peak
             indices[1, idx] = col_peak
 
@@ -93,8 +93,8 @@ class CircleDetection(CenteringMethod):
         self.PF8Config = PF8Config
         self.plots_info = plots_info
 
-    def _prep_for_centering(self, data: np.ndarray, initial_center: tuple) -> None:
-        self.initial_center = initial_center
+    def _prep_for_centering(self, data: np.ndarray) -> None:
+        self.initial_detector_center = self.PF8Config.get_detector_center()
         ## Find peaks
         pf8 = PF8(self.PF8Config)
         peak_list = pf8.get_peaks_pf8(data=data)
@@ -102,8 +102,8 @@ class CircleDetection(CenteringMethod):
         indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
 
         for idx, k in enumerate(peak_list_y_in_frame):
-            row_peak = int(k + self.initial_center[1])
-            col_peak = int(peak_list_x_in_frame[idx] + self.initial_center[0])
+            row_peak = int(k + self.initial_detector_center[1])
+            col_peak = int(peak_list_x_in_frame[idx] + self.initial_detector_center[0])
             indices[0, idx] = row_peak
             indices[1, idx] = col_peak
 
@@ -251,9 +251,8 @@ class MinimizePeakFWHM(CenteringMethod):
             "r_squared": r_squared,
         }
 
-    def _prep_for_centering(self, data: np.ndarray, initial_center: tuple) -> None:
-
-        self.initial_center = initial_center
+    def _prep_for_centering(self, data: np.ndarray) -> None:
+        self.initial_detector_center = self.PF8Config.get_detector_center()
         ## Find peaks
         pf8 = PF8(self.PF8Config)
         peak_list = pf8.get_peaks_pf8(data=data)
@@ -261,8 +260,8 @@ class MinimizePeakFWHM(CenteringMethod):
         indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
 
         for idx, k in enumerate(peak_list_y_in_frame):
-            row_peak = int(k + self.initial_center[1])
-            col_peak = int(peak_list_x_in_frame[idx] + self.initial_center[0])
+            row_peak = int(k + self.initial_detector_center[1])
+            col_peak = int(peak_list_x_in_frame[idx] + self.initial_detector_center[0])
             indices[0, idx] = row_peak
             indices[1, idx] = col_peak
 
@@ -286,14 +285,14 @@ class MinimizePeakFWHM(CenteringMethod):
         self.pixel_step = 1
         xx, yy = np.meshgrid(
             np.arange(
-                self.initial_center[0] - self.config["outlier_distance"],
-                self.initial_center[0] + self.config["outlier_distance"] + 1,
+                self.initial_detector_center[0] - self.config["outlier_distance"],
+                self.initial_detector_center[0] + self.config["outlier_distance"] + 1,
                 self.pixel_step,
                 dtype=int,
             ),
             np.arange(
-                self.initial_center[1] - self.config["outlier_distance"],
-                self.initial_center[1] + self.config["outlier_distance"] + 1,
+                self.initial_detector_center[1] - self.config["outlier_distance"],
+                self.initial_detector_center[1] + self.config["outlier_distance"] + 1,
                 self.pixel_step,
                 dtype=int,
             ),
@@ -357,9 +356,9 @@ class FriedelPairs(CenteringMethod):
 
         return {
             "shift_x": shift[0],
-            "xc": (shift[0] / 2) + self.initial_center[0] + 0.5,
+            "xc": (shift[0] / 2) + self.initial_guess[0] + 0.5,
             "shift_y": shift[1],
-            "yc": (shift[1] / 2) + self.initial_center[1] + 0.5,
+            "yc": (shift[1] / 2) + self.initial_guess[1] + 0.5,
             "d": distance,
         }
 
@@ -407,12 +406,20 @@ class FriedelPairs(CenteringMethod):
         else:
             return cut_peaks_list[0][0]
 
-    def _prep_for_centering(self, data: np.ndarray, initial_center: tuple, peak_list: list) -> None:
+    def _prep_for_centering(self, data: np.ndarray, initial_guess: tuple) -> None:
 
-        self.initial_center = initial_center
-
+        self.initial_guess = initial_guess
+        self.initial_detector_center = self.PF8Config.get_detector_center()
         ## Find peaks
-        self.peak_list_x_in_frame, self.peak_list_y_in_frame = peak_list
+        PF8Config.modify_radius(
+                initial_guess[0] - self.initial_detector_center[0],   initial_guess[1] - self.initial_detector_center[1]
+                )
+
+        pf8 = PF8(self.PF8Config)
+        peak_list = pf8.get_peaks_pf8(data=frame)
+        peak_list_in_slab = pf8.peak_list_in_slab(peak_list)
+
+        self.peak_list_x_in_frame, self.peak_list_y_in_frame = peak_list_in_slab
 
         print(self.peak_list_x_in_frame, self.peak_list_y_in_frame)
         # Assemble data and mask
@@ -461,18 +468,18 @@ class FriedelPairs(CenteringMethod):
 
         
         if self.config["plots_flag"] and self.centering_converged(center):
-            shift_x =  2 * (center[0] - self.initial_center[0])
-            shift_y =  2 * (center[1] - self.initial_center[1])
+            shift_x =  2 * (center[0] - self.initial_guess[0])
+            shift_y =  2 * (center[1] - self.initial_guess[1])
 
             fig, ax = plt.subplots(1, 1, figsize=(8, 8))
             pos = ax.imshow(self.visual_data, vmin=0, vmax=100, cmap="YlGnBu")
             ax.scatter(
-                self.initial_center[0],
-                self.initial_center[1],
+                self.initial_guess[0],
+                self.initial_guess[1],
                 color="lime",
                 marker="+",
                 s=150,
-                label=f"Initial center:({np.round(self.initial_center[0],1)},{np.round(self.initial_center[1], 1)})",
+                label=f"Initial center:({np.round(self.initial_guess[0],1)},{np.round(self.initial_guess[1], 1)})",
             )
             ax.scatter(
                 center[0],
@@ -490,20 +497,20 @@ class FriedelPairs(CenteringMethod):
             plt.savefig(f'{self.plots_info["args"].scratch}/center_refinement/plots/{self.plots_info["run_label"]}/centered_friedel/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png')
             plt.close("all")
 
-            original_peaks_x = [np.round(k + self.initial_center[0]) for k in peak_list_x_in_frame]
-            original_peaks_y = [np.round(k + self.initial_center[1]) for k in peak_list_y_in_frame]
+            original_peaks_x = [np.round(k + self.initial_guess[0]) for k in peak_list_x_in_frame]
+            original_peaks_y = [np.round(k + self.initial_guess[1]) for k in peak_list_y_in_frame]
 
             inverted_non_shifted_peaks_x = [
-                np.round(k + self.initial_center[0]) for k in inverted_peaks_x
+                np.round(k + self.initial_guess[0]) for k in inverted_peaks_x
             ]
             inverted_non_shifted_peaks_y = [
-                np.round(k + self.initial_center[1]) for k in inverted_peaks_y
+                np.round(k + self.initial_guess[1]) for k in inverted_peaks_y
             ]
             inverted_shifted_peaks_x = [
-                np.round(k + self.initial_center[0] + shift_x) for k in inverted_peaks_x
+                np.round(k + self.initial_guess[0] + shift_x) for k in inverted_peaks_x
             ]
             inverted_shifted_peaks_y = [
-                np.round(k + self.initial_center[1] + shift_y) for k in inverted_peaks_y
+                np.round(k + self.initial_guess[1] + shift_y) for k in inverted_peaks_y
             ]
 
             ## Check pairs alignement

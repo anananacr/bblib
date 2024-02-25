@@ -50,7 +50,8 @@ PF8Info = {
     "pf8_detector_info": ...,
     "bad_pixel_map_filename": ...,
     "bad_pixel_map_hdf5_path": ...,
-    "pixel_maps": ...
+    "pixel_maps": ...,
+    "_shifted_pixel_maps":...
 }
 ```
 
@@ -84,18 +85,19 @@ plots_info =  {
     "args": ...
     }
 ```
-To calculate the refined detector center of the frame in numpy array, from an initial coordinate given by the `initial_center = [x_0, y_0]`
+To calculate the refined detector center of a frame in numpy array using the methods: 
+
 ```python
 from methods import CenterOfMass
 center_of_mass_method = CenterOfMass(config=config, PF8Config=PF8Config)
 center_coordinates_from_center_of_mass = center_of_mass_method(
-                        data=frame, initial_center= ...
+                        data=frame
                     )
                     
 from methods import CircleDetection
 circle_detection_method = CircleDetection(config=config, PF8Config=PF8Config, plots_info=plots_info)
 center_coordinates_from_circle_detection = circle_detection_method(
-                        data=frame, initial_center = ...
+                        data=frame
                     )
                     
 from methods import MinimizePeakFWHM
@@ -103,15 +105,19 @@ minimize_peak_fwhm_method = MinimizePeakFWHM(
                         config=config, PF8Config=PF8Config, plots_info=plots_info
                     )
 center_coordinates_from_minimize_peak_fwhm = minimize_peak_fwhm_method(
-                        data=frame, initial_center = ...
+                        data=frame
                     )
-                    
+```  
+
+The `FriedelPairs` method need an initial guess for the refined detector center coordinates ` initial_guess = [x_0, y_0]`
+
+```python          
 from methods import FriedelPairs
 friedel_pairs_method = FriedelPairs(
                         config=config, PF8Config=PF8Config, plots_info=plots_info
                     )
 center_coordinates_from_friedel_pairs = friedel_pairs_method(
-                        data=frame, initial_center= ...
+                        data=frame, initial_guess= ...
                     )
 ```         
 ## Author:

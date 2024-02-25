@@ -19,19 +19,27 @@ class PF8Info:
     bad_pixel_map_filename: str = None
     bad_pixel_map_hdf5_path: str = None
     pixel_maps: dict = None
+    _shifted_pixel_maps: bool = False
 
     def modify_radius(self, detector_shift_x: int, detector_shift_y: int):
-        self._data_shape = self.pixel_maps["x"].shape
-        self._flattened_data_shape = self.pixel_maps["x"].flatten().shape[0]
-        self.pixel_maps["x"] = (
-            self.pixel_maps["x"].flatten() - detector_shift_x
-        ).reshape(self._data_shape)
-        self.pixel_maps["y"] = (
-            self.pixel_maps["y"].flatten() - detector_shift_y
-        ).reshape(self._data_shape)
-        self.pixel_maps["radius"] = np.sqrt(np.square(self.pixel_maps["x"]) + np.square(self.pixel_maps["y"])).reshape(self._data_shape)
-        
-    def get(self, parameter: str):
+        if not self._shifted_pixel_maps:
+            self._detector_center_from_geom =self.get_detector_center()
+            self._detector_shift_x = detector_shift_x
+            self._detector_shift_y = detector_shift_y
+            self._shifted_pixel_maps = True
+            self._data_shape = self.pixel_maps["x"].shape
+            self._flattened_data_shape = self.pixel_maps["x"].flatten().shape[0]
+            self.pixel_maps["x"] = (
+                self.pixel_maps["x"].flatten() - detector_shift_x
+            ).reshape(self._data_shape)
+            self.pixel_maps["y"] = (
+                self.pixel_maps["y"].flatten() - detector_shift_y
+            ).reshape(self._data_shape)
+            self.pixel_maps["radius"] = np.sqrt(np.square(self.pixel_maps["x"]) + np.square(self.pixel_maps["y"])).reshape(self._data_shape)
+        else: 
+            print("Pixel maps have been moved once before, to avoid errors reset the geometry before moving it again.")
+
+    def    get(self, parameter: str):
         if parameter == "max_num_peaks":
             return self.max_num_peaks
         elif parameter == "adc_threshold":
@@ -53,7 +61,29 @@ class PF8Info:
         elif parameter == "bad_pixel_map_hdf5_path":
             return self.bad_pixel_map_hdf5_path
 
-
+    def get_detector_center(self) ->list:
+        if not self._shifted_pixel_maps:
+            if self.pf8_detector_info["nasics_x"] * self.pf8_detector_info["nasics_y"] > 1:
+                # Multiple panels
+                # Get minimum array shape
+                y_minimum = (
+                    2 * int(max(abs(self.pixel_maps["y"].max()), abs(self.pixel_maps["y"].min()))) + 2
+                )
+                x_minimum = (
+                    2 * int(max(abs(self.pixel_maps["x"].max()), abs(self.pixel_maps["x"].min()))) + 2
+                )
+                visual_img_shape = (y_minimum, x_minimum)
+                # Detector center in the middle of the minimum array
+                _img_center_x = int(visual_img_shape[1] / 2)
+                _img_center_y = int(visual_img_shape[0] / 2)
+            else:
+                # Single panel
+                _img_center_x = int(abs(self.pixel_maps["x"][0, 0]))
+                _img_center_y = int(abs(self.pixel_maps["y"][0, 0]))
+        else:
+            _img_center_x = self._detector_center_from_geom[0] + self._detector_shift_x
+            _img_center_y = self._detector_center_from_geom[1] + self._detector_shift_y
+        return [_img_center_x, _img_center_y]
 class PF8:
     def __init__(self, info):
         assert isinstance(

@@ -7,14 +7,14 @@ from om.algorithms.crystallography import TypePeakList, Peakfinder8PeakDetection
 
 @dataclass
 class PF8Info:
-    max_num_peaks: int
-    adc_threshold: float
-    minimum_snr: int
-    min_pixel_count: int
-    max_pixel_count: int
-    local_bg_radius: int
-    min_res: float
-    max_res: float
+    max_num_peaks: np.int32
+    adc_threshold: np.int32
+    minimum_snr: np.float32
+    min_pixel_count: np.int16
+    max_pixel_count: np.int16
+    local_bg_radius: np.int16
+    min_res: np.int16
+    max_res: np.int16
     pf8_detector_info: dict = None
     bad_pixel_map_filename: str = None
     bad_pixel_map_hdf5_path: str = None

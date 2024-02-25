@@ -18,7 +18,7 @@ class PF8Info:
     pf8_detector_info: dict = None
     bad_pixel_map_filename: str = None
     bad_pixel_map_hdf5_path: str = None
-    pixel_maps: np.array = None
+    pixel_maps: dict = None
 
     def modify_radius(self, detector_shift_x: int, detector_shift_y: int):
         self._data_shape = self.pixel_maps["x"].shape

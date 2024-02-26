@@ -10,6 +10,7 @@ from bblib.utils import (
     correct_polarization,
 )
 import math
+from scipy import ndimage
 from bblib.models import PF8Info, PF8
 import h5py
 import numpy as np
@@ -44,6 +45,8 @@ class CenterOfMass(CenteringMethod):
     def __init__(self, config: dict, PF8Config: PF8Info,  plots_info: dict):
         self.config = config
         self.PF8Config = PF8Config
+        self.plots_info = plots_info
+
 
     def _prep_for_centering(self, data: np.ndarray) -> None:
         self.initial_detector_center = self.PF8Config.get_detector_center()
@@ -63,9 +66,14 @@ class CenterOfMass(CenteringMethod):
 
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
-
-        self.visual_data = data_visualize.visualize_data(data=data * mask)
-        visual_mask = data_visualize.visualize_data(data=mask).astype(int)
+        if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
+                > 1
+            ):
+            self.visual_data = data_visualize.visualize_data(data=data * mask)
+            visual_mask = data_visualize.visualize_data(data=mask).astype(int)
+        else:
+            self.visual_data = ndimage.rotate(data * mask, angle=self.PF8Config._detector_rotation_angle)
+            visual_mask = ndimage.rotate(mask, angle=self.PF8Config._detector_rotation_angle)
 
         # JF for safety
         visual_mask[np.where(self.visual_data < 0)] = 0
@@ -87,11 +95,12 @@ class CenterOfMass(CenteringMethod):
 
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-            ax1.imshow(self.visual_data, vmax=10)
+            ax1.imshow(self.visual_data, vmax=10, origin="lower")
             ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Calculated detector center: ({center[0]}, {center[1]})")
-            ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='r', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
+            ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='lime', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
             path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_of_mass/')
             path.mkdir(parents=True, exist_ok=True)
+            ax1.legend()
             plt.savefig(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_of_mass/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
             )
@@ -148,7 +157,7 @@ class CircleDetection(CenteringMethod):
 
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-            ax1.imshow(edges)
+            ax1.imshow(edges, origin="lower")
             path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/edges/')
             path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
@@ -547,7 +556,7 @@ class FriedelPairs(CenteringMethod):
             shift_y = 2 * (center[1] - self.initial_guess[1])
 
             fig, ax = plt.subplots(1, 1, figsize=(8, 8))
-            pos = ax.imshow(self.visual_data, vmin=0, vmax=100, cmap="YlGnBu")
+            pos = ax.imshow(self.visual_data, vmin=0, vmax=100, cmap="YlGnBu", origin="lower")
             ax.scatter(
                 self.initial_guess[0],
                 self.initial_guess[1],
@@ -598,7 +607,7 @@ class FriedelPairs(CenteringMethod):
 
             ## Check pairs alignement
             fig, ax = plt.subplots(1, 1, figsize=(8, 8))
-            pos = ax.imshow(self.visual_data, vmin=0, vmax=100, cmap="YlGn")
+            pos = ax.imshow(self.visual_data, vmin=0, vmax=100, cmap="YlGn", origin="lower")
             ax.scatter(
                 original_peaks_x,
                 original_peaks_y,

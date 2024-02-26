@@ -56,21 +56,44 @@ class PF8Info:
         self.bad_pixel_map_hdf5_path = [
             x.split(" = ")[-1][:-1] for x in geometry_txt if x.split(" = ")[0] == "mask"
         ][0]
-        try:
-            self.pixel_resolution = float(
-                [(x.split(" = ")[-1]) for x in geometry_txt if x.split(" = ")[0] == "res"][0]
-            )
-        except ValueError:
-            self.pixel_resolution = float(
-                [(x.split(" = ")[-1].split(";")[0]) for x in geometry_txt if x.split(" = ")[0] == "res"][0]
-            )
+
+        #try:
+        #    self.pixel_resolution = float(
+        #        [(x.split(" = ")[-1]) for x in geometry_txt if x.split(" = ")[0] == "res"][0]
+        #    )
+        #except ValueError:
+        #    self.pixel_resolution = float(
+        #        [(x.split(" = ")[-1].split(";")[0]) for x in geometry_txt if x.split(" = ")[0] == "res"][0]
+        #    )
 
         geom = GeometryInformation(
             geometry_description=geometry_txt, geometry_format="crystfel"
         )
+        self.pixel_resolution=1/geom.get_pixel_size()
         self.pixel_maps = geom.get_pixel_maps()
         self.pf8_detector_info = geom.get_layout_info()
         self._shifted_pixel_maps = False
+
+        if (self.pf8_detector_info["nasics_x"] * self.pf8_detector_info["nasics_y"]) == 1:
+            fs_direction = [
+            x.split(" = ")[-1][:-1] for x in geometry_txt if x.split(" = ")[0].split("/")[-1] == "fs"
+            ][0]
+            ss_direction = [
+            x.split(" = ")[-1][:-1] for x in geometry_txt if x.split(" = ")[0].split("/")[-1] == "ss"
+            ][0]
+
+            try:
+                rotation_matrix=[[float(fs_direction.split("x")[0]), float(fs_direction.split("y")[0].split("x")[-1])]]
+            except ValueError:
+                rotation_matrix=[[float(fs_direction.split("x")[0].split("y")[-1]), float(fs_direction.split("y")[0])]]
+
+            try:
+                rotation_matrix.append([float(ss_direction.split("x")[0]), float(ss_direction.split("y")[0].split("x")[-1])])
+            except ValueError:
+                rotation_matrix.append([float(ss_direction.split("x")[0].split("y")[-1]), float(ss_direction.split("y")[0])])
+            
+            self._detector_rotation_angle = np.arctan2(rotation_matrix[1][0],rotation_matrix[0][0]) * 180/np.pi
+            
 
     def get(self, parameter: str):
         if parameter == "max_num_peaks":

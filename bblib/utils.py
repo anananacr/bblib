@@ -34,7 +34,7 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
         xc = -1
         yc = -1
 
-    return [xc, yc]
+    return [np.round(xc,1), np.round(yc,1)]
 
 
 def azimuthal_average(

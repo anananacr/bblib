@@ -15,13 +15,13 @@ To utilize the methods `CenterOfMass`,  `FriedelPairs`, `MinimizePeakFWHM`  and 
 config = {
     "plots_flag": ...,
 	"force_center": {
-		"mode":...,
+		"mode": ...,
 		"x": ...,
 		"y": ...
-		}
+		},
 	"search_radius": ...,
 	"pf8": {
-		"max_num_peaks":...,
+		"max_num_peaks": ...,
 		"adc_threshold": ...,
 		"minimum_snr": ...,
 		"min_pixel_count": ...,
@@ -29,30 +29,30 @@ config = {
 		"local_bg_radius": ...,
 		"min_res": ...,
 		"max_res": ...
-		}
-	"starting_frame":...,
+		},
+	"starting_frame": ...,
 	"offset": {
-		"x":...,
+		"x": ...,
 		"y": ...
-		}
+		},
 	"peak_region":{
 		"min": ...,
 		"max": ...
-		}
+		},
 	"outlier_distance": ...,
 	"canny":{
 		"sigma": ...,
 		"low_threshold": ...,
 		"high_threshold": ...
-		}	
+		},	
 	"method": ...,
 	"bragg_peaks_positions_for_center_of_mass_calculation": ...,
 	"pixels_for_mask_of_bragg_peaks": ...,
 	"skip_methods": ...,
 	"polarization": {
-		"skip":...,
-		"axis":...,
-		"value":...
+		"skip": ...,
+		"axis": ...,
+		"value": ...
 		}
 }
 

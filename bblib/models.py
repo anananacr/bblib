@@ -28,8 +28,6 @@ class PF8Info:
             self._detector_shift_x = detector_shift_x
             self._detector_shift_y = detector_shift_y
             self._shifted_pixel_maps = True
-            self._data_shape = self.pixel_maps["x"].shape
-            self._flattened_data_shape = self.pixel_maps["x"].flatten().shape[0]
             self.pixel_maps["x"] = (
                 self.pixel_maps["x"].flatten() - detector_shift_x
             ).reshape(self._data_shape)
@@ -45,7 +43,6 @@ class PF8Info:
             )
             
             
-    
     def set_geometry_from_file(self, geometry_filename:str):
         geometry_txt = open(geometry_filename, "r").readlines()
         self.bad_pixel_map_filename = [
@@ -62,6 +59,8 @@ class PF8Info:
         )
         self.pixel_resolution=1/geom.get_pixel_size()
         self.pixel_maps = geom.get_pixel_maps()
+        self._data_shape = self.pixel_maps["x"].shape
+        self._flattened_data_shape = self.pixel_maps["x"].flatten().shape[0]
         self.pf8_detector_info = geom.get_layout_info()
         self._shifted_pixel_maps = False
 
@@ -142,8 +141,8 @@ class PF8Info:
                 _img_center_y = int(visual_img_shape[0] / 2)
             else:
                 # Single panel
-                _img_center_x = int(abs(self.pixel_maps["x"][0, 0]))
-                _img_center_y = int(abs(self.pixel_maps["y"][0, 0]))
+                _img_center_x = self._data_shape[1] +1 - self.pixel_maps["x"][0, 0]
+                _img_center_y = self._data_shape[0] +1 - self.pixel_maps["y"][0, 0]
         else:
             _img_center_x = self._detector_center_from_geom[0] + self._detector_shift_x
             _img_center_y = self._detector_center_from_geom[1] + self._detector_shift_y

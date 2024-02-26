@@ -2,7 +2,7 @@ import numpy as np
 from dataclasses import dataclass, field
 import math
 from om.algorithms.crystallography import TypePeakList, Peakfinder8PeakDetection
-from om.lib.geometry import TypePixelMaps, TypeDetectorLayoutInformation
+from om.lib.geometry import TypePixelMaps, TypeDetectorLayoutInformation, GeometryInformation
 
 
 @dataclass
@@ -43,6 +43,28 @@ class PF8Info:
             print(
                 "Pixel maps have been moved once before, to avoid errors reset the geometry before moving it again."
             )
+    
+    def set_geometry_from_file(self, geometry_filename:str):
+        geometry_txt = open(geometry_filename, "r").readlines()
+        self.bad_pixel_map_filename = [
+            x.split(" = ")[-1][:-1]
+            for x in geometry_txt
+            if x.split(" = ")[0] == "mask_file"
+        ][0]
+        self.bad_pixel_map_hdf5_path = [
+            x.split(" = ")[-1][:-1] for x in geometry_txt if x.split(" = ")[0] == "mask"
+        ][0]
+
+        self.pixel_resolution = float(
+            [(x.split(" = ")[-1]) for x in geometry_txt if x.split(" = ")[0] == "res"][0]
+        )
+        
+        geom = GeometryInformation(
+            geometry_description=geometry_txt, geometry_format="crystfel"
+        )
+        self.pixel_maps = geom.get_pixel_maps()
+        self.pf8_detector_info = geom.get_layout_info()
+        self._shifted_pixel_maps = False
 
     def get(self, parameter: str):
         if parameter == "max_num_peaks":

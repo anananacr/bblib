@@ -255,13 +255,13 @@ class MinimizePeakFWHM(CenteringMethod):
         self.initial_guess = initial_guess
         self.initial_detector_center = self.PF8Config.get_detector_center()
         ## Find peaks
-        PF8Config.update_pixel_maps(
+        self.PF8Config.update_pixel_maps(
             initial_guess[0] - self.initial_detector_center[0],
             initial_guess[1] - self.initial_detector_center[1],
         )
         pf8 = PF8(self.PF8Config)
 
-        peak_list = pf8.get_peaks_pf8(data=frame)
+        peak_list = pf8.get_peaks_pf8(data=data)
         peak_list_x_in_frame, peak_list_y_in_frame = pf8.peak_list_in_slab(peak_list)
         indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
 
@@ -277,7 +277,7 @@ class MinimizePeakFWHM(CenteringMethod):
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
-        if config["skip_pol"]:
+        if self.config["skip_polarization"]:
             self.visual_data = data_visualize.visualize_data(data=data * mask)
         else:
             pol_corrected_data, pol_array_map = correct_polarization(
@@ -440,13 +440,13 @@ class FriedelPairs(CenteringMethod):
         self.initial_guess = initial_guess
         self.initial_detector_center = self.PF8Config.get_detector_center()
         ## Find peaks
-        PF8Config.update_pixel_maps(
+        self.PF8Config.update_pixel_maps(
             initial_guess[0] - self.initial_detector_center[0],
             initial_guess[1] - self.initial_detector_center[1],
         )
 
         pf8 = PF8(self.PF8Config)
-        peak_list = pf8.get_peaks_pf8(data=frame)
+        peak_list = pf8.get_peaks_pf8(data=data)
         peak_list_in_slab = pf8.peak_list_in_slab(peak_list)
 
         self.peak_list_x_in_frame, self.peak_list_y_in_frame = peak_list_in_slab
@@ -457,7 +457,7 @@ class FriedelPairs(CenteringMethod):
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
-        if config["skip_pol"]:
+        if self.config["skip_polarization"]:
             self.visual_data = data_visualize.visualize_data(data=data * mask)
         else:
             pol_corrected_data, pol_array_map = correct_polarization(

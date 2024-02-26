@@ -1,6 +1,6 @@
 # beambusters library
 
-Beam swepeing serial crystallography data processing library. Methods implementation for detector center determination based on Friedel pairs inversion symmetry. 
+Beam sweeping serial crystallography data processing library. Methods implementation for detector center determination based on Friedel pairs inversion symmetry. 
 
 ## Python version
 
@@ -32,6 +32,8 @@ config = {
 	"pixels_for_mask_of_bragg_peaks": ...,
 	"skipped_methods": ...,
 	"skipped_polarization": ...,
+	"polarization_axis":...,
+	"polarization_value":...,
 	"offset_x": ...,
 	"offset_y": ...,
 	"force_center_mode": ...,
@@ -40,18 +42,19 @@ config = {
 
 PF8Info = {
 	"max_num_peaks": 
-    "adc_threshold": 
-    "minimum_snr": ...,
-    "min_pixel_count": ...,
-    "max_pixel_count": ...,
-    "local_bg_radius": ...,
-    "min_res": ...,
-    "max_res": ...,
-    "pf8_detector_info": ...,
-    "bad_pixel_map_filename": ...,
-    "bad_pixel_map_hdf5_path": ...,
-    "pixel_maps": ...,
-    "_shifted_pixel_maps":...
+	"adc_threshold": 
+	"minimum_snr": ...,
+	"min_pixel_count": ...,
+	"max_pixel_count": ...,
+	"local_bg_radius": ...,
+	"min_res": ...,
+	"max_res": ...,
+	"pf8_detector_info": ...,
+	"bad_pixel_map_filename": ...,
+	"bad_pixel_map_hdf5_path": ...,
+	"pixel_maps": ...,
+	"pixel_resolution": ...,
+	"_shifted_pixel_maps":...
 }
 ```
 
@@ -59,65 +62,66 @@ The `pf8_detector_info` parameter is a dictionary containing the detector layout
 ```python
 pf8_detector_info =  {
 	"asic_nx": ...,
-    "asic_ny": ...,
-    "nasics_x": ...,
-    "nasics_y": ...
-    } 
+	"asic_ny": ...,
+	"nasics_x": ...,
+	"nasics_y": ...
+} 
 ```
 
 The `pixel_maps` parameter is a dictionary containing the pixel maps numpy array:
 ```python
 pixel_maps =  {
 	"x": ...,
-    "y": ...,
-    "z": ...,
-    "radius": ...,
-    "phi": ...
-    } 
+	"y": ...,
+	"z": ...,
+	"radius": ...,
+	"phi": ...
+} 
 ```
 
 The methods `FriedelPairs`, `MinimizePeakFWHM` and  `CircleDetection ` need a `plots_info` parameter:
 ```python
 plots_info =  {
 	"file_label": ...,
-    "run_label": ...,
+	"run_label": ...,
 	"frame_index": ...,
-    "args": ...
-    }
+	"root_path": ...
+}
 ```
-To calculate the refined detector center of a frame in numpy array using the methods: 
+To calculate the refined detector center of raw data frame as a numpy array using the following methods: 
 
 ```python
-from methods import CenterOfMass
+from bblib.methods import CenterOfMass
 center_of_mass_method = CenterOfMass(config=config, PF8Config=PF8Config)
 center_coordinates_from_center_of_mass = center_of_mass_method(
-                        data=frame
+                        data = ...
                     )
                     
-from methods import CircleDetection
+from bblib.methods import CircleDetection
 circle_detection_method = CircleDetection(config=config, PF8Config=PF8Config, plots_info=plots_info)
 center_coordinates_from_circle_detection = circle_detection_method(
-                        data=frame
+                        data = ...
                     )
-                    
-from methods import MinimizePeakFWHM
+``` 
+
+The `FriedelPairs` and `MinimizePeakFWHMmethod` need an initial guess for the refined detector center coordinates ` initial_guess = [x_0, y_0]`
+
+```python          
+from bblib.methods import MinimizePeakFWHM
 minimize_peak_fwhm_method = MinimizePeakFWHM(
                         config=config, PF8Config=PF8Config, plots_info=plots_info
                     )
 center_coordinates_from_minimize_peak_fwhm = minimize_peak_fwhm_method(
-                        data=frame
+                        data = ..., initial_guess = ...
                     )
-```  
 
-The `FriedelPairs` method need an initial guess for the refined detector center coordinates ` initial_guess = [x_0, y_0]`
 
-```python          
-from methods import FriedelPairs
+from bblib.methods import FriedelPairs
 friedel_pairs_method = FriedelPairs(
                         config=config, PF8Config=PF8Config, plots_info=plots_info
                     )
 center_coordinates_from_friedel_pairs = friedel_pairs_method(
-                        data=frame, initial_guess= ...
+                        data = ..., initial_guess= ...
                     )
 ```         
 ## Author:

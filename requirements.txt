@@ -22,7 +22,7 @@ filelock==3.13.1
 fonttools==4.48.1
 graphviz==0.20.1
 h5py==3.10.0
-hdf5plugin==4.3.0
+hdf5plugin==4.4.0
 idna==3.6
 imageio==2.33.1
 importlib-metadata==7.0.1
@@ -78,7 +78,7 @@ tifffile==2024.1.30
 tomli==2.0.1
 tomlkit==0.12.3
 trove-classifiers==2024.2.23
-typing_extensions==4.9.0
+typing_extensions==4.10.0
 tzdata==2023.4
 urllib3==2.2.1
 virtualenv==20.25.1

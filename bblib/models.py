@@ -1,8 +1,8 @@
-from typing import List, Optional, Callable, Tuple, Any, Dict
 import numpy as np
 from dataclasses import dataclass, field
 import math
 from om.algorithms.crystallography import TypePeakList, Peakfinder8PeakDetection
+from om.lib.geometry import TypePixelMaps, TypeDetectorLayoutInformation
 
 
 @dataclass
@@ -15,15 +15,16 @@ class PF8Info:
     local_bg_radius: np.int16
     min_res: np.int16
     max_res: np.int16
-    pf8_detector_info: dict = None
+    pf8_detector_info: TypeDetectorLayoutInformation = None
     bad_pixel_map_filename: str = None
     bad_pixel_map_hdf5_path: str = None
-    pixel_maps: dict = None
+    pixel_maps: TypePixelMaps = None
+    pixel_resolution: float = None
     _shifted_pixel_maps: bool = False
 
-    def modify_radius(self, detector_shift_x: int, detector_shift_y: int):
+    def update_pixel_maps(self, detector_shift_x: int, detector_shift_y: int):
         if not self._shifted_pixel_maps:
-            self._detector_center_from_geom =self.get_detector_center()
+            self._detector_center_from_geom = self.get_detector_center()
             self._detector_shift_x = detector_shift_x
             self._detector_shift_y = detector_shift_y
             self._shifted_pixel_maps = True
@@ -35,11 +36,15 @@ class PF8Info:
             self.pixel_maps["y"] = (
                 self.pixel_maps["y"].flatten() - detector_shift_y
             ).reshape(self._data_shape)
-            self.pixel_maps["radius"] = np.sqrt(np.square(self.pixel_maps["x"]) + np.square(self.pixel_maps["y"])).reshape(self._data_shape)
-        else: 
-            print("Pixel maps have been moved once before, to avoid errors reset the geometry before moving it again.")
+            self.pixel_maps["radius"] = np.sqrt(
+                np.square(self.pixel_maps["x"]) + np.square(self.pixel_maps["y"])
+            ).reshape(self._data_shape)
+        else:
+            print(
+                "Pixel maps have been moved once before, to avoid errors reset the geometry before moving it again."
+            )
 
-    def    get(self, parameter: str):
+    def get(self, parameter: str):
         if parameter == "max_num_peaks":
             return self.max_num_peaks
         elif parameter == "adc_threshold":
@@ -61,16 +66,33 @@ class PF8Info:
         elif parameter == "bad_pixel_map_hdf5_path":
             return self.bad_pixel_map_hdf5_path
 
-    def get_detector_center(self) ->list:
+    def get_detector_center(self) -> list:
         if not self._shifted_pixel_maps:
-            if self.pf8_detector_info["nasics_x"] * self.pf8_detector_info["nasics_y"] > 1:
+            if (
+                self.pf8_detector_info["nasics_x"] * self.pf8_detector_info["nasics_y"]
+                > 1
+            ):
                 # Multiple panels
                 # Get minimum array shape
                 y_minimum = (
-                    2 * int(max(abs(self.pixel_maps["y"].max()), abs(self.pixel_maps["y"].min()))) + 2
+                    2
+                    * int(
+                        max(
+                            abs(self.pixel_maps["y"].max()),
+                            abs(self.pixel_maps["y"].min()),
+                        )
+                    )
+                    + 2
                 )
                 x_minimum = (
-                    2 * int(max(abs(self.pixel_maps["x"].max()), abs(self.pixel_maps["x"].min()))) + 2
+                    2
+                    * int(
+                        max(
+                            abs(self.pixel_maps["x"].max()),
+                            abs(self.pixel_maps["x"].min()),
+                        )
+                    )
+                    + 2
                 )
                 visual_img_shape = (y_minimum, x_minimum)
                 # Detector center in the middle of the minimum array
@@ -84,6 +106,8 @@ class PF8Info:
             _img_center_x = self._detector_center_from_geom[0] + self._detector_shift_x
             _img_center_y = self._detector_center_from_geom[1] + self._detector_shift_y
         return [_img_center_x, _img_center_y]
+
+
 class PF8:
     def __init__(self, info):
         assert isinstance(

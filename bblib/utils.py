@@ -1,13 +1,11 @@
-from typing import List, Optional, Callable, Tuple, Any, Dict
 from numpy import exp
 import numpy as np
 import matplotlib.pyplot as plt
-
 plt.switch_backend("agg")
 import math
 
 
-def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> List[int]:
+def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
     """
     Adapted from Robert Bücker work on diffractem (https://github.com/robertbuecker/diffractem/tree/master)
     Bücker, R., Hogan-Lamarre, P., Mehrabi, P. et al. Serial protein crystallography in an electron microscope. Nat Commun 11, 996 (2020). https://doi.org/10.1038/s41467-020-14793-0
@@ -33,7 +31,7 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> List[int]:
     yc = np.sum(data[indices] * indices[0]) / np.sum(data[indices])
 
     if np.isnan(xc) or np.isnan(yc):
-        xc = -1 
+        xc = -1
         yc = -1
 
     return [xc, yc]
@@ -125,11 +123,11 @@ def correct_polarization(
 
     mask = mask.astype(bool)
     mask = mask.flatten()
-    Int = np.reshape(data.copy(), len(mask))
+    intensity = np.reshape(data.copy(), len(mask))
     pol = mask.copy().astype(np.float32)
     pol = make_polarization_array(pol, x.flatten(), y.flatten(), dist, p)
-    Int = Int / pol
-    return Int.reshape(data.shape), pol.reshape(data.shape)
+    intensity = intensity / pol
+    return intensity.reshape(data.shape), pol.reshape(data.shape)
 
 
 def make_polarization_array(
@@ -439,7 +437,6 @@ def open_distance_map_global_min(
 
     fig.colorbar(pos1, ax=ax1, shrink=0.6)
 
-
     if int(np.sum(proj_y)) == 0 or int(np.sum(proj_x)) == 0:
         converged = 0
         xc = -1
@@ -512,7 +509,7 @@ def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:
     return (np.greater(R, radius)).astype(np.int32)
 
 
-def ring_mask(data, center, inner_radius, outer_radius):
+def ring_mask(data:np.ndarray, center: tuple, inner_radius: int, outer_radius: int) -> np.ndarray:
     """
     Make a  ring mask for the data
 

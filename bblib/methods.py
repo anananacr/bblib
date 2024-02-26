@@ -5,8 +5,8 @@ from bblib.utils import (
     center_of_mass,
     azimuthal_average,
     gaussian_lin,
-    open_fwhm_map_global_min,
-    open_distance_map_global_min,
+    get_fwhm_map_global_min,
+    get_distance_map_global_min,
     correct_polarization,
 )
 import math
@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from skimage.transform import hough_circle, hough_circle_peaks
 from skimage.feature import canny
 import multiprocessing
-
+import pathlib
 
 class CenteringMethod(ABC):
     @abstractmethod
@@ -137,6 +137,8 @@ class CircleDetection(CenteringMethod):
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             ax1.imshow(edges)
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/edges/')
+            path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/edges/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
             )
@@ -239,6 +241,8 @@ class MinimizePeakFWHM(CenteringMethod):
             plt.xlim(0, 500)
             # plt.ylim(0, round(popt[0])+2)
             plt.legend()
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/radial_average/')
+            path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/radial_average/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
             )
@@ -329,7 +333,11 @@ class MinimizePeakFWHM(CenteringMethod):
             self.fwhm_summary = pool.map(self._calculate_fwhm, coordinates)
 
     def _run_centering(self, **kwargs) -> tuple:
-        center = open_fwhm_map_global_min(
+        if self.config["plots_flag"]:
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/fwhm_map/')
+            path.mkdir(parents=True, exist_ok=True)
+
+        center = get_fwhm_map_global_min(
             self.fwhm_summary,
             f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}',
             f'{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}',
@@ -510,7 +518,11 @@ class FriedelPairs(CenteringMethod):
             )
 
         ## Minimize distance
-        center = open_distance_map_global_min(
+        if self.config["plots_flag"]:
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/distance_map/')
+            path.mkdir(parents=True, exist_ok=True)
+            
+        center = get_distance_map_global_min(
             distance_summary,
             f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}',
             f'{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}',
@@ -545,6 +557,8 @@ class FriedelPairs(CenteringMethod):
             plt.title("Center refinement: autocorrelation of Friedel pairs")
             fig.colorbar(pos, shrink=0.6)
             ax.legend()
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/centered_friedel/')
+            path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/centered_friedel/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
             )
@@ -610,6 +624,8 @@ class FriedelPairs(CenteringMethod):
             plt.title("Bragg peaks alignement")
             fig.colorbar(pos, shrink=0.6)
             ax.legend()
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/peaks/')
+            path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/peaks/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
             )

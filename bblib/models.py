@@ -40,9 +40,11 @@ class PF8Info:
                 np.square(self.pixel_maps["x"]) + np.square(self.pixel_maps["y"])
             ).reshape(self._data_shape)
         else:
-            print(
-                "Pixel maps have been moved once before, to avoid errors reset the geometry before moving it again."
+            raise ValueError(
+                f"Pixel maps have been moved once before, to avoid errors reset the geometry before moving it again."
             )
+            
+            
     
     def set_geometry_from_file(self, geometry_filename:str):
         geometry_txt = open(geometry_filename, "r").readlines()

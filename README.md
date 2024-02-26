@@ -1,6 +1,6 @@
 # beambusters library
 
-Beam sweeping serial crystallography data processing library. Methods implementation for detector center determination based on Friedel pairs inversion symmetry. 
+Beambusters library, it aims to calculate the refined detector center of diffraction patterns. Methods implementation for detector center refinement based on Friedel pairs inversion symmetry. 
 
 ## Python version
 

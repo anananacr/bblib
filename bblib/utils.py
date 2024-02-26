@@ -253,7 +253,7 @@ def gaussian_lin(
     return m * x + n + a * exp(-((x - x0) ** 2) / (2 * sigma**2))
 
 
-def open_fwhm_map_global_min(
+def get_fwhm_map_global_min(
     lines: list, output_folder: str, label: str, pixel_step: int, plots_flag: bool
 ) -> tuple:
     """
@@ -358,10 +358,10 @@ def open_fwhm_map_global_min(
         if plots_flag:
             plt.savefig(f"{output_folder}/fwhm_map/{label}.png")
     plt.close()
-    return [xc, yc]
+    return [np.round(xc,0), np.round(yc,0)]
 
 
-def open_distance_map_global_min(
+def get_distance_map_global_min(
     lines: list, output_folder: str, label: str, pixel_step: int, plots_flag: bool
 ) -> tuple:
     """
@@ -446,7 +446,7 @@ def open_distance_map_global_min(
         if plots_flag:
             plt.savefig(f"{output_folder}/distance_map/{label}.png")
     plt.close()
-    return [xc, yc]
+    return [np.round(xc,1), np.round(yc,1)]
 
 
 def shift_image_by_n_pixels(data: np.ndarray, n: int, axis: int) -> np.ndarray:

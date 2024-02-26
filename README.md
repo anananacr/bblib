@@ -10,36 +10,52 @@ Python 3.10.5 (main, Jun 21 2022, 11:18:08) [GCC 4.8.5 20150623 (Red Hat 4.8.5-4
 ## Usage
 
 To utilize the methods `CenterOfMass`,  `FriedelPairs`, `MinimizePeakFWHM`  and `CircleDetection` it is required to have two configuration dictionaries, one for PeakFinder8 and another one for this library itself. The follow snippet shows the expected structure for both:
+
 ```python
 config = {
-	"pf8_max_num_peaks": ...,
-	"pf8_adc_threshold": ...,
-	"pf8_minimum_snr": ...,
-	"pf8_min_pixel_count": ...,
-	"pf8_max_pixel_count": ...,
-	"pf8_local_bg_radius": ...,
-	"pf8_min_res": ...,
-	"pf8_max_res": ...,
-	"min_peak_region": ...,
-	"max_peak_region": ...,
-	"canny_sigma": ...,
-	"canny_low_thr": ...,
-	"canny_high_thr": ...,
-	"outlier_distance": ...,
-	"search_radius": ...,
-	"method": ...,
     "plots_flag": ...,
+	"force_center": {
+		"mode":...,
+		"x": ...,
+		"y": ...
+		}
+	"search_radius": ...,
+	"pf8": {
+		"max_num_peaks":...,
+		"adc_threshold": ...,
+		"minimum_snr": ...,
+		"min_pixel_count": ...,
+		"max_pixel_count": ...,
+		"local_bg_radius": ...,
+		"min_res": ...,
+		"max_res": ...
+		}
+	"starting_frame":...,
+	"offset": {
+		"x":...,
+		"y": ...
+		}
+	"peak_region":{
+		"min": ...,
+		"max": ...
+		}
+	"outlier_distance": ...,
+	"canny":{
+		"sigma": ...,
+		"low_threshold": ...,
+		"high_threshold": ...
+		}	
+	"method": ...,
 	"bragg_peaks_positions_for_center_of_mass_calculation": ...,
 	"pixels_for_mask_of_bragg_peaks": ...,
-	"skipped_methods": ...,
-	"skip_polarization": ...,
-	"polarization_axis":...,
-	"polarization_value":...,
-	"offset_x": ...,
-	"offset_y": ...,
-	"force_center_mode": ...,
-	"force_center": ...,
+	"skip_methods": ...,
+	"polarization": {
+		"skip":...,
+		"axis":...,
+		"value":...
+		}
 }
+
 
 PF8Info = {
 	"max_num_peaks": 

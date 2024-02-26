@@ -41,7 +41,7 @@ class CenteringMethod(ABC):
 
 
 class CenterOfMass(CenteringMethod):
-    def __init__(self, config: dict, PF8Config: PF8Info):
+    def __init__(self, config: dict, PF8Config: PF8Info,  plots_info: dict):
         self.config = config
         self.PF8Config = PF8Config
 
@@ -74,8 +74,8 @@ class CenterOfMass(CenteringMethod):
         peaks_mask = mask_peaks(
             visual_mask,
             indices,
-            bragg=self.config["bragg_pos_center_of_mass"],
-            n=self.config["pixels_per_peak"],
+            bragg=self.config["bragg_peaks_positions_for_center_of_mass_calculation"],
+            n=self.config["pixels_for_mask_of_bragg_peaks"],
         )
         self.mask_for_center_of_mass = peaks_mask * visual_mask
 
@@ -84,6 +84,18 @@ class CenterOfMass(CenteringMethod):
         if self.centering_converged(center):
             center[0] += self.config["offset"]["x"]
             center[1] += self.config["offset"]["y"]
+
+        if self.config["plots_flag"]:
+            fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
+            ax1.imshow(self.visual_data, vmax=10)
+            ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Calculated detector center: ({center[0]}, {center[1]})")
+            ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='r', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_of_mass/')
+            path.mkdir(parents=True, exist_ok=True)
+            plt.savefig(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_of_mass/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
+            )
+            plt.close()
         return np.round(center, 1)
 
 
@@ -119,7 +131,7 @@ class CircleDetection(CenteringMethod):
         # JF for safety
         visual_mask[np.where(self.visual_data < 0)] = 0
         only_peaks_mask = mask_peaks(
-            visual_mask, indices, bragg=0, n=self.config["pixels_per_peak"]
+            visual_mask, indices, bragg=0, n=self.config["pixels_for_mask_of_bragg_peaks"]
         )
         self.mask_for_circle_detection = only_peaks_mask * visual_mask
 
@@ -281,7 +293,7 @@ class MinimizePeakFWHM(CenteringMethod):
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
-        if self.config["skip_polarization"]:
+        if self.config["polarization"]["skip"]:
             self.visual_data = data_visualize.visualize_data(data=data * mask)
         else:
             pol_corrected_data, pol_array_map = correct_polarization(
@@ -290,8 +302,8 @@ class MinimizePeakFWHM(CenteringMethod):
                 float(np.mean(self.pixel_maps["z"]) * self.PF8Config.pixel_resolution),
                 frame,
                 mask=mask,
-                polarization_axis=config["polarization_axis"],
-                p=config["polarization_value"],
+                polarization_axis=config["polarization"]["axis"],
+                p=config["polarization"]["value"],
             )
             self.visual_data = data_visualize.visualize_data(
                 data=pol_corrected_data * mask
@@ -303,7 +315,7 @@ class MinimizePeakFWHM(CenteringMethod):
         visual_mask[np.where(self.visual_data < 0)] = 0
 
         only_peaks_mask = mask_peaks(
-            visual_mask, indices, bragg=0, n=self.config["pixels_per_peak"]
+            visual_mask, indices, bragg=0, n=self.config["pixels_for_mask_of_bragg_peaks"]
         )
         self.mask_for_fwhm_min = only_peaks_mask * visual_mask
 
@@ -342,7 +354,7 @@ class MinimizePeakFWHM(CenteringMethod):
             f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}',
             f'{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}',
             self.pixel_step,
-            self.config["plots_flag"],
+            self.config["plots_flag"]
         )
 
         if self.centering_converged(center):
@@ -465,7 +477,7 @@ class FriedelPairs(CenteringMethod):
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
-        if self.config["skip_polarization"]:
+        if self.config["polarization"]["skip"]:
             self.visual_data = data_visualize.visualize_data(data=data * mask)
         else:
             pol_corrected_data, pol_array_map = correct_polarization(
@@ -474,8 +486,8 @@ class FriedelPairs(CenteringMethod):
                 float(np.mean(self.pixel_maps["z"]) * self.PF8Config.pixel_resolution),
                 data=data,
                 mask=mask,
-                polarization_axis=config["polarization_axis"],
-                p=config["polarization_value"],
+                polarization_axis=config["polarization"]["axis"],
+                p=config["polarization"]["value"],
             )
             self.visual_data = data_visualize.visualize_data(
                 data=pol_corrected_data * mask
@@ -521,7 +533,7 @@ class FriedelPairs(CenteringMethod):
         if self.config["plots_flag"]:
             path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/distance_map/')
             path.mkdir(parents=True, exist_ok=True)
-            
+
         center = get_distance_map_global_min(
             distance_summary,
             f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}',

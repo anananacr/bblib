@@ -56,11 +56,15 @@ class PF8Info:
         self.bad_pixel_map_hdf5_path = [
             x.split(" = ")[-1][:-1] for x in geometry_txt if x.split(" = ")[0] == "mask"
         ][0]
+        try:
+            self.pixel_resolution = float(
+                [(x.split(" = ")[-1]) for x in geometry_txt if x.split(" = ")[0] == "res"][0]
+            )
+        except ValueError:
+            self.pixel_resolution = float(
+                [(x.split(" = ")[-1].split(";")[0]) for x in geometry_txt if x.split(" = ")[0] == "res"][0]
+            )
 
-        self.pixel_resolution = float(
-            [(x.split(" = ")[-1]) for x in geometry_txt if x.split(" = ")[0] == "res"][0]
-        )
-        
         geom = GeometryInformation(
             geometry_description=geometry_txt, geometry_format="crystfel"
         )

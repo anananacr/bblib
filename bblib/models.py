@@ -75,17 +75,20 @@ class PF8Info:
             transformation_matrix=[[detector_panels[panel_name]["fsx"], detector_panels[panel_name]["fsy"]],[detector_panels[panel_name]["ssx"], detector_panels[panel_name]["ssy"]]]
             
             print(transformation_matrix)
-            ## check if it is simple rotation
 
+            ## Check by cases 
+            ## TODO general way duplicating the image size
+            ## check if it is simple rotation
             if transformation_matrix[1][0] == -1 * transformation_matrix[0][1] and transformation_matrix[0][0] == transformation_matrix[1][1]:
                 self.is_simple_rotation = True
                 rotation_matrix = transformation_matrix
             else:
-                ## check if it is a reflection over the axes
+                ## check if it is a reflection over the scan axes
                 self.is_simple_rotation = False
                 reflection_over_ss = [[-1,0],[0,1]]
                 reflection_over_fs = [[1,0],[0,-1]]
 
+                ## This only works if ss corresponds to rows and fs corresponds to columns
                 if np.array_equiv(transformation_matrix,reflection_over_ss):
                     self.is_reflection_over_ss = True
                     self.is_reflection_over_fs = False
@@ -102,6 +105,8 @@ class PF8Info:
                     self.is_reflection_over_ss = True
                     self.is_reflection_over_fs = False
                     rotation_matrix =np.matmul(transformation_matrix, reflection_over_fs)
+                ## if ss is rows and self.is_reflection_over_ss:
+                ##     self.is_reflection_over_rows = True
             self._detector_rotation_angle = np.arctan2(rotation_matrix[1][0],rotation_matrix[0][0]) * 180/np.pi      
 
     def get(self, parameter: str):

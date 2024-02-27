@@ -19,6 +19,7 @@ from skimage.transform import hough_circle, hough_circle_peaks
 from skimage.feature import canny
 import multiprocessing
 import pathlib
+from scipy.optimize import curve_fit
 
 class CenteringMethod(ABC):
     @abstractmethod
@@ -73,6 +74,14 @@ class CenterOfMass(CenteringMethod):
             self.visual_data = data_visualize.visualize_data(data=data * mask)
             visual_mask = data_visualize.visualize_data(data=mask).astype(int)
         else:
+            if not self.PF8Config.is_simple_rotation:
+                if self.PF8Config.is_reflection_over_ss:
+                    data = data[:,::-1]
+                    mask = mask[:,::-1]
+                
+                if self.PF8Config.is_reflection_over_fs:
+                    data = data[::-1,:]
+                    mask = mask[::-1,:]
             self.visual_data = ndimage.rotate(data * mask, angle=self.PF8Config._detector_rotation_angle)
             visual_mask = ndimage.rotate(mask, angle=self.PF8Config._detector_rotation_angle)
 
@@ -96,9 +105,9 @@ class CenterOfMass(CenteringMethod):
 
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-            ax1.imshow(self.visual_data, vmax=10, cmap="YlGn", origin="lower")
+            ax1.imshow(self.visual_data*self.mask_for_center_of_mass, vmax=10, cmap="YlGn", origin="lower")
             ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='blue', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
-            ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Calculated detector center: ({center[0]}, {center[1]})")
+            ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Refined detector center: ({center[0]}, {center[1]})")
             path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_of_mass/')
             path.mkdir(parents=True, exist_ok=True)
             ax1.legend()
@@ -141,9 +150,16 @@ class CircleDetection(CenteringMethod):
             self.visual_data = data_visualize.visualize_data(data=data * mask)
             visual_mask = data_visualize.visualize_data(data=mask).astype(int)
         else:
+            if not self.PF8Config.is_simple_rotation:
+                if self.PF8Config.is_reflection_over_ss:
+                    data = data[:,::-1]
+                    mask = mask[:,::-1]
+                
+                if self.PF8Config.is_reflection_over_fs:
+                    data = data[::-1,:]
+                    mask = mask[::-1,:]
             self.visual_data = ndimage.rotate(data * mask, angle=self.PF8Config._detector_rotation_angle)
             visual_mask = ndimage.rotate(mask, angle=self.PF8Config._detector_rotation_angle)
-
 
         # JF for safety
         visual_mask[np.where(self.visual_data < 0)] = 0
@@ -192,9 +208,9 @@ class CircleDetection(CenteringMethod):
         center = [xc, yc]
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-            ax1.imshow(self.visual_data, vmax=10, origin="lower", cmap="YlGn")
+            ax1.imshow(self.visual_data*self.mask_for_circle_detection, vmax=10, origin="lower", cmap="YlGn")
             ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='blue', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
-            ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Calculated detector center: ({center[0]}, {center[1]})")
+            ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Refined detector center: ({center[0]}, {center[1]})")
             path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_circle_detection/')
             path.mkdir(parents=True, exist_ok=True)
             ax1.legend()
@@ -259,7 +275,7 @@ class MinimizePeakFWHM(CenteringMethod):
             ss_res = np.sum(residuals**2)
             ss_tot = np.sum((y - np.mean(y)) ** 2)
             r_squared = 1 - (ss_res / ss_tot)
-        except ZeroDivisionError:
+        except (ZeroDivisionError, RuntimeError):
             r_squared = 0
             fwhm = 10000
             popt = []
@@ -269,7 +285,7 @@ class MinimizePeakFWHM(CenteringMethod):
             x_fit = x.copy()
             y_fit = gaussian_lin(x_fit, *popt)
 
-            plt.vlines([x[0], x[-1]], 0, round(popt[0]) + 2, "r")
+            plt.vlines([x[0], x[-1]], 0, round(popt[0])*10, "r")
 
             plt.plot(
                 x_fit,
@@ -280,7 +296,7 @@ class MinimizePeakFWHM(CenteringMethod):
 
             plt.title("Azimuthal integration")
             plt.xlim(0, 500)
-            # plt.ylim(0, round(popt[0])+2)
+            plt.ylim(0, 5)
             plt.legend()
             path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/radial_average/')
             path.mkdir(parents=True, exist_ok=True)
@@ -311,8 +327,8 @@ class MinimizePeakFWHM(CenteringMethod):
         indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
 
         for idx, k in enumerate(peak_list_y_in_frame):
-            row_peak = int(k + self.initial_detector_center[1])
-            col_peak = int(peak_list_x_in_frame[idx] + self.initial_detector_center[0])
+            row_peak = int(k + initial_guess[1])
+            col_peak = int(peak_list_x_in_frame[idx] + initial_guess[0])
             indices[0, idx] = row_peak
             indices[1, idx] = col_peak
 
@@ -323,7 +339,22 @@ class MinimizePeakFWHM(CenteringMethod):
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
         if self.config["polarization"]["skip"]:
-            self.visual_data = data_visualize.visualize_data(data=data * mask)
+            if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
+                    > 1
+                ):
+                self.visual_data = data_visualize.visualize_data(data=data * mask)
+                visual_mask = data_visualize.visualize_data(data=mask).astype(int)
+            else:
+                if not self.PF8Config.is_simple_rotation:
+                    if self.PF8Config.is_reflection_over_ss:
+                        data = data[:,::-1]
+                        mask = mask[:,::-1]
+
+                    if self.PF8Config.is_reflection_over_fs:
+                        data = data[::-1,:]
+                        mask = mask[::-1,:]
+                self.visual_data = ndimage.rotate(data * mask, angle=self.PF8Config._detector_rotation_angle)
+                visual_mask = ndimage.rotate(mask, angle=self.PF8Config._detector_rotation_angle)
         else:
             pol_corrected_data, pol_array_map = correct_polarization(
                 self.pixel_maps["x"],
@@ -334,11 +365,22 @@ class MinimizePeakFWHM(CenteringMethod):
                 polarization_axis=config["polarization"]["axis"],
                 p=config["polarization"]["value"],
             )
-            self.visual_data = data_visualize.visualize_data(
-                data=pol_corrected_data * mask
-            )
+            if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
+                    > 1
+                ):
+                self.visual_data = data_visualize.visualize_data(data=pol_corrected_data * mask)
+                visual_mask = data_visualize.visualize_data(data=mask).astype(int)
+            else:
+                if not self.PF8Config.is_simple_rotation:
+                    if self.PF8Config.is_reflection_over_ss:
+                        pol_corrected_data = pol_corrected_data[:,::-1]
+                        mask = mask[:,::-1]
 
-        visual_mask = data_visualize.visualize_data(data=mask).astype(int)
+                    if self.PF8Config.is_reflection_over_fs:
+                        pol_corrected_data = pol_corrected_data[::-1,:]
+                        mask = mask[::-1,:]
+                self.visual_data = ndimage.rotate(pol_corrected_data * mask, angle=self.PF8Config._detector_rotation_angle)
+                visual_mask = ndimage.rotate(mask, angle=self.PF8Config._detector_rotation_angle)
 
         # JF for safety
         visual_mask[np.where(self.visual_data < 0)] = 0
@@ -390,6 +432,20 @@ class MinimizePeakFWHM(CenteringMethod):
             self.plot_fwhm_flag = True
             self._calculate_fwhm(center)
             self.plot_fwhm_flag = False
+
+        if self.config["plots_flag"]:
+            fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
+            ax1.imshow(self.visual_data * self.mask_for_fwhm_min, vmax=10, origin="lower", cmap="YlGn")
+            ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='blue', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
+            ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='blue', marker='o', label=f"Initial guess: ({np.round(self.initial_guess[0])}, {np.round(self.initial_guess[1])})")
+            ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Refined detector center: ({center[0]}, {center[1]})")
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_fwhm_minimization/')
+            path.mkdir(parents=True, exist_ok=True)
+            ax1.legend()
+            plt.savefig(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_fwhm_minimization/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
+            )
+            plt.close()
 
         return center
 
@@ -507,20 +563,48 @@ class FriedelPairs(CenteringMethod):
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
         if self.config["polarization"]["skip"]:
-            self.visual_data = data_visualize.visualize_data(data=data * mask)
+            if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
+                    > 1
+                ):
+                self.visual_data = data_visualize.visualize_data(data=data * mask)
+                visual_mask = data_visualize.visualize_data(data=mask).astype(int)
+            else:
+                if not self.PF8Config.is_simple_rotation:
+                    if self.PF8Config.is_reflection_over_ss:
+                        data = data[:,::-1]
+                        mask = mask[:,::-1]
+
+                    if self.PF8Config.is_reflection_over_fs:
+                        data = data[::-1,:]
+                        mask = mask[::-1,:]
+                self.visual_data = ndimage.rotate(data * mask, angle=self.PF8Config._detector_rotation_angle)
+                visual_mask = ndimage.rotate(mask, angle=self.PF8Config._detector_rotation_angle)
         else:
             pol_corrected_data, pol_array_map = correct_polarization(
                 self.pixel_maps["x"],
                 self.pixel_maps["y"],
                 float(np.mean(self.pixel_maps["z"]) * self.PF8Config.pixel_resolution),
-                data=data,
+                frame,
                 mask=mask,
                 polarization_axis=config["polarization"]["axis"],
                 p=config["polarization"]["value"],
             )
-            self.visual_data = data_visualize.visualize_data(
-                data=pol_corrected_data * mask
-            )
+            if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
+                    > 1
+                ):
+                self.visual_data = data_visualize.visualize_data(data=pol_corrected_data * mask)
+                visual_mask = data_visualize.visualize_data(data=mask).astype(int)
+            else:
+                if not self.PF8Config.is_simple_rotation:
+                    if self.PF8Config.is_reflection_over_ss:
+                        pol_corrected_data = pol_corrected_data[:,::-1]
+                        mask = mask[:,::-1]
+
+                    if self.PF8Config.is_reflection_over_fs:
+                        pol_corrected_data = pol_corrected_data[::-1,:]
+                        mask = mask[::-1,:]
+                self.visual_data = ndimage.rotate(pol_corrected_data * mask, angle=self.PF8Config._detector_rotation_angle)
+                visual_mask = ndimage.rotate(mask, angle=self.PF8Config._detector_rotation_angle)
 
     def _run_centering(self, **kwargs) -> tuple:
         peak_list_x_in_frame = self.peak_list_x_in_frame.copy()
@@ -580,18 +664,27 @@ class FriedelPairs(CenteringMethod):
             ax.scatter(
                 self.initial_guess[0],
                 self.initial_guess[1],
+                color="b",
+                marker="o",
+                s=25,
+                label=f"Initial detector center:({np.round(self.detector_center_from_geom[0],1)},{np.round(self.detector_center_from_geom[1], 1)})",
+            )
+            ax.scatter(
+                self.initial_guess[0],
+                self.initial_guess[1],
                 color="lime",
                 marker="+",
                 s=150,
-                label=f"Initial center:({np.round(self.initial_guess[0],1)},{np.round(self.initial_guess[1], 1)})",
+                label=f"Initial guess:({np.round(self.initial_guess[0],1)},{np.round(self.initial_guess[1], 1)})",
             )
+            
             ax.scatter(
                 center[0],
                 center[1],
                 color="r",
                 marker="o",
                 s=25,
-                label=f"Refined center:({np.round(center[0],1)}, {np.round(center[1],1)})",
+                label=f"Refined detector center:({np.round(center[0],1)}, {np.round(center[1],1)})",
             )
             ax.set_xlim(200, 900)
             ax.set_ylim(900, 200)

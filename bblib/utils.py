@@ -284,23 +284,20 @@ def get_fwhm_map_global_min(
     r = np.array(merged_dict["r_squared"]).reshape((n, n))
     z = np.nan_to_num(z)
     r = np.nan_to_num(r)
-    pos1 = ax1.imshow(z, cmap="rainbow", vmax=50)
+    pos1 = ax1.imshow(z, cmap="rainbow")
     step = 10
     n = z.shape[0]
 
     ax1.set_xticks(np.arange(0, n, step, dtype=int))
     ax1.set_yticks(np.arange(0, n, step, dtype=int))
 
-    ticks_len = (np.arange(0, n, step)).shape[0]
     step = round(step * (abs(x[0] - x[1])), 1)
     ax1.set_xticklabels(
-        np.linspace(round(x[0], 1), round(x[-1] + step, 1), ticks_len, dtype=int),
-        rotation=45,
+        np.arange(round(x[0], 1), round(x[-1] + step, 1), step, dtype=int), rotation=45
     )
     ax1.set_yticklabels(
-        np.linspace(round(y[0], 1), round(y[-1] + step, 1), ticks_len, dtype=int)
+        np.arange(round(y[0], 1), round(y[-1] + step, 1), step, dtype=int)
     )
-
     ax1.set_ylabel("yc [px]")
     ax1.set_xlabel("xc [px]")
     ax1.set_title("FWHM")
@@ -312,14 +309,12 @@ def get_fwhm_map_global_min(
     ax2.set_xticks(np.arange(0, n, step, dtype=int))
     ax2.set_yticks(np.arange(0, n, step, dtype=int))
 
-    ticks_len = (np.arange(0, n, step)).shape[0]
     step = round(step * (abs(x[0] - x[1])), 1)
     ax2.set_xticklabels(
-        np.linspace(round(x[0], 1), round(x[-1] + step, 1), ticks_len, dtype=int),
-        rotation=45,
+        np.arange(round(x[0], 1), round(x[-1] + step, 1), step, dtype=int), rotation=45
     )
     ax2.set_yticklabels(
-        np.linspace(round(y[0], 1), round(y[-1] + step, 1), ticks_len, dtype=int)
+        np.arange(round(y[0], 1), round(y[-1] + step, 1), step, dtype=int)
     )
 
     ax2.set_ylabel("yc [px]")

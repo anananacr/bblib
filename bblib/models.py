@@ -24,7 +24,6 @@ class PF8Info:
 
     def update_pixel_maps(self, detector_shift_x: int, detector_shift_y: int):
         if not self._shifted_pixel_maps:
-            self._detector_center_from_geom = self.get_detector_center()
             self._detector_shift_x = detector_shift_x
             self._detector_shift_y = detector_shift_y
             self._shifted_pixel_maps = True
@@ -63,6 +62,7 @@ class PF8Info:
         self._flattened_data_shape = self.pixel_maps["x"].flatten().shape[0]
         self.pf8_detector_info = geom.get_layout_info()
         self._shifted_pixel_maps = False
+        self.detector_center_from_geom = self.get_detector_center()
 
         if (self.pf8_detector_info["nasics_x"] * self.pf8_detector_info["nasics_y"]) == 1:
             ## Get single panel rotation matrix from the geometry file
@@ -74,16 +74,44 @@ class PF8Info:
             ][0]
 
             try:
-                rotation_matrix=[[float(fs_direction.split("x")[0]), float(fs_direction.split("y")[0].split("x")[-1])]]
+                transformation_matrix=[[float(fs_direction.split("x")[0]), float(fs_direction.split("y")[0].split("x")[-1])]]
             except ValueError:
-                rotation_matrix=[[float(fs_direction.split("x")[0].split("y")[-1]), float(fs_direction.split("y")[0])]]
+                transformation_matrix=[[float(fs_direction.split("x")[0].split("y")[-1]), float(fs_direction.split("y")[0])]]
 
             try:
-                rotation_matrix.append([float(ss_direction.split("x")[0]), float(ss_direction.split("y")[0].split("x")[-1])])
+                transformation_matrix.append([float(ss_direction.split("x")[0]), float(ss_direction.split("y")[0].split("x")[-1])])
             except ValueError:
-                rotation_matrix.append([float(ss_direction.split("x")[0].split("y")[-1]), float(ss_direction.split("y")[0])])
-            self._detector_rotation_angle = np.arctan2(rotation_matrix[1][0],rotation_matrix[0][0]) * 180/np.pi
+                transformation_matrix.append([float(ss_direction.split("x")[0].split("y")[-1]), float(ss_direction.split("y")[0])])
             
+            ## check if it is simple rotation
+
+            if transformation_matrix[1][0] == -1 * transformation_matrix[0][1] and transformation_matrix[0][0] == transformation_matrix[1][1]:
+                self.is_simple_rotation = True
+                rotation_matrix = transformation_matrix
+            else:
+                self.is_simple_rotation = False
+                ### is reflection over ss axis
+                reflection_over_ss = [[-1,0],[0,1]]
+                reflection_over_fs = [[1,0],[0,-1]]
+
+                if np.array_equiv(transformation_matrix,reflection_over_ss):
+                    self.is_reflection_over_ss = True
+                    self.is_reflection_over_fs = False
+                    rotation_matrix = [[1,0],[0,1]]
+                elif np.array_equiv(transformation_matrix,reflection_over_fs):
+                    self.is_reflection_over_ss = False
+                    self.is_reflection_over_fs = True
+                    rotation_matrix = [[1,0],[0,1]]
+                elif np.array_equiv(transformation_matrix,np.matmul(reflection_over_ss, reflection_over_fs)):
+                    self.is_reflection_over_ss = True
+                    self.is_reflection_over_fs = True
+                    rotation_matrix = [[1,0],[0,1]]
+                else:
+                    self.is_reflection_over_ss = True
+                    self.is_reflection_over_fs = False
+                    rotation_matrix =np.matmul(transformation_matrix, reflection_over_fs)
+
+            self._detector_rotation_angle = np.arctan2(rotation_matrix[1][0],rotation_matrix[0][0]) * 180/np.pi            
 
     def get(self, parameter: str):
         if parameter == "max_num_peaks":
@@ -144,8 +172,8 @@ class PF8Info:
                 _img_center_x = int(abs(np.min(self.pixel_maps["x"])))
                 _img_center_y = int(abs(np.min(self.pixel_maps["y"])))
         else:
-            _img_center_x = self._detector_center_from_geom[0] + self._detector_shift_x
-            _img_center_y = self._detector_center_from_geom[1] + self._detector_shift_y
+            _img_center_x = self.detector_center_from_geom[0] + self._detector_shift_x
+            _img_center_y = self.detector_center_from_geom[1] + self._detector_shift_y
         return [_img_center_x, _img_center_y]
 
 

@@ -135,8 +135,15 @@ class CircleDetection(CenteringMethod):
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
-        self.visual_data = data_visualize.visualize_data(data=data * mask)
-        visual_mask = data_visualize.visualize_data(data=mask).astype(int)
+        if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
+                > 1
+            ):
+            self.visual_data = data_visualize.visualize_data(data=data * mask)
+            visual_mask = data_visualize.visualize_data(data=mask).astype(int)
+        else:
+            self.visual_data = ndimage.rotate(data * mask, angle=self.PF8Config._detector_rotation_angle)
+            visual_mask = ndimage.rotate(mask, angle=self.PF8Config._detector_rotation_angle)
+
 
         # JF for safety
         visual_mask[np.where(self.visual_data < 0)] = 0

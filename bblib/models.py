@@ -65,7 +65,8 @@ class PF8Info:
         self.detector_center_from_geom = self.get_detector_center()
 
         if (self.pf8_detector_info["nasics_x"] * self.pf8_detector_info["nasics_y"]) == 1:
-            ## Get single panel rotation matrix from the geometry file
+            ## Get single panel transformation matrix from the geometry file
+            ### Warning! Check carefully if the visualized data after reorientation of the panel makes sense, e.g. if it is equal to the real experimental data geometry.
             fs_direction = [
             x.split(" = ")[-1][:-1] for x in geometry_txt if x.split(" = ")[0].split("/")[-1] == "fs"
             ][0]
@@ -89,8 +90,8 @@ class PF8Info:
                 self.is_simple_rotation = True
                 rotation_matrix = transformation_matrix
             else:
+                ## check if it is a reflection over the axes
                 self.is_simple_rotation = False
-                ### is reflection over ss axis
                 reflection_over_ss = [[-1,0],[0,1]]
                 reflection_over_fs = [[1,0],[0,-1]]
 
@@ -110,8 +111,7 @@ class PF8Info:
                     self.is_reflection_over_ss = True
                     self.is_reflection_over_fs = False
                     rotation_matrix =np.matmul(transformation_matrix, reflection_over_fs)
-
-            self._detector_rotation_angle = np.arctan2(rotation_matrix[1][0],rotation_matrix[0][0]) * 180/np.pi            
+            self._detector_rotation_angle = np.arctan2(rotation_matrix[1][0],rotation_matrix[0][0]) * 180/np.pi      
 
     def get(self, parameter: str):
         if parameter == "max_num_peaks":

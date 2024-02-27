@@ -667,7 +667,7 @@ class FriedelPairs(CenteringMethod):
                 color="b",
                 marker="o",
                 s=25,
-                label=f"Initial detector center:({np.round(self.detector_center_from_geom[0],1)},{np.round(self.detector_center_from_geom[1], 1)})",
+                label=f"Initial detector center:({np.round(self.initial_detector_center[0],1)},{np.round(self.initial_detector_center[1], 1)})",
             )
             ax.scatter(
                 self.initial_guess[0],

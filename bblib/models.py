@@ -2,7 +2,7 @@ import numpy as np
 from dataclasses import dataclass, field
 import math
 from om.algorithms.crystallography import TypePeakList, Peakfinder8PeakDetection
-from om.lib.geometry import TypePixelMaps, TypeDetectorLayoutInformation, GeometryInformation
+from om.lib.geometry import TypePixelMaps, TypeDetectorLayoutInformation, GeometryInformation, _read_crystfel_geometry_from_text
 
 
 @dataclass
@@ -63,27 +63,18 @@ class PF8Info:
         self.pf8_detector_info = geom.get_layout_info()
         self._shifted_pixel_maps = False
         self.detector_center_from_geom = self.get_detector_center()
+        
 
         if (self.pf8_detector_info["nasics_x"] * self.pf8_detector_info["nasics_y"]) == 1:
             ## Get single panel transformation matrix from the geometry file
             ### Warning! Check carefully if the visualized data after reorientation of the panel makes sense, e.g. if it is equal to the real experimental data geometry.
-            fs_direction = [
-            x.split(" = ")[-1][:-1] for x in geometry_txt if x.split(" = ")[0].split("/")[-1] == "fs"
-            ][0]
-            ss_direction = [
-            x.split(" = ")[-1][:-1] for x in geometry_txt if x.split(" = ")[0].split("/")[-1] == "ss"
-            ][0]
-
-            try:
-                transformation_matrix=[[float(fs_direction.split("x")[0]), float(fs_direction.split("y")[0].split("x")[-1])]]
-            except ValueError:
-                transformation_matrix=[[float(fs_direction.split("x")[0].split("y")[-1]), float(fs_direction.split("y")[0])]]
-
-            try:
-                transformation_matrix.append([float(ss_direction.split("x")[0]), float(ss_direction.split("y")[0].split("x")[-1])])
-            except ValueError:
-                transformation_matrix.append([float(ss_direction.split("x")[0].split("y")[-1]), float(ss_direction.split("y")[0])])
+            detector, _, _ = _read_crystfel_geometry_from_text(text_lines=geometry_txt)
+            detector_panels=dict(detector["panels"])
+            panel_name=list(detector_panels.keys())[0]
             
+            transformation_matrix=[[detector_panels[panel_name]["fsx"], detector_panels[panel_name]["fsy"]],[detector_panels[panel_name]["ssx"], detector_panels[panel_name]["ssy"]]]
+            
+            print(transformation_matrix)
             ## check if it is simple rotation
 
             if transformation_matrix[1][0] == -1 * transformation_matrix[0][1] and transformation_matrix[0][0] == transformation_matrix[1][1]:

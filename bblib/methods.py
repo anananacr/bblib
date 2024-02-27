@@ -66,7 +66,7 @@ class CenterOfMass(CenteringMethod):
 
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
-            
+
         if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
                 > 1
             ):
@@ -106,7 +106,7 @@ class CenterOfMass(CenteringMethod):
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_of_mass/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
             )
             plt.close()
-        return np.round(center, 1)
+        return np.round(center, 0)
 
 
 class CircleDetection(CenteringMethod):

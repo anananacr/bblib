@@ -141,8 +141,8 @@ class PF8Info:
                 _img_center_y = int(visual_img_shape[0] / 2)
             else:
                 # Single panel
-                _img_center_x = self._data_shape[1] +1 - self.pixel_maps["x"][0, 0]
-                _img_center_y = self._data_shape[0] +1 - self.pixel_maps["y"][0, 0]
+                _img_center_x = int(abs(np.min(self.pixel_maps["x"])))
+                _img_center_y = int(abs(np.min(self.pixel_maps["y"])))
         else:
             _img_center_x = self._detector_center_from_geom[0] + self._detector_shift_x
             _img_center_y = self._detector_center_from_geom[1] + self._detector_shift_y

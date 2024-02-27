@@ -96,9 +96,9 @@ class CenterOfMass(CenteringMethod):
 
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-            ax1.imshow(self.visual_data, vmax=10, origin="lower")
+            ax1.imshow(self.visual_data, vmax=10, cmap="YlGn", origin="lower")
+            ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='blue', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
             ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Calculated detector center: ({center[0]}, {center[1]})")
-            ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='lime', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
             path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_of_mass/')
             path.mkdir(parents=True, exist_ok=True)
             ax1.legend()
@@ -190,6 +190,18 @@ class CircleDetection(CenteringMethod):
             yc = -1
 
         center = [xc, yc]
+        if self.config["plots_flag"]:
+            fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
+            ax1.imshow(self.visual_data, vmax=10, origin="lower", cmap="YlGn")
+            ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='blue', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
+            ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Calculated detector center: ({center[0]}, {center[1]})")
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_circle_detection/')
+            path.mkdir(parents=True, exist_ok=True)
+            ax1.legend()
+            plt.savefig(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_circle_detection/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
+            )
+            plt.close()
         return center
 
 
@@ -564,7 +576,7 @@ class FriedelPairs(CenteringMethod):
             shift_y = 2 * (center[1] - self.initial_guess[1])
 
             fig, ax = plt.subplots(1, 1, figsize=(8, 8))
-            pos = ax.imshow(self.visual_data, vmin=0, vmax=100, cmap="YlGnBu", origin="lower")
+            pos = ax.imshow(self.visual_data, vmin=0, vmax=100, cmap="YlGn", origin="lower")
             ax.scatter(
                 self.initial_guess[0],
                 self.initial_guess[1],

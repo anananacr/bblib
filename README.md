@@ -4,8 +4,10 @@ Beambusters library, it aims to refine the detector center of diffraction patter
 
 ## Python version
 
-Python 3.10.5 (main, Jun 21 2022, 11:18:08) [GCC 4.8.5 20150623 (Red Hat 4.8.5-44)] on linux
+Python 3.10.5 
 
+## Installation
+pip install bblib
 
 ## Usage
 

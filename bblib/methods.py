@@ -342,13 +342,13 @@ class MinimizePeakFWHM(CenteringMethod):
                 visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
         else:
             pol_corrected_data, pol_array_map = correct_polarization(
-                self.pixel_maps["x"],
-                self.pixel_maps["y"],
-                float(np.mean(self.pixel_maps["z"]) * self.PF8Config.pixel_resolution),
-                frame,
+                self.PF8Config.pixel_maps["x"],
+                self.PF8Config.pixel_maps["y"],
+                float(np.mean(self.PF8Config.pixel_maps["z"]) * self.PF8Config.pixel_resolution),
+                data,
                 mask=mask,
-                polarization_axis=config["polarization"]["axis"],
-                p=config["polarization"]["value"],
+                polarization_axis=self.config["polarization"]["axis"],
+                p=self.config["polarization"]["value"],
             )
             if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
                 > 1
@@ -551,13 +551,13 @@ class FriedelPairs(CenteringMethod):
                 visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
         else:
             pol_corrected_data, pol_array_map = correct_polarization(
-                self.pixel_maps["x"],
-                self.pixel_maps["y"],
-                float(np.mean(self.pixel_maps["z"]) * self.PF8Config.pixel_resolution),
-                frame,
+                self.PF8Config.pixel_maps["x"],
+                self.PF8Config.pixel_maps["y"],
+                float(np.mean(self.PF8Config.pixel_maps["z"]) * self.PF8Config.pixel_resolution),
+                data,
                 mask=mask,
-                polarization_axis=config["polarization"]["axis"],
-                p=config["polarization"]["value"],
+                polarization_axis=self.config["polarization"]["axis"],
+                p=self.config["polarization"]["value"],
             )
             if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
                 > 1

@@ -96,7 +96,7 @@ pixel_maps =  {
 } 
 ```
 
-The methods `FriedelPairs`, `MinimizePeakFWHM` and  `CircleDetection ` need a `plots_info` parameter:
+The methods `FriedelPairs`, `MinimizePeakFWHM` and  `CircleDetection ` need a `plots_info` parameter if you want to save plots:
 ```python
 plots_info =  {
 	"file_label": ...,
@@ -109,7 +109,7 @@ To calculate the refined detector center of raw data frame as a numpy array usin
 
 ```python
 from bblib.methods import CenterOfMass
-center_of_mass_method = CenterOfMass(config=config, PF8Config=PF8Config)
+center_of_mass_method = CenterOfMass(config=config, PF8Config=PF8Config, plots_info=plots_info)
 center_coordinates_from_center_of_mass = center_of_mass_method(
                         data = ...
                     )

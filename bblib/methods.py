@@ -44,10 +44,12 @@ class CenteringMethod(ABC):
 
 
 class CenterOfMass(CenteringMethod):
-    def __init__(self, config: dict, PF8Config: PF8Info,  plots_info: dict):
+    def __init__(self, config: dict, PF8Config: PF8Info,  plots_info: dict = None):
         self.config = config
         self.PF8Config = PF8Config
         self.plots_info = plots_info
+        if config["plots_flag"] and not plots_info:
+            raise ValueError("From config you want to save plots, please indicate the information to save the plots.")
 
 
     def _prep_for_centering(self, data: np.ndarray) -> None:
@@ -115,10 +117,13 @@ class CenterOfMass(CenteringMethod):
 
 
 class CircleDetection(CenteringMethod):
-    def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict):
+    def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict =None):
         self.config = config
         self.PF8Config = PF8Config
         self.plots_info = plots_info
+        if config["plots_flag"] and not plots_info:
+            raise ValueError("From config you want to save plots, please indicate the information to save the plots.")
+
 
     def _prep_for_centering(self, data: np.ndarray) -> None:
         self.initial_detector_center = self.PF8Config.get_detector_center()
@@ -213,11 +218,14 @@ class CircleDetection(CenteringMethod):
 
 
 class MinimizePeakFWHM(CenteringMethod):
-    def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict):
+    def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict = None):
         self.config = config
         self.PF8Config = PF8Config
         self.plots_info = plots_info
         self.plot_fwhm_flag = False
+        if config["plots_flag"] and not plots_info:
+            raise ValueError("From config you want to save plots, please indicate the information to save the plots.")
+
 
     def _calculate_fwhm(self, coordinate: tuple) -> dict:
         center_to_radial_average = coordinate
@@ -429,10 +437,13 @@ class MinimizePeakFWHM(CenteringMethod):
 
 
 class FriedelPairs(CenteringMethod):
-    def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict):
+    def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict = None):
         self.config = config
         self.PF8Config = PF8Config
         self.plots_info = plots_info
+        if config["plots_flag"] and not plots_info:
+            raise ValueError("From config you want to save plots, please indicate the information to save the plots.")
+
 
     def _remove_repeated_pairs(self, pairs_list: list) -> list:
         x_vector = []

@@ -8,6 +8,7 @@ from bblib.utils import (
     get_fwhm_map_global_min,
     get_distance_map_global_min,
     correct_polarization,
+    visualize_single_panel
 )
 import math
 from scipy import ndimage
@@ -54,14 +55,16 @@ class CenterOfMass(CenteringMethod):
         pf8 = PF8(self.PF8Config)
         peak_list = pf8.get_peaks_pf8(data=data)
         peak_list_x_in_frame, peak_list_y_in_frame = pf8.peak_list_in_slab(peak_list)
-        indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
+        row_indexes = np.zeros(peak_list["num_peaks"], dtype=int)
+        col_indexes = np.zeros(peak_list["num_peaks"], dtype=int)
 
         for idx, k in enumerate(peak_list_y_in_frame):
             row_peak = int(k + self.initial_detector_center[1])
             col_peak = int(peak_list_x_in_frame[idx] + self.initial_detector_center[0])
-            indices[0, idx] = row_peak
-            indices[1, idx] = col_peak
-
+            row_indexes[idx] = row_peak
+            col_indexes[idx] = col_peak
+        peaks_indexes =(row_indexes, col_indexes)
+        
         # Assemble data and mask
         data_visualize = geometry.DataVisualizer(pixel_maps=self.PF8Config.pixel_maps)
 
@@ -74,16 +77,9 @@ class CenterOfMass(CenteringMethod):
             self.visual_data = data_visualize.visualize_data(data=data * mask)
             visual_mask = data_visualize.visualize_data(data=mask).astype(int)
         else:
-            if not self.PF8Config.is_simple_rotation:
-                if self.PF8Config.is_reflection_over_ss:
-                    data = data[:,::-1]
-                    mask = mask[:,::-1]
-                
-                if self.PF8Config.is_reflection_over_fs:
-                    data = data[::-1,:]
-                    mask = mask[::-1,:]
-            self.visual_data = ndimage.rotate(data * mask, angle=self.PF8Config._detector_rotation_angle)
-            visual_mask = ndimage.rotate(mask, angle=self.PF8Config._detector_rotation_angle)
+            
+            self.visual_data = visualize_single_panel(data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
+            visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
 
         # JF for safety
         visual_mask[np.where(self.visual_data < 0)] = 0
@@ -91,7 +87,7 @@ class CenterOfMass(CenteringMethod):
         # Mask Bragg peaks
         peaks_mask = mask_peaks(
             visual_mask,
-            indices,
+            peaks_indexes,
             bragg=self.config["bragg_peaks_positions_for_center_of_mass_calculation"],
             n=self.config["pixels_for_mask_of_bragg_peaks"],
         )
@@ -130,14 +126,16 @@ class CircleDetection(CenteringMethod):
         pf8 = PF8(self.PF8Config)
         peak_list = pf8.get_peaks_pf8(data=data)
         peak_list_x_in_frame, peak_list_y_in_frame = pf8.peak_list_in_slab(peak_list)
-        indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
+        row_indexes = np.zeros(peak_list["num_peaks"], dtype=int)
+        col_indexes = np.zeros(peak_list["num_peaks"], dtype=int)
 
         for idx, k in enumerate(peak_list_y_in_frame):
             row_peak = int(k + self.initial_detector_center[1])
             col_peak = int(peak_list_x_in_frame[idx] + self.initial_detector_center[0])
-            indices[0, idx] = row_peak
-            indices[1, idx] = col_peak
-
+            row_indexes[idx] = row_peak
+            col_indexes[idx] = col_peak
+        peaks_indexes =(row_indexes, col_indexes)
+        
         # Assemble data and mask
         data_visualize = geometry.DataVisualizer(pixel_maps=self.PF8Config.pixel_maps)
 
@@ -150,21 +148,14 @@ class CircleDetection(CenteringMethod):
             self.visual_data = data_visualize.visualize_data(data=data * mask)
             visual_mask = data_visualize.visualize_data(data=mask).astype(int)
         else:
-            if not self.PF8Config.is_simple_rotation:
-                if self.PF8Config.is_reflection_over_ss:
-                    data = data[:,::-1]
-                    mask = mask[:,::-1]
-                
-                if self.PF8Config.is_reflection_over_fs:
-                    data = data[::-1,:]
-                    mask = mask[::-1,:]
-            self.visual_data = ndimage.rotate(data * mask, angle=self.PF8Config._detector_rotation_angle)
-            visual_mask = ndimage.rotate(mask, angle=self.PF8Config._detector_rotation_angle)
+            
+            self.visual_data = visualize_single_panel(data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
+            visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
 
         # JF for safety
         visual_mask[np.where(self.visual_data < 0)] = 0
         only_peaks_mask = mask_peaks(
-            visual_mask, indices, bragg=0, n=self.config["pixels_for_mask_of_bragg_peaks"]
+            visual_mask, peaks_indexes, bragg=0, n=self.config["pixels_for_mask_of_bragg_peaks"]
         )
         self.mask_for_circle_detection = only_peaks_mask * visual_mask
 
@@ -324,14 +315,16 @@ class MinimizePeakFWHM(CenteringMethod):
 
         peak_list = pf8.get_peaks_pf8(data=data)
         peak_list_x_in_frame, peak_list_y_in_frame = pf8.peak_list_in_slab(peak_list)
-        indices = np.ndarray((2, peak_list["num_peaks"]), dtype=int)
+        row_indexes = np.zeros(peak_list["num_peaks"], dtype=int)
+        col_indexes = np.zeros(peak_list["num_peaks"], dtype=int)
 
         for idx, k in enumerate(peak_list_y_in_frame):
-            row_peak = int(k + initial_guess[1])
-            col_peak = int(peak_list_x_in_frame[idx] + initial_guess[0])
-            indices[0, idx] = row_peak
-            indices[1, idx] = col_peak
-
+            row_peak = int(k + self.initial_detector_center[1])
+            col_peak = int(peak_list_x_in_frame[idx] + self.initial_detector_center[0])
+            row_indexes[idx] = row_peak
+            col_indexes[idx] = col_peak
+        peaks_indexes =(row_indexes, col_indexes)
+        
         # Assemble data and mask
         data_visualize = geometry.DataVisualizer(pixel_maps=self.PF8Config.pixel_maps)
 
@@ -340,21 +333,13 @@ class MinimizePeakFWHM(CenteringMethod):
 
         if self.config["polarization"]["skip"]:
             if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
-                    > 1
-                ):
+                > 1
+            ):
                 self.visual_data = data_visualize.visualize_data(data=data * mask)
                 visual_mask = data_visualize.visualize_data(data=mask).astype(int)
             else:
-                if not self.PF8Config.is_simple_rotation:
-                    if self.PF8Config.is_reflection_over_ss:
-                        data = data[:,::-1]
-                        mask = mask[:,::-1]
-
-                    if self.PF8Config.is_reflection_over_fs:
-                        data = data[::-1,:]
-                        mask = mask[::-1,:]
-                self.visual_data = ndimage.rotate(data * mask, angle=self.PF8Config._detector_rotation_angle)
-                visual_mask = ndimage.rotate(mask, angle=self.PF8Config._detector_rotation_angle)
+                self.visual_data = visualize_single_panel(data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
+                visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
         else:
             pol_corrected_data, pol_array_map = correct_polarization(
                 self.pixel_maps["x"],
@@ -366,27 +351,20 @@ class MinimizePeakFWHM(CenteringMethod):
                 p=config["polarization"]["value"],
             )
             if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
-                    > 1
-                ):
+                > 1
+            ):
                 self.visual_data = data_visualize.visualize_data(data=pol_corrected_data * mask)
                 visual_mask = data_visualize.visualize_data(data=mask).astype(int)
             else:
-                if not self.PF8Config.is_simple_rotation:
-                    if self.PF8Config.is_reflection_over_ss:
-                        pol_corrected_data = pol_corrected_data[:,::-1]
-                        mask = mask[:,::-1]
+                self.visual_data = visualize_single_panel(pol_corrected_data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
+                visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
 
-                    if self.PF8Config.is_reflection_over_fs:
-                        pol_corrected_data = pol_corrected_data[::-1,:]
-                        mask = mask[::-1,:]
-                self.visual_data = ndimage.rotate(pol_corrected_data * mask, angle=self.PF8Config._detector_rotation_angle)
-                visual_mask = ndimage.rotate(mask, angle=self.PF8Config._detector_rotation_angle)
 
         # JF for safety
         visual_mask[np.where(self.visual_data < 0)] = 0
 
         only_peaks_mask = mask_peaks(
-            visual_mask, indices, bragg=0, n=self.config["pixels_for_mask_of_bragg_peaks"]
+            visual_mask, peaks_indexes, bragg=0, n=self.config["pixels_for_mask_of_bragg_peaks"]
         )
         self.mask_for_fwhm_min = only_peaks_mask * visual_mask
 
@@ -564,21 +542,13 @@ class FriedelPairs(CenteringMethod):
 
         if self.config["polarization"]["skip"]:
             if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
-                    > 1
-                ):
+                > 1
+            ):
                 self.visual_data = data_visualize.visualize_data(data=data * mask)
                 visual_mask = data_visualize.visualize_data(data=mask).astype(int)
             else:
-                if not self.PF8Config.is_simple_rotation:
-                    if self.PF8Config.is_reflection_over_ss:
-                        data = data[:,::-1]
-                        mask = mask[:,::-1]
-
-                    if self.PF8Config.is_reflection_over_fs:
-                        data = data[::-1,:]
-                        mask = mask[::-1,:]
-                self.visual_data = ndimage.rotate(data * mask, angle=self.PF8Config._detector_rotation_angle)
-                visual_mask = ndimage.rotate(mask, angle=self.PF8Config._detector_rotation_angle)
+                self.visual_data = visualize_single_panel(data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
+                visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
         else:
             pol_corrected_data, pol_array_map = correct_polarization(
                 self.pixel_maps["x"],
@@ -590,21 +560,14 @@ class FriedelPairs(CenteringMethod):
                 p=config["polarization"]["value"],
             )
             if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
-                    > 1
-                ):
+                > 1
+            ):
                 self.visual_data = data_visualize.visualize_data(data=pol_corrected_data * mask)
                 visual_mask = data_visualize.visualize_data(data=mask).astype(int)
             else:
-                if not self.PF8Config.is_simple_rotation:
-                    if self.PF8Config.is_reflection_over_ss:
-                        pol_corrected_data = pol_corrected_data[:,::-1]
-                        mask = mask[:,::-1]
+                self.visual_data = visualize_single_panel(pol_corrected_data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
+                visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
 
-                    if self.PF8Config.is_reflection_over_fs:
-                        pol_corrected_data = pol_corrected_data[::-1,:]
-                        mask = mask[::-1,:]
-                self.visual_data = ndimage.rotate(pol_corrected_data * mask, angle=self.PF8Config._detector_rotation_angle)
-                visual_mask = ndimage.rotate(mask, angle=self.PF8Config._detector_rotation_angle)
 
     def _run_centering(self, **kwargs) -> tuple:
         peak_list_x_in_frame = self.peak_list_x_in_frame.copy()
@@ -662,8 +625,8 @@ class FriedelPairs(CenteringMethod):
             fig, ax = plt.subplots(1, 1, figsize=(8, 8))
             pos = ax.imshow(self.visual_data, vmin=0, vmax=100, cmap="YlGn", origin="lower")
             ax.scatter(
-                self.initial_guess[0],
-                self.initial_guess[1],
+                self.initial_detector_center[0],
+                self.initial_detector_center[1],
                 color="b",
                 marker="o",
                 s=25,

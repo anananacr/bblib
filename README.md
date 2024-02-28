@@ -1,6 +1,6 @@
 # beambusters library
 
-Beambusters library, it aims to refine the detector center of diffraction patterns. Methods implementation for detector center refinement based on Friedel pairs inversion symmetry. 
+beambusters library. It refines the detector center of diffraction patterns.
 
 ## Python version
 

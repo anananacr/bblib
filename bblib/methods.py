@@ -106,11 +106,11 @@ class CenterOfMass(CenteringMethod):
             ax1.imshow(self.visual_data*self.mask_for_center_of_mass, vmax=10, cmap="YlGn", origin="lower")
             ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='blue', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
             ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Refined detector center: ({center[0]}, {center[1]})")
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_of_mass/')
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_of_mass/')
             path.mkdir(parents=True, exist_ok=True)
             ax1.legend()
             plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_of_mass/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_of_mass/{self.plots_info["file_name"]}.png'
             )
             plt.close()
         return np.round(center, 0)
@@ -178,10 +178,10 @@ class CircleDetection(CenteringMethod):
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             ax1.imshow(edges, origin="lower")
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/edges/')
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/edges/')
             path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/edges/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/edges/{self.plots_info["file_name"]}.png'
             )
             plt.close()
         # Detect radii
@@ -207,11 +207,11 @@ class CircleDetection(CenteringMethod):
             ax1.imshow(self.visual_data*self.mask_for_circle_detection, vmax=10, origin="lower", cmap="YlGn")
             ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='blue', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
             ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Refined detector center: ({center[0]}, {center[1]})")
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_circle_detection/')
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_circle_detection/')
             path.mkdir(parents=True, exist_ok=True)
             ax1.legend()
             plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_circle_detection/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_circle_detection/{self.plots_info["file_name"]}.png'
             )
             plt.close()
         return center
@@ -297,10 +297,10 @@ class MinimizePeakFWHM(CenteringMethod):
             plt.xlim(0, 500)
             plt.ylim(0, 5)
             plt.legend()
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/radial_average/')
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/')
             path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/radial_average/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/{self.plots_info["file_name"]}.png'
             )
             plt.close()
 
@@ -403,13 +403,13 @@ class MinimizePeakFWHM(CenteringMethod):
 
     def _run_centering(self, **kwargs) -> tuple:
         if self.config["plots_flag"]:
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/fwhm_map/')
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/fwhm_map/')
             path.mkdir(parents=True, exist_ok=True)
 
         center = get_fwhm_map_global_min(
             self.fwhm_summary,
-            f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}',
-            f'{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}',
+            f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}',
+            f'{self.plots_info["file_name"]}',
             self.pixel_step,
             self.config["plots_flag"]
         )
@@ -425,11 +425,11 @@ class MinimizePeakFWHM(CenteringMethod):
             ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='blue', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
             ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='blue', marker='o', label=f"Initial guess: ({np.round(self.initial_guess[0])}, {np.round(self.initial_guess[1])})")
             ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Refined detector center: ({center[0]}, {center[1]})")
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_fwhm_minimization/')
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_fwhm_minimization/')
             path.mkdir(parents=True, exist_ok=True)
             ax1.legend()
             plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/center_fwhm_minimization/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_fwhm_minimization/{self.plots_info["file_name"]}.png'
             )
             plt.close()
 
@@ -618,13 +618,13 @@ class FriedelPairs(CenteringMethod):
 
         ## Minimize distance
         if self.config["plots_flag"]:
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/distance_map/')
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/distance_map/')
             path.mkdir(parents=True, exist_ok=True)
 
         center = get_distance_map_global_min(
             distance_summary,
-            f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}',
-            f'{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}',
+            f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}',
+            f'{self.plots_info["file_name"]}',
             self.pixel_step,
             self.config["plots_flag"],
         )
@@ -665,10 +665,10 @@ class FriedelPairs(CenteringMethod):
             plt.title("Center refinement: autocorrelation of Friedel pairs")
             fig.colorbar(pos, shrink=0.6)
             ax.legend()
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/centered_friedel/')
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/centered_friedel/')
             path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/centered_friedel/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/centered_friedel/{self.plots_info["file_name"]}.png'
             )
             plt.close("all")
 
@@ -732,10 +732,10 @@ class FriedelPairs(CenteringMethod):
             plt.title("Bragg peaks alignement")
             fig.colorbar(pos, shrink=0.6)
             ax.legend()
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/peaks/')
+            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/peaks/')
             path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["run_label"]}/peaks/{self.plots_info["file_label"]}_{self.plots_info["frame_index"]}.png'
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/peaks/{self.plots_info["file_name"]}.png'
             )
             plt.close()
         return center

@@ -99,9 +99,8 @@ pixel_maps =  {
 The methods `FriedelPairs`, `MinimizePeakFWHM` and  `CircleDetection ` need a `plots_info` parameter if you want to save plots:
 ```python
 plots_info =  {
-	"file_label": ...,
-	"run_label": ...,
-	"frame_index": ...,
+	"file_name": ...,
+	"folder_name": ...,
 	"root_path": ...
 }
 ```

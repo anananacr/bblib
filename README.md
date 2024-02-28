@@ -1,33 +1,150 @@
+# beambusters library
 
-:loudspeaker: :warning: :construction: Work in progress :loudspeaker: :warning: :construction:
-
-# beambusters pipeline
-Beam swepeing serial crystallography data processing routine. Scripts necessary for detector center determination based on Friedel pairs inversion symmetry. It also include auxiliary scripts for subsequent processing with CrystFEL [1].
-
+Beambusters library, it aims to refine the detector center of diffraction patterns. Methods implementation for detector center refinement based on Friedel pairs inversion symmetry. 
 
 ## Python version
+
 Python 3.10.5 (main, Jun 21 2022, 11:18:08) [GCC 4.8.5 20150623 (Red Hat 4.8.5-44)] on linux
 
 
 ## Usage
-### Calculate the direct beam postion of each frame based on FWHM minimization of the background peak
-scripts in scripts/algorithms
+
+To utilize the methods `CenterOfMass`,  `FriedelPairs`, `MinimizePeakFWHM`  and `CircleDetection` it is required to have two configuration dictionaries, one for PeakFinder8 and another one for this library itself. The follow snippet shows the expected structure for both:
+
+```python
+config = {
+    "plots_flag": ...,
+	"force_center": {
+		"mode": ...,
+		"x": ...,
+		"y": ...
+		},
+	"search_radius": ...,
+	"pf8": {
+		"max_num_peaks": ...,
+		"adc_threshold": ...,
+		"minimum_snr": ...,
+		"min_pixel_count": ...,
+		"max_pixel_count": ...,
+		"local_bg_radius": ...,
+		"min_res": ...,
+		"max_res": ...
+		},
+	"starting_frame": ...,
+	"offset": {
+		"x": ...,
+		"y": ...
+		},
+	"peak_region":{
+		"min": ...,
+		"max": ...
+		},
+	"outlier_distance": ...,
+	"canny":{
+		"sigma": ...,
+		"low_threshold": ...,
+		"high_threshold": ...
+		},	
+	"method": ...,
+	"bragg_peaks_positions_for_center_of_mass_calculation": ...,
+	"pixels_for_mask_of_bragg_peaks": ...,
+	"skip_methods": ...,
+	"polarization": {
+		"skip": ...,
+		"axis": ...,
+		"value": ...
+		}
+}
 
 
-Raw folder: raw/run_label/scan_type/run_label_scan_type_data_*.h5
-lst files: each dataset should be splitted in split_run_label_scan_type.lst**
-index of lst files are integer and it will submit a slurm job for each lst index from initial_index to end_index
+PF8Info = {
+	"max_num_peaks": 
+	"adc_threshold": 
+	"minimum_snr": ...,
+	"min_pixel_count": ...,
+	"max_pixel_count": ...,
+	"local_bg_radius": ...,
+	"min_res": ...,
+	"max_res": ...,
+	"pf8_detector_info": ...,
+	"bad_pixel_map_filename": ...,
+	"bad_pixel_map_hdf5_path": ...,
+	"pixel_maps": ...,
+	"pixel_resolution": ...,
+	"_shifted_pixel_maps":...
+}
+```
 
-./turbo_center.sh split_run_label_scan_type initial_index end_index
+The `pf8_detector_info` parameter is a dictionary containing the detector layout information:
+```python
+pf8_detector_info =  {
+	"asic_nx": ...,
+	"asic_ny": ...,
+	"nasics_x": ...,
+	"nasics_y": ...
+} 
+```
 
-Example:
-./turbo_center.sh split_beam_sweeping_lyzo2_snake 3 10
+The `pixel_maps` parameter is a dictionary containing the pixel maps numpy array:
+```python
+pixel_maps =  {
+	"x": ...,
+	"y": ...,
+	"z": ...,
+	"radius": ...,
+	"phi": ...
+} 
+```
 
-## Contact:
+The methods `FriedelPairs`, `MinimizePeakFWHM` and  `CircleDetection ` need a `plots_info` parameter if you want to save plots:
+```python
+plots_info =  {
+	"file_name": ...,
+	"folder_name": ...,
+	"root_path": ...
+}
+```
+To calculate the refined detector center of raw data frame as a numpy array using the following methods: 
 
-Ana Carolina Rodrigues
+```python
+from bblib.methods import CenterOfMass
+center_of_mass_method = CenterOfMass(config=config, PF8Config=PF8Config, plots_info=plots_info)
+center_coordinates_from_center_of_mass = center_of_mass_method(
+                        data = ...
+                    )
+                    
+from bblib.methods import CircleDetection
+circle_detection_method = CircleDetection(config=config, PF8Config=PF8Config, plots_info=plots_info)
+center_coordinates_from_circle_detection = circle_detection_method(
+                        data = ...
+                    )
+``` 
 
-ana.rodrigues@desy.de
+The `FriedelPairs` and `MinimizePeakFWHMmethod` need an initial guess for the refined detector center coordinates ` initial_guess = [x_0, y_0]`
+
+```python          
+from bblib.methods import MinimizePeakFWHM
+minimize_peak_fwhm_method = MinimizePeakFWHM(
+                        config=config, PF8Config=PF8Config, plots_info=plots_info
+                    )
+center_coordinates_from_minimize_peak_fwhm = minimize_peak_fwhm_method(
+                        data = ..., initial_guess = ...
+                    )
+
+
+from bblib.methods import FriedelPairs
+friedel_pairs_method = FriedelPairs(
+                        config=config, PF8Config=PF8Config, plots_info=plots_info
+                    )
+center_coordinates_from_friedel_pairs = friedel_pairs_method(
+                        data = ..., initial_guess= ...
+                    )
+```         
+## Author:
+
+Ana Carolina Rodrigues (2021 - )
+
+email: ana.rodrigues@desy.de
 
 
 

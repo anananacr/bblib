@@ -1,13 +1,11 @@
-from typing import List, Optional, Callable, Tuple, Any, Dict
 from numpy import exp
 import numpy as np
 import matplotlib.pyplot as plt
-
 plt.switch_backend("agg")
 import math
 
 
-def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> List[int]:
+def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
     """
     Adapted from Robert Bücker work on diffractem (https://github.com/robertbuecker/diffractem/tree/master)
     Bücker, R., Hogan-Lamarre, P., Mehrabi, P. et al. Serial protein crystallography in an electron microscope. Nat Commun 11, 996 (2020). https://doi.org/10.1038/s41467-020-14793-0
@@ -28,15 +26,15 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> List[int]:
     if mask is None:
         mask = np.ones_like(data)
     data = data * mask
-    indices = np.where(data > 0)
-    xc = np.sum(data[indices] * indices[1]) / np.sum(data[indices])
-    yc = np.sum(data[indices] * indices[0]) / np.sum(data[indices])
+    indexes = np.where(data > 0)
+    xc = np.sum(data[indexes] * indexes[1]) / np.sum(data[indexes])
+    yc = np.sum(data[indexes] * indexes[0]) / np.sum(data[indexes])
 
     if np.isnan(xc) or np.isnan(yc):
-        xc = -1 
+        xc = -1
         yc = -1
 
-    return [xc, yc]
+    return [np.round(xc,1), np.round(yc,1)]
 
 
 def azimuthal_average(
@@ -125,11 +123,11 @@ def correct_polarization(
 
     mask = mask.astype(bool)
     mask = mask.flatten()
-    Int = np.reshape(data.copy(), len(mask))
+    intensity = np.reshape(data.copy(), len(mask))
     pol = mask.copy().astype(np.float32)
     pol = make_polarization_array(pol, x.flatten(), y.flatten(), dist, p)
-    Int = Int / pol
-    return Int.reshape(data.shape), pol.reshape(data.shape)
+    intensity = intensity / pol
+    return intensity.reshape(data.shape), pol.reshape(data.shape)
 
 
 def make_polarization_array(
@@ -169,15 +167,15 @@ def make_polarization_array(
     return pol
 
 
-def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int, n: int) -> np.ndarray:
+def mask_peaks(mask: np.ndarray, indexes: tuple, bragg: int, n: int) -> np.ndarray:
     """
-    Gather coordinates of a box of 1x1 pixels around each point from the indices list. Bragg flag indicates if the mask returned will contain only bragg peaks regions (bragg =1), no bragg peaks regions (bragg=0), or both (bragg =-1).
+    Gather coordinates of a box of 1x1 pixels around each point from the indexes list. Bragg flag indicates if the mask returned will contain only bragg peaks regions (bragg =1), no bragg peaks regions (bragg=0), or both (bragg =-1).
     Parameters
     ----------
     mask: np.ndarray
         An array where mask will be built based on its shape. Mask shape is the same size of data.
-    indices: tuple
-        Bragg peaks coordinates, indices[0] contains x-coordinates of Bragg peaks and indices[1] the corresponding y-coordinates.
+    indexes: tuple
+        Bragg peaks coordinates, indexes[0] contains x-coordinates of Bragg peaks and indexes[1] the corresponding y-coordinates.
     bragg: int
         Bragg flag, choose between return only peaks, only background or both (bypass masking of peaks).
     n: int
@@ -189,7 +187,7 @@ def mask_peaks(mask: np.ndarray, indices: tuple, bragg: int, n: int) -> np.ndarr
     """
     surrounding_positions = []
     count = 0
-    for index in zip(indices[0], indices[1]):
+    for index in zip(indexes[0], indexes[1]):
         row, col = index
         for i in range(-n, n + 1):
             for k in range(-n, n + 1):
@@ -255,7 +253,7 @@ def gaussian_lin(
     return m * x + n + a * exp(-((x - x0) ** 2) / (2 * sigma**2))
 
 
-def open_fwhm_map_global_min(
+def get_fwhm_map_global_min(
     lines: list, output_folder: str, label: str, pixel_step: int, plots_flag: bool
 ) -> tuple:
     """
@@ -286,23 +284,20 @@ def open_fwhm_map_global_min(
     r = np.array(merged_dict["r_squared"]).reshape((n, n))
     z = np.nan_to_num(z)
     r = np.nan_to_num(r)
-    pos1 = ax1.imshow(z, cmap="rainbow", vmax=50)
+    pos1 = ax1.imshow(z, cmap="rainbow")
     step = 10
     n = z.shape[0]
 
     ax1.set_xticks(np.arange(0, n, step, dtype=int))
     ax1.set_yticks(np.arange(0, n, step, dtype=int))
 
-    ticks_len = (np.arange(0, n, step)).shape[0]
     step = round(step * (abs(x[0] - x[1])), 1)
     ax1.set_xticklabels(
-        np.linspace(round(x[0], 1), round(x[-1] + step, 1), ticks_len, dtype=int),
-        rotation=45,
+        np.arange(round(x[0], 1), round(x[-1] + step, 1), step, dtype=int), rotation=45
     )
     ax1.set_yticklabels(
-        np.linspace(round(y[0], 1), round(y[-1] + step, 1), ticks_len, dtype=int)
+        np.arange(round(y[0], 1), round(y[-1] + step, 1), step, dtype=int)
     )
-
     ax1.set_ylabel("yc [px]")
     ax1.set_xlabel("xc [px]")
     ax1.set_title("FWHM")
@@ -314,14 +309,12 @@ def open_fwhm_map_global_min(
     ax2.set_xticks(np.arange(0, n, step, dtype=int))
     ax2.set_yticks(np.arange(0, n, step, dtype=int))
 
-    ticks_len = (np.arange(0, n, step)).shape[0]
     step = round(step * (abs(x[0] - x[1])), 1)
     ax2.set_xticklabels(
-        np.linspace(round(x[0], 1), round(x[-1] + step, 1), ticks_len, dtype=int),
-        rotation=45,
+        np.arange(round(x[0], 1), round(x[-1] + step, 1), step, dtype=int), rotation=45
     )
     ax2.set_yticklabels(
-        np.linspace(round(y[0], 1), round(y[-1] + step, 1), ticks_len, dtype=int)
+        np.arange(round(y[0], 1), round(y[-1] + step, 1), step, dtype=int)
     )
 
     ax2.set_ylabel("yc [px]")
@@ -360,10 +353,10 @@ def open_fwhm_map_global_min(
         if plots_flag:
             plt.savefig(f"{output_folder}/fwhm_map/{label}.png")
     plt.close()
-    return [xc, yc]
+    return [np.round(xc,0), np.round(yc,0)]
 
 
-def open_distance_map_global_min(
+def get_distance_map_global_min(
     lines: list, output_folder: str, label: str, pixel_step: int, plots_flag: bool
 ) -> tuple:
     """
@@ -439,7 +432,6 @@ def open_distance_map_global_min(
 
     fig.colorbar(pos1, ax=ax1, shrink=0.6)
 
-
     if int(np.sum(proj_y)) == 0 or int(np.sum(proj_x)) == 0:
         converged = 0
         xc = -1
@@ -449,7 +441,7 @@ def open_distance_map_global_min(
         if plots_flag:
             plt.savefig(f"{output_folder}/distance_map/{label}.png")
     plt.close()
-    return [xc, yc]
+    return [np.round(xc,1), np.round(yc,1)]
 
 
 def shift_image_by_n_pixels(data: np.ndarray, n: int, axis: int) -> np.ndarray:
@@ -512,7 +504,7 @@ def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:
     return (np.greater(R, radius)).astype(np.int32)
 
 
-def ring_mask(data, center, inner_radius, outer_radius):
+def ring_mask(data:np.ndarray, center: tuple, inner_radius: int, outer_radius: int) -> np.ndarray:
     """
     Make a  ring mask for the data
 
@@ -537,3 +529,28 @@ def ring_mask(data, center, inner_radius, outer_radius):
     R = np.sqrt(np.square(X) + np.square(Y))
     bin_size = outer_radius - inner_radius
     return np.greater(R, outer_radius - bin_size) & np.less(R, outer_radius + bin_size)
+
+
+def visualize_single_panel(data: np.ndarray, transformation_matrix: np.ndarray, ss_in_rows: bool) -> np.ndarray:
+    visual_data = np.full((2 * max(data.shape) + 1, 2 * max(data.shape) + 1), np.nan)
+
+    for i in range(data.shape[0]):
+        for j in range(data.shape[1]):
+            point = (i, j) if ss_in_rows else (j, i)
+            xy_j, xy_i = fsss_to_xy(point, transformation_matrix)
+            visual_data[xy_i][xy_j] = data[i][j]
+
+    non_nan_indices = np.where(~np.isnan(visual_data))
+    min_row_index, min_col_index = np.min(non_nan_indices, axis=1)
+    max_row_index, max_col_index = np.max(non_nan_indices, axis=1)
+
+    return visual_data[min_row_index:max_row_index + 1, min_col_index:max_col_index + 1]
+
+
+def fsss_to_xy(point: tuple, m: list) -> tuple:
+    d = m[0][0] * m[1][1] - m[0][1] * m[1][0]
+    ss = point[0] + 1
+    fs = point[1] + 1
+    x = int((m[1][1] / d) * fs - (m[0][1] / d) * ss)
+    y = int(-(m[1][0] / d) * fs + (m[0][0] / d) * ss)
+    return x, y

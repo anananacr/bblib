@@ -2,8 +2,7 @@ name: Release bblib
 
 on:
   push:
-    branches:
-      - main
+    tags: "*"
 
 jobs:
   deploy:
@@ -20,6 +19,9 @@ jobs:
     - name: Install poetry
       run: |
         pip install poetry
+
+    - name: Version bump
+      run: poetry version ${{ github.ref_name }}
 
     - name: Build package
       run: poetry build

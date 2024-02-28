@@ -531,40 +531,26 @@ def ring_mask(data:np.ndarray, center: tuple, inner_radius: int, outer_radius: i
     return np.greater(R, outer_radius - bin_size) & np.less(R, outer_radius + bin_size)
 
 
-def visualize_single_panel(data: np.ndarray, transformation_matrix:np.ndarray, ss_in_rows: bool)->np.ndarray:
-    visual_data = np.zeros((2*max(data.shape)+1, 2*max(data.shape)+1))
-    visual_data[visual_data==0]=np.nan
+def visualize_single_panel(data: np.ndarray, transformation_matrix: np.ndarray, ss_in_rows: bool) -> np.ndarray:
+    visual_data = np.full((2 * max(data.shape) + 1, 2 * max(data.shape) + 1), np.nan)
 
-    for i, row in enumerate(data):
-        for j, col in enumerate(row):
-            if ss_in_rows:
-                xy_j, xy_i = fsss_to_xy((i, j), transformation_matrix)
-            else:
-                xy_j, xy_i = fsss_to_xy((j, i), transformation_matrix)
+    for i in range(data.shape[0]):
+        for j in range(data.shape[1]):
+            point = (i, j) if ss_in_rows else (j, i)
+            xy_j, xy_i = fsss_to_xy(point, transformation_matrix)
             visual_data[xy_i][xy_j] = data[i][j]
-    
-    max_row_index=-1
-    max_col_index=-1
-    min_row_index=visual_data.shape[0]
-    min_col_index=visual_data.shape[0]
-    for i, row in enumerate(visual_data):
-            for j, col in enumerate(row):
-                if not np.isnan(visual_data[i][j]):
-                    if i>max_row_index:
-                        max_row_index=i
-                    if j>max_col_index:
-                        max_col_index=j
-                    if i<min_row_index:
-                        min_row_index=i
-                    if j<min_col_index:
-                        min_col_index=j
-                    
-    return visual_data[min_row_index:max_row_index+1, min_col_index:max_col_index+1]
 
-def fsss_to_xy(point: tuple, m: list) ->tuple:
-    d = m[0][0]*m[1][1] - m[0][1]*m[1][0]
-    ss = point[0]+1
-    fs = point[1]+1
-    x = int(+(m[1][1]/d)*fs -(m[0][1]/d)*ss)
-    y = int(-(m[1][0]/d)*fs +(m[0][0]/d)*ss)
-    return (x,y)
+    non_nan_indices = np.where(~np.isnan(visual_data))
+    min_row_index, min_col_index = np.min(non_nan_indices, axis=1)
+    max_row_index, max_col_index = np.max(non_nan_indices, axis=1)
+
+    return visual_data[min_row_index:max_row_index + 1, min_col_index:max_col_index + 1]
+
+
+def fsss_to_xy(point: tuple, m: list) -> tuple:
+    d = m[0][0] * m[1][1] - m[0][1] * m[1][0]
+    ss = point[0] + 1
+    fs = point[1] + 1
+    x = int((m[1][1] / d) * fs - (m[0][1] / d) * ss)
+    y = int(-(m[1][0] / d) * fs + (m[0][0] / d) * ss)
+    return x, y

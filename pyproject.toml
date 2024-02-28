@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bblib"
-version = "1.0.0"
+version = "1.0.2"
 description = "beambusters library to refine the detector center for crystallography data processing."
 authors = ["Ana Rodrigues <ana.rodrigues@desy.de>"]
 license = "GNU"

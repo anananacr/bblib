@@ -8,7 +8,7 @@ from bblib.utils import (
     get_fwhm_map_global_min,
     get_distance_map_global_min,
     correct_polarization,
-    visualize_single_panel
+    visualize_single_panel,
 )
 import math
 from scipy import ndimage
@@ -21,6 +21,7 @@ from skimage.feature import canny
 import multiprocessing
 import pathlib
 from scipy.optimize import curve_fit
+
 
 class CenteringMethod(ABC):
     @abstractmethod
@@ -44,13 +45,14 @@ class CenteringMethod(ABC):
 
 
 class CenterOfMass(CenteringMethod):
-    def __init__(self, config: dict, PF8Config: PF8Info,  plots_info: dict = None):
+    def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict = None):
         self.config = config
         self.PF8Config = PF8Config
         self.plots_info = plots_info
         if config["plots_flag"] and not plots_info:
-            raise ValueError("From config you want to save plots, please indicate the information to save the plots.")
-
+            raise ValueError(
+                "From config you want to save plots, please indicate the information to save the plots."
+            )
 
     def _prep_for_centering(self, data: np.ndarray) -> None:
         self.initial_detector_center = self.PF8Config.get_detector_center()
@@ -65,23 +67,29 @@ class CenterOfMass(CenteringMethod):
             col_peak = int(peak_list_x_in_frame[idx] + self.initial_detector_center[0])
             row_indexes[idx] = row_peak
             col_indexes[idx] = col_peak
-        peaks_indexes =(row_indexes, col_indexes)
-        
+        peaks_indexes = (row_indexes, col_indexes)
+
         # Assemble data and mask
         data_visualize = geometry.DataVisualizer(pixel_maps=self.PF8Config.pixel_maps)
 
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
-        if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
-                > 1
-            ):
+        if (
+            self.PF8Config.pf8_detector_info["nasics_x"]
+            * self.PF8Config.pf8_detector_info["nasics_y"]
+            > 1
+        ):
             self.visual_data = data_visualize.visualize_data(data=data * mask)
             visual_mask = data_visualize.visualize_data(data=mask).astype(int)
         else:
-            
-            self.visual_data = visualize_single_panel(data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
-            visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
+
+            self.visual_data = visualize_single_panel(
+                data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows
+            )
+            visual_mask = visualize_single_panel(
+                mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows
+            )
 
         # JF for safety
         visual_mask[np.where(self.visual_data < 0)] = 0
@@ -103,10 +111,29 @@ class CenterOfMass(CenteringMethod):
 
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-            ax1.imshow(self.visual_data*self.mask_for_center_of_mass, vmax=10, cmap="YlGn", origin="lower")
-            ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='blue', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
-            ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Refined detector center: ({center[0]}, {center[1]})")
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_of_mass/')
+            ax1.imshow(
+                self.visual_data * self.mask_for_center_of_mass,
+                vmax=10,
+                cmap="YlGn",
+                origin="lower",
+            )
+            ax1.scatter(
+                self.initial_detector_center[0],
+                self.initial_detector_center[1],
+                color="blue",
+                marker="o",
+                label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})",
+            )
+            ax1.scatter(
+                center[0],
+                center[1],
+                color="r",
+                marker="o",
+                label=f"Refined detector center: ({center[0]}, {center[1]})",
+            )
+            path = pathlib.Path(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_of_mass/'
+            )
             path.mkdir(parents=True, exist_ok=True)
             ax1.legend()
             plt.savefig(
@@ -117,13 +144,14 @@ class CenterOfMass(CenteringMethod):
 
 
 class CircleDetection(CenteringMethod):
-    def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict =None):
+    def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict = None):
         self.config = config
         self.PF8Config = PF8Config
         self.plots_info = plots_info
         if config["plots_flag"] and not plots_info:
-            raise ValueError("From config you want to save plots, please indicate the information to save the plots.")
-
+            raise ValueError(
+                "From config you want to save plots, please indicate the information to save the plots."
+            )
 
     def _prep_for_centering(self, data: np.ndarray) -> None:
         self.initial_detector_center = self.PF8Config.get_detector_center()
@@ -139,28 +167,37 @@ class CircleDetection(CenteringMethod):
             col_peak = int(peak_list_x_in_frame[idx] + self.initial_detector_center[0])
             row_indexes[idx] = row_peak
             col_indexes[idx] = col_peak
-        peaks_indexes =(row_indexes, col_indexes)
-        
+        peaks_indexes = (row_indexes, col_indexes)
+
         # Assemble data and mask
         data_visualize = geometry.DataVisualizer(pixel_maps=self.PF8Config.pixel_maps)
 
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
-        if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
-                > 1
-            ):
+        if (
+            self.PF8Config.pf8_detector_info["nasics_x"]
+            * self.PF8Config.pf8_detector_info["nasics_y"]
+            > 1
+        ):
             self.visual_data = data_visualize.visualize_data(data=data * mask)
             visual_mask = data_visualize.visualize_data(data=mask).astype(int)
         else:
-            
-            self.visual_data = visualize_single_panel(data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
-            visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
+
+            self.visual_data = visualize_single_panel(
+                data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows
+            )
+            visual_mask = visualize_single_panel(
+                mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows
+            )
 
         # JF for safety
         visual_mask[np.where(self.visual_data < 0)] = 0
         only_peaks_mask = mask_peaks(
-            visual_mask, peaks_indexes, bragg=0, n=self.config["pixels_for_mask_of_bragg_peaks"]
+            visual_mask,
+            peaks_indexes,
+            bragg=0,
+            n=self.config["pixels_for_mask_of_bragg_peaks"],
         )
         self.mask_for_circle_detection = only_peaks_mask * visual_mask
 
@@ -178,7 +215,9 @@ class CircleDetection(CenteringMethod):
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             ax1.imshow(edges, origin="lower")
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/edges/')
+            path = pathlib.Path(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/edges/'
+            )
             path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/edges/{self.plots_info["file_name"]}.png'
@@ -204,10 +243,29 @@ class CircleDetection(CenteringMethod):
         center = [xc, yc]
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-            ax1.imshow(self.visual_data*self.mask_for_circle_detection, vmax=10, origin="lower", cmap="YlGn")
-            ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='blue', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
-            ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Refined detector center: ({center[0]}, {center[1]})")
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_circle_detection/')
+            ax1.imshow(
+                self.visual_data * self.mask_for_circle_detection,
+                vmax=10,
+                origin="lower",
+                cmap="YlGn",
+            )
+            ax1.scatter(
+                self.initial_detector_center[0],
+                self.initial_detector_center[1],
+                color="blue",
+                marker="o",
+                label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})",
+            )
+            ax1.scatter(
+                center[0],
+                center[1],
+                color="r",
+                marker="o",
+                label=f"Refined detector center: ({center[0]}, {center[1]})",
+            )
+            path = pathlib.Path(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_circle_detection/'
+            )
             path.mkdir(parents=True, exist_ok=True)
             ax1.legend()
             plt.savefig(
@@ -224,8 +282,9 @@ class MinimizePeakFWHM(CenteringMethod):
         self.plots_info = plots_info
         self.plot_fwhm_flag = False
         if config["plots_flag"] and not plots_info:
-            raise ValueError("From config you want to save plots, please indicate the information to save the plots.")
-
+            raise ValueError(
+                "From config you want to save plots, please indicate the information to save the plots."
+            )
 
     def _calculate_fwhm(self, coordinate: tuple) -> dict:
         center_to_radial_average = coordinate
@@ -284,7 +343,7 @@ class MinimizePeakFWHM(CenteringMethod):
             x_fit = x.copy()
             y_fit = gaussian_lin(x_fit, *popt)
 
-            plt.vlines([x[0], x[-1]], 0, round(popt[0])*10, "r")
+            plt.vlines([x[0], x[-1]], 0, round(popt[0]) * 10, "r")
 
             plt.plot(
                 x_fit,
@@ -297,7 +356,9 @@ class MinimizePeakFWHM(CenteringMethod):
             plt.xlim(0, 500)
             plt.ylim(0, 5)
             plt.legend()
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/')
+            path = pathlib.Path(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/'
+            )
             path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/{self.plots_info["file_name"]}.png'
@@ -328,37 +389,60 @@ class MinimizePeakFWHM(CenteringMethod):
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
         if self.config["polarization"]["skip"]:
-            if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
+            peak_list = pf8.get_peaks_pf8(data=data)
+            if (
+                self.PF8Config.pf8_detector_info["nasics_x"]
+                * self.PF8Config.pf8_detector_info["nasics_y"]
                 > 1
             ):
                 self.visual_data = data_visualize.visualize_data(data=data * mask)
                 visual_mask = data_visualize.visualize_data(data=mask).astype(int)
             else:
-                self.visual_data = visualize_single_panel(data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
-                visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
+                self.visual_data = visualize_single_panel(
+                    data,
+                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.ss_in_rows,
+                )
+                visual_mask = visualize_single_panel(
+                    mask,
+                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.ss_in_rows,
+                )
         else:
             pol_corrected_data, pol_array_map = correct_polarization(
                 self.PF8Config.pixel_maps["x"],
                 self.PF8Config.pixel_maps["y"],
-                float(np.mean(self.PF8Config.pixel_maps["z"]) * self.PF8Config.pixel_resolution),
+                float(
+                    np.mean(self.PF8Config.pixel_maps["z"])
+                    * self.PF8Config.pixel_resolution
+                ),
                 data,
                 mask=mask,
                 polarization_axis=self.config["polarization"]["axis"],
                 p=self.config["polarization"]["value"],
             )
-            if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
+            peak_list = pf8.get_peaks_pf8(data=pol_corrected_data)
+            if (
+                self.PF8Config.pf8_detector_info["nasics_x"]
+                * self.PF8Config.pf8_detector_info["nasics_y"]
                 > 1
             ):
-                self.visual_data = data_visualize.visualize_data(data=pol_corrected_data * mask)
+                self.visual_data = data_visualize.visualize_data(
+                    data=pol_corrected_data * mask
+                )
                 visual_mask = data_visualize.visualize_data(data=mask).astype(int)
             else:
-                self.visual_data = visualize_single_panel(pol_corrected_data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
-                visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
+                self.visual_data = visualize_single_panel(
+                    pol_corrected_data,
+                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.ss_in_rows,
+                )
+                visual_mask = visualize_single_panel(
+                    mask,
+                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.ss_in_rows,
+                )
 
-        if self.config["polarization"]["skip"]:
-            peak_list = pf8.get_peaks_pf8(data=data)
-        else:
-            peak_list = pf8.get_peaks_pf8(data=pol_corrected_data)
         peak_list_x_in_frame, peak_list_y_in_frame = pf8.peak_list_in_slab(peak_list)
         row_indexes = np.zeros(peak_list["num_peaks"], dtype=int)
         col_indexes = np.zeros(peak_list["num_peaks"], dtype=int)
@@ -368,13 +452,16 @@ class MinimizePeakFWHM(CenteringMethod):
             col_peak = int(peak_list_x_in_frame[idx] + self.initial_guess[0])
             row_indexes[idx] = row_peak
             col_indexes[idx] = col_peak
-        peaks_indexes =(row_indexes, col_indexes)
+        peaks_indexes = (row_indexes, col_indexes)
 
         # JF for safety
         visual_mask[np.where(self.visual_data < 0)] = 0
 
         only_peaks_mask = mask_peaks(
-            visual_mask, peaks_indexes, bragg=0, n=self.config["pixels_for_mask_of_bragg_peaks"]
+            visual_mask,
+            peaks_indexes,
+            bragg=0,
+            n=self.config["pixels_for_mask_of_bragg_peaks"],
         )
         self.mask_for_fwhm_min = only_peaks_mask * visual_mask
 
@@ -405,7 +492,9 @@ class MinimizePeakFWHM(CenteringMethod):
 
     def _run_centering(self, **kwargs) -> tuple:
         if self.config["plots_flag"]:
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/fwhm_map/')
+            path = pathlib.Path(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/fwhm_map/'
+            )
             path.mkdir(parents=True, exist_ok=True)
 
         center = get_fwhm_map_global_min(
@@ -413,7 +502,7 @@ class MinimizePeakFWHM(CenteringMethod):
             f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}',
             f'{self.plots_info["file_name"]}',
             self.pixel_step,
-            self.config["plots_flag"]
+            self.config["plots_flag"],
         )
 
         if self.centering_converged(center):
@@ -423,11 +512,36 @@ class MinimizePeakFWHM(CenteringMethod):
 
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-            ax1.imshow(self.visual_data * self.mask_for_fwhm_min, vmax=10, origin="lower", cmap="YlGn")
-            ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='blue', marker='o', label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})")
-            ax1.scatter(self.initial_detector_center[0], self.initial_detector_center[1], color='blue', marker='o', label=f"Initial guess: ({np.round(self.initial_guess[0])}, {np.round(self.initial_guess[1])})")
-            ax1.scatter(center[0], center[1], color='r', marker='o', label=f"Refined detector center: ({center[0]}, {center[1]})")
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_fwhm_minimization/')
+            ax1.imshow(
+                self.visual_data * self.mask_for_fwhm_min,
+                vmax=10,
+                origin="lower",
+                cmap="YlGn",
+            )
+            ax1.scatter(
+                self.initial_detector_center[0],
+                self.initial_detector_center[1],
+                color="blue",
+                marker="o",
+                label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})",
+            )
+            ax1.scatter(
+                self.initial_detector_center[0],
+                self.initial_detector_center[1],
+                color="blue",
+                marker="o",
+                label=f"Initial guess: ({np.round(self.initial_guess[0])}, {np.round(self.initial_guess[1])})",
+            )
+            ax1.scatter(
+                center[0],
+                center[1],
+                color="r",
+                marker="o",
+                label=f"Refined detector center: ({center[0]}, {center[1]})",
+            )
+            path = pathlib.Path(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_fwhm_minimization/'
+            )
             path.mkdir(parents=True, exist_ok=True)
             ax1.legend()
             plt.savefig(
@@ -444,8 +558,9 @@ class FriedelPairs(CenteringMethod):
         self.PF8Config = PF8Config
         self.plots_info = plots_info
         if config["plots_flag"] and not plots_info:
-            raise ValueError("From config you want to save plots, please indicate the information to save the plots.")
-
+            raise ValueError(
+                "From config you want to save plots, please indicate the information to save the plots."
+            )
 
     def _remove_repeated_pairs(self, pairs_list: list) -> list:
         x_vector = []
@@ -542,7 +657,7 @@ class FriedelPairs(CenteringMethod):
         )
 
         pf8 = PF8(self.PF8Config)
-        
+
         # Assemble data and mask
         data_visualize = geometry.DataVisualizer(pixel_maps=self.PF8Config.pixel_maps)
 
@@ -550,43 +665,62 @@ class FriedelPairs(CenteringMethod):
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
         if self.config["polarization"]["skip"]:
-            if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
+            peak_list = pf8.get_peaks_pf8(data=data)
+            if (
+                self.PF8Config.pf8_detector_info["nasics_x"]
+                * self.PF8Config.pf8_detector_info["nasics_y"]
                 > 1
             ):
                 self.visual_data = data_visualize.visualize_data(data=data * mask)
                 visual_mask = data_visualize.visualize_data(data=mask).astype(int)
             else:
-                self.visual_data = visualize_single_panel(data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
-                visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
+                self.visual_data = visualize_single_panel(
+                    data,
+                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.ss_in_rows,
+                )
+                visual_mask = visualize_single_panel(
+                    mask,
+                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.ss_in_rows,
+                )
         else:
             pol_corrected_data, pol_array_map = correct_polarization(
                 self.PF8Config.pixel_maps["x"],
                 self.PF8Config.pixel_maps["y"],
-                float(np.mean(self.PF8Config.pixel_maps["z"]) * self.PF8Config.pixel_resolution),
+                float(
+                    np.mean(self.PF8Config.pixel_maps["z"])
+                    * self.PF8Config.pixel_resolution
+                ),
                 data,
                 mask=mask,
                 polarization_axis=self.config["polarization"]["axis"],
                 p=self.config["polarization"]["value"],
             )
-            if (self.PF8Config.pf8_detector_info["nasics_x"] * self.PF8Config.pf8_detector_info["nasics_y"]
+            peak_list = pf8.get_peaks_pf8(data=pol_corrected_data)
+            if (
+                self.PF8Config.pf8_detector_info["nasics_x"]
+                * self.PF8Config.pf8_detector_info["nasics_y"]
                 > 1
             ):
-                self.visual_data = data_visualize.visualize_data(data=pol_corrected_data * mask)
+                self.visual_data = data_visualize.visualize_data(
+                    data=pol_corrected_data * mask
+                )
                 visual_mask = data_visualize.visualize_data(data=mask).astype(int)
             else:
-                self.visual_data = visualize_single_panel(pol_corrected_data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
-                visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
-
-        if self.config["polarization"]["skip"]:
-            peak_list = pf8.get_peaks_pf8(data=data)
-        else:
-            peak_list = pf8.get_peaks_pf8(data=pol_corrected_data)
+                self.visual_data = visualize_single_panel(
+                    pol_corrected_data,
+                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.ss_in_rows,
+                )
+                visual_mask = visualize_single_panel(
+                    mask,
+                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.ss_in_rows,
+                )
 
         peak_list_in_slab = pf8.peak_list_in_slab(peak_list)
         self.peak_list_x_in_frame, self.peak_list_y_in_frame = peak_list_in_slab
-
-
-
 
     def _run_centering(self, **kwargs) -> tuple:
         peak_list_x_in_frame = self.peak_list_x_in_frame.copy()
@@ -626,7 +760,9 @@ class FriedelPairs(CenteringMethod):
 
         ## Minimize distance
         if self.config["plots_flag"]:
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/distance_map/')
+            path = pathlib.Path(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/distance_map/'
+            )
             path.mkdir(parents=True, exist_ok=True)
 
         center = get_distance_map_global_min(
@@ -642,7 +778,9 @@ class FriedelPairs(CenteringMethod):
             shift_y = 2 * (center[1] - self.initial_guess[1])
 
             fig, ax = plt.subplots(1, 1, figsize=(8, 8))
-            pos = ax.imshow(self.visual_data, vmin=0, vmax=100, cmap="YlGn", origin="lower")
+            pos = ax.imshow(
+                self.visual_data, vmin=0, vmax=100, cmap="YlGn", origin="lower"
+            )
             ax.scatter(
                 self.initial_detector_center[0],
                 self.initial_detector_center[1],
@@ -659,7 +797,7 @@ class FriedelPairs(CenteringMethod):
                 s=150,
                 label=f"Initial guess:({np.round(self.initial_guess[0],1)},{np.round(self.initial_guess[1], 1)})",
             )
-            
+
             ax.scatter(
                 center[0],
                 center[1],
@@ -673,7 +811,9 @@ class FriedelPairs(CenteringMethod):
             plt.title("Center refinement: autocorrelation of Friedel pairs")
             fig.colorbar(pos, shrink=0.6)
             ax.legend()
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/centered_friedel/')
+            path = pathlib.Path(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/centered_friedel/'
+            )
             path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/centered_friedel/{self.plots_info["file_name"]}.png'
@@ -702,7 +842,9 @@ class FriedelPairs(CenteringMethod):
 
             ## Check pairs alignement
             fig, ax = plt.subplots(1, 1, figsize=(8, 8))
-            pos = ax.imshow(self.visual_data, vmin=0, vmax=100, cmap="YlGn", origin="lower")
+            pos = ax.imshow(
+                self.visual_data, vmin=0, vmax=100, cmap="YlGn", origin="lower"
+            )
             ax.scatter(
                 original_peaks_x,
                 original_peaks_y,
@@ -740,7 +882,9 @@ class FriedelPairs(CenteringMethod):
             plt.title("Bragg peaks alignement")
             fig.colorbar(pos, shrink=0.6)
             ax.legend()
-            path = pathlib.Path(f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/peaks/')
+            path = pathlib.Path(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/peaks/'
+            )
             path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/peaks/{self.plots_info["file_name"]}.png'

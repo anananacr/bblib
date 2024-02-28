@@ -1,6 +1,7 @@
 from numpy import exp
 import numpy as np
 import matplotlib.pyplot as plt
+
 plt.switch_backend("agg")
 import math
 
@@ -34,7 +35,7 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
         xc = -1
         yc = -1
 
-    return [np.round(xc,1), np.round(yc,1)]
+    return [np.round(xc, 1), np.round(yc, 1)]
 
 
 def azimuthal_average(
@@ -353,7 +354,7 @@ def get_fwhm_map_global_min(
         if plots_flag:
             plt.savefig(f"{output_folder}/fwhm_map/{label}.png")
     plt.close()
-    return [np.round(xc,0), np.round(yc,0)]
+    return [np.round(xc, 0), np.round(yc, 0)]
 
 
 def get_distance_map_global_min(
@@ -441,7 +442,7 @@ def get_distance_map_global_min(
         if plots_flag:
             plt.savefig(f"{output_folder}/distance_map/{label}.png")
     plt.close()
-    return [np.round(xc,1), np.round(yc,1)]
+    return [np.round(xc, 1), np.round(yc, 1)]
 
 
 def shift_image_by_n_pixels(data: np.ndarray, n: int, axis: int) -> np.ndarray:
@@ -504,7 +505,9 @@ def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:
     return (np.greater(R, radius)).astype(np.int32)
 
 
-def ring_mask(data:np.ndarray, center: tuple, inner_radius: int, outer_radius: int) -> np.ndarray:
+def ring_mask(
+    data: np.ndarray, center: tuple, inner_radius: int, outer_radius: int
+) -> np.ndarray:
     """
     Make a  ring mask for the data
 
@@ -531,7 +534,9 @@ def ring_mask(data:np.ndarray, center: tuple, inner_radius: int, outer_radius: i
     return np.greater(R, outer_radius - bin_size) & np.less(R, outer_radius + bin_size)
 
 
-def visualize_single_panel(data: np.ndarray, transformation_matrix: np.ndarray, ss_in_rows: bool) -> np.ndarray:
+def visualize_single_panel(
+    data: np.ndarray, transformation_matrix: np.ndarray, ss_in_rows: bool
+) -> np.ndarray:
     visual_data = np.full((2 * max(data.shape) + 1, 2 * max(data.shape) + 1), np.nan)
 
     for i in range(data.shape[0]):
@@ -544,7 +549,9 @@ def visualize_single_panel(data: np.ndarray, transformation_matrix: np.ndarray, 
     min_row_index, min_col_index = np.min(non_nan_indices, axis=1)
     max_row_index, max_col_index = np.max(non_nan_indices, axis=1)
 
-    return visual_data[min_row_index:max_row_index + 1, min_col_index:max_col_index + 1]
+    return visual_data[
+        min_row_index : max_row_index + 1, min_col_index : max_col_index + 1
+    ]
 
 
 def fsss_to_xy(point: tuple, m: list) -> tuple:

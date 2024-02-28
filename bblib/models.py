@@ -2,7 +2,12 @@ import numpy as np
 from dataclasses import dataclass, field
 import math
 from om.algorithms.crystallography import TypePeakList, Peakfinder8PeakDetection
-from om.lib.geometry import TypePixelMaps, TypeDetectorLayoutInformation, GeometryInformation, _read_crystfel_geometry_from_text
+from om.lib.geometry import (
+    TypePixelMaps,
+    TypeDetectorLayoutInformation,
+    GeometryInformation,
+    _read_crystfel_geometry_from_text,
+)
 
 
 @dataclass
@@ -40,9 +45,8 @@ class PF8Info:
             raise ValueError(
                 f"Pixel maps have been moved once before, to avoid errors reset the geometry before moving it again."
             )
-            
-            
-    def set_geometry_from_file(self, geometry_filename:str):
+
+    def set_geometry_from_file(self, geometry_filename: str):
         geometry_txt = open(geometry_filename, "r").readlines()
         self.bad_pixel_map_filename = [
             x.split(" = ")[-1][:-1]
@@ -56,31 +60,54 @@ class PF8Info:
         geom = GeometryInformation(
             geometry_description=geometry_txt, geometry_format="crystfel"
         )
-        self.pixel_resolution=1/geom.get_pixel_size()
+        self.pixel_resolution = 1 / geom.get_pixel_size()
         self.pixel_maps = geom.get_pixel_maps()
         self._data_shape = self.pixel_maps["x"].shape
         self._flattened_data_shape = self.pixel_maps["x"].flatten().shape[0]
         self.pf8_detector_info = geom.get_layout_info()
         self._shifted_pixel_maps = False
         self.detector_center_from_geom = self.get_detector_center()
-        
 
-        if (self.pf8_detector_info["nasics_x"] * self.pf8_detector_info["nasics_y"]) == 1:
+        if (
+            self.pf8_detector_info["nasics_x"] * self.pf8_detector_info["nasics_y"]
+        ) == 1:
             ## Get single panel transformation matrix from the geometry file
             ### Warning! Check carefully if the visualized data after reorientation of the panel makes sense, e.g. if it is equal to the real experimental data geometry.
             detector, _, _ = _read_crystfel_geometry_from_text(text_lines=geometry_txt)
-            detector_panels=dict(detector["panels"])
-            panel_name=list(detector_panels.keys())[0]
-            frame_dim_structure=[x for x in detector_panels[panel_name]["dim_structure"] if x=="ss" or x=="fs"]
+            detector_panels = dict(detector["panels"])
+            panel_name = list(detector_panels.keys())[0]
+            frame_dim_structure = [
+                x
+                for x in detector_panels[panel_name]["dim_structure"]
+                if x == "ss" or x == "fs"
+            ]
 
-            if frame_dim_structure[0]=="ss":
+            if frame_dim_structure[0] == "ss":
                 self.ss_in_rows = True
-            else: 
+            else:
                 self.ss_in_rows = False
-            self.transformation_matrix=[[detector_panels[panel_name]["fsx"], detector_panels[panel_name]["fsy"]],[detector_panels[panel_name]["ssx"], detector_panels[panel_name]["ssy"]]]
+            self.transformation_matrix = [
+                [
+                    detector_panels[panel_name]["fsx"],
+                    detector_panels[panel_name]["fsy"],
+                ],
+                [
+                    detector_panels[panel_name]["ssx"],
+                    detector_panels[panel_name]["ssy"],
+                ],
+            ]
 
-            self.transformation_matrix=[[detector_panels[panel_name]["fsx"], detector_panels[panel_name]["fsy"]],[detector_panels[panel_name]["ssx"], detector_panels[panel_name]["ssy"]]]
-            
+            self.transformation_matrix = [
+                [
+                    detector_panels[panel_name]["fsx"],
+                    detector_panels[panel_name]["fsy"],
+                ],
+                [
+                    detector_panels[panel_name]["ssx"],
+                    detector_panels[panel_name]["ssy"],
+                ],
+            ]
+
     def get(self, parameter: str):
         if parameter == "max_num_peaks":
             return self.max_num_peaks

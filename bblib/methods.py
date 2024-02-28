@@ -321,8 +321,6 @@ class MinimizePeakFWHM(CenteringMethod):
         )
         pf8 = PF8(self.PF8Config)
 
-        
-        
         # Assemble data and mask
         data_visualize = geometry.DataVisualizer(pixel_maps=self.PF8Config.pixel_maps)
 
@@ -584,7 +582,6 @@ class FriedelPairs(CenteringMethod):
         else:
             peak_list = pf8.get_peaks_pf8(data=pol_corrected_data)
 
-        peak_list = pf8.get_peaks_pf8(data=data)
         peak_list_in_slab = pf8.peak_list_in_slab(peak_list)
         self.peak_list_x_in_frame, self.peak_list_y_in_frame = peak_list_in_slab
 

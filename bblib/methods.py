@@ -321,17 +321,7 @@ class MinimizePeakFWHM(CenteringMethod):
         )
         pf8 = PF8(self.PF8Config)
 
-        peak_list = pf8.get_peaks_pf8(data=data)
-        peak_list_x_in_frame, peak_list_y_in_frame = pf8.peak_list_in_slab(peak_list)
-        row_indexes = np.zeros(peak_list["num_peaks"], dtype=int)
-        col_indexes = np.zeros(peak_list["num_peaks"], dtype=int)
-
-        for idx, k in enumerate(peak_list_y_in_frame):
-            row_peak = int(k + self.initial_detector_center[1])
-            col_peak = int(peak_list_x_in_frame[idx] + self.initial_detector_center[0])
-            row_indexes[idx] = row_peak
-            col_indexes[idx] = col_peak
-        peaks_indexes =(row_indexes, col_indexes)
+        
         
         # Assemble data and mask
         data_visualize = geometry.DataVisualizer(pixel_maps=self.PF8Config.pixel_maps)
@@ -367,6 +357,20 @@ class MinimizePeakFWHM(CenteringMethod):
                 self.visual_data = visualize_single_panel(pol_corrected_data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
                 visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
 
+        if self.config["polarization"]["skip"]:
+            peak_list = pf8.get_peaks_pf8(data=data)
+        else:
+            peak_list = pf8.get_peaks_pf8(data=pol_corrected_data)
+        peak_list_x_in_frame, peak_list_y_in_frame = pf8.peak_list_in_slab(peak_list)
+        row_indexes = np.zeros(peak_list["num_peaks"], dtype=int)
+        col_indexes = np.zeros(peak_list["num_peaks"], dtype=int)
+
+        for idx, k in enumerate(peak_list_y_in_frame):
+            row_peak = int(k + self.initial_guess[1])
+            col_peak = int(peak_list_x_in_frame[idx] + self.initial_guess[0])
+            row_indexes[idx] = row_peak
+            col_indexes[idx] = col_peak
+        peaks_indexes =(row_indexes, col_indexes)
 
         # JF for safety
         visual_mask[np.where(self.visual_data < 0)] = 0
@@ -540,11 +544,7 @@ class FriedelPairs(CenteringMethod):
         )
 
         pf8 = PF8(self.PF8Config)
-        peak_list = pf8.get_peaks_pf8(data=data)
-        peak_list_in_slab = pf8.peak_list_in_slab(peak_list)
-
-        self.peak_list_x_in_frame, self.peak_list_y_in_frame = peak_list_in_slab
-
+        
         # Assemble data and mask
         data_visualize = geometry.DataVisualizer(pixel_maps=self.PF8Config.pixel_maps)
 
@@ -578,6 +578,17 @@ class FriedelPairs(CenteringMethod):
             else:
                 self.visual_data = visualize_single_panel(pol_corrected_data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
                 visual_mask = visualize_single_panel(mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows)
+
+        if self.config["polarization"]["skip"]:
+            peak_list = pf8.get_peaks_pf8(data=data)
+        else:
+            peak_list = pf8.get_peaks_pf8(data=pol_corrected_data)
+
+        peak_list = pf8.get_peaks_pf8(data=data)
+        peak_list_in_slab = pf8.peak_list_in_slab(peak_list)
+        self.peak_list_x_in_frame, self.peak_list_y_in_frame = peak_list_in_slab
+
+
 
 
     def _run_centering(self, **kwargs) -> tuple:

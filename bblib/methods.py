@@ -836,7 +836,7 @@ class FriedelPairs(CenteringMethod):
                 label=f"Refined detector center:({np.round(center[0],1)}, {np.round(center[1],1)})",
             )
             ax.set_xlim(200, 900)
-            ax.set_ylim(900, 200)
+            ax.set_ylim(200, 900)
             plt.title("Center refinement: autocorrelation of Friedel pairs")
             fig.colorbar(pos, shrink=0.6)
             ax.legend()
@@ -907,7 +907,7 @@ class FriedelPairs(CenteringMethod):
                 label="shift of inverted peaks",
             )
             ax.set_xlim(200, 900)
-            ax.set_ylim(900, 200)
+            ax.set_ylim(200, 900)
             plt.title("Bragg peaks alignement")
             fig.colorbar(pos, shrink=0.6)
             ax.legend()

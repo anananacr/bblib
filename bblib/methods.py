@@ -773,6 +773,7 @@ class FriedelPairs(CenteringMethod):
             self.config["plots_flag"],
         )
 
+
         if self.config["plots_flag"] and self.centering_converged(center):
             shift_x = 2 * (center[0] - self.initial_guess[0])
             shift_y = 2 * (center[1] - self.initial_guess[1])

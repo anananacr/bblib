@@ -54,6 +54,13 @@ class CenterOfMass(CenteringMethod):
                 "From config you want to save plots, please indicate the information to save the plots."
             )
 
+        if not config["plots_flag"] and not plots_info:
+            plots_info =  {
+	        "file_name": "",
+	        "folder_name": "",
+	        "root_path": ""
+            }
+
     def _prep_for_centering(self, data: np.ndarray) -> None:
         self.initial_detector_center = self.PF8Config.get_detector_center()
         pf8 = PF8(self.PF8Config)
@@ -152,6 +159,13 @@ class CircleDetection(CenteringMethod):
             raise ValueError(
                 "From config you want to save plots, please indicate the information to save the plots."
             )
+
+        if not config["plots_flag"] and not plots_info:
+            plots_info =  {
+	        "file_name": "",
+	        "folder_name": "",
+	        "root_path": ""
+            }
 
     def _prep_for_centering(self, data: np.ndarray) -> None:
         self.initial_detector_center = self.PF8Config.get_detector_center()
@@ -285,6 +299,14 @@ class MinimizePeakFWHM(CenteringMethod):
             raise ValueError(
                 "From config you want to save plots, please indicate the information to save the plots."
             )
+
+        if not config["plots_flag"] and not plots_info:
+            plots_info =  {
+	        "file_name": "",
+	        "folder_name": "",
+	        "root_path": ""
+            }
+
 
     def _calculate_fwhm(self, coordinate: tuple) -> dict:
         center_to_radial_average = coordinate
@@ -561,7 +583,13 @@ class FriedelPairs(CenteringMethod):
             raise ValueError(
                 "From config you want to save plots, please indicate the information to save the plots."
             )
-
+        
+        if not config["plots_flag"] and not plots_info:
+            plots_info =  {
+	        "file_name": "",
+	        "folder_name": "",
+	        "root_path": ""
+            }
     def _remove_repeated_pairs(self, pairs_list: list) -> list:
         x_vector = []
         y_vector = []

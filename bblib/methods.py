@@ -21,7 +21,7 @@ from skimage.feature import canny
 import multiprocessing
 import pathlib
 from scipy.optimize import curve_fit
-
+from matplotlib.colors import LogNorm
 
 class CenteringMethod(ABC):
     @abstractmethod
@@ -120,7 +120,7 @@ class CenterOfMass(CenteringMethod):
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             ax1.imshow(
                 self.visual_data * self.mask_for_center_of_mass,
-                vmax=10,
+                norm=LogNorm(),
                 cmap="YlGn",
                 origin="lower",
             )
@@ -259,7 +259,7 @@ class CircleDetection(CenteringMethod):
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             ax1.imshow(
                 self.visual_data * self.mask_for_circle_detection,
-                vmax=10,
+                norm=LogNorm(),
                 origin="lower",
                 cmap="YlGn",
             )
@@ -536,7 +536,7 @@ class MinimizePeakFWHM(CenteringMethod):
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             ax1.imshow(
                 self.visual_data * self.mask_for_fwhm_min,
-                vmax=10,
+                norm=LogNorm(),
                 origin="lower",
                 cmap="YlGn",
             )
@@ -748,11 +748,13 @@ class FriedelPairs(CenteringMethod):
                 )
 
         peak_list_in_slab = pf8.peak_list_in_slab(peak_list)
+        #print(peak_list_in_slab)
         self.peak_list_x_in_frame, self.peak_list_y_in_frame = peak_list_in_slab
 
     def _run_centering(self, **kwargs) -> tuple:
-        peak_list_x_in_frame = self.peak_list_x_in_frame.copy()
-        peak_list_y_in_frame = self.peak_list_y_in_frame.copy()
+       
+        peak_list_y_in_frame = self.peak_list_x_in_frame.copy()
+        peak_list_x_in_frame = self.peak_list_y_in_frame.copy()
 
         peaks = list(zip(peak_list_x_in_frame, peak_list_y_in_frame))
         inverted_peaks_x = [-1 * k for k in peak_list_x_in_frame]
@@ -806,9 +808,9 @@ class FriedelPairs(CenteringMethod):
             shift_x = 2 * (center[0] - self.initial_guess[0])
             shift_y = 2 * (center[1] - self.initial_guess[1])
 
-            fig, ax = plt.subplots(1, 1, figsize=(8, 8))
+            fig, ax = plt.subplots(1, 1, figsize=(10, 10))
             pos = ax.imshow(
-                self.visual_data, vmin=0, vmax=100, cmap="YlGn", origin="lower"
+                self.visual_data, norm=LogNorm(), cmap="YlGn", origin="lower"
             )
             ax.scatter(
                 self.initial_detector_center[0],
@@ -870,9 +872,9 @@ class FriedelPairs(CenteringMethod):
             ]
 
             ## Check pairs alignement
-            fig, ax = plt.subplots(1, 1, figsize=(8, 8))
+            fig, ax = plt.subplots(1, 1, figsize=(10, 10))
             pos = ax.imshow(
-                self.visual_data, vmin=0, vmax=100, cmap="YlGn", origin="lower"
+                self.visual_data, norm=LogNorm(), cmap="YlGn", origin="lower"
             )
             ax.scatter(
                 original_peaks_x,

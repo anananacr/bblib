@@ -26,6 +26,7 @@ class PF8Info:
     pixel_maps: TypePixelMaps = None
     pixel_resolution: float = None
     _shifted_pixel_maps: bool = False
+    geometry_txt: list = None
 
     def update_pixel_maps(self, detector_shift_x: int, detector_shift_y: int):
         if not self._shifted_pixel_maps:
@@ -33,10 +34,10 @@ class PF8Info:
             self._detector_shift_y = detector_shift_y
             self._shifted_pixel_maps = True
             self.pixel_maps["x"] = (
-                self.pixel_maps["x"].flatten() - detector_shift_x
+                self.pixel_maps["x"].flatten() + detector_shift_x
             ).reshape(self._data_shape)
             self.pixel_maps["y"] = (
-                self.pixel_maps["y"].flatten() - detector_shift_y
+                self.pixel_maps["y"].flatten() + detector_shift_y
             ).reshape(self._data_shape)
             self.pixel_maps["radius"] = np.sqrt(
                 np.square(self.pixel_maps["x"]) + np.square(self.pixel_maps["y"])
@@ -46,19 +47,24 @@ class PF8Info:
                 f"Pixel maps have been moved once before, to avoid errors reset the geometry before moving it again."
             )
 
-    def set_geometry_from_file(self, geometry_filename: str):
-        geometry_txt = open(geometry_filename, "r").readlines()
+    def set_geometry_from_file(self, geometry_filename: str = None):
+        if geometry_filename:
+            self.geometry_txt = open(geometry_filename, "r").readlines()
+        else:
+            if not self.geometry_txt:
+                raise ValueError("Please, specify the detector geometry in CrystFEL format.")
+
         self.bad_pixel_map_filename = [
             x.split(" = ")[-1][:-1]
-            for x in geometry_txt
+            for x in self.geometry_txt
             if x.split(" = ")[0] == "mask_file"
         ][0]
         self.bad_pixel_map_hdf5_path = [
-            x.split(" = ")[-1][:-1] for x in geometry_txt if x.split(" = ")[0] == "mask"
+            x.split(" = ")[-1][:-1] for x in self.geometry_txt if x.split(" = ")[0] == "mask"
         ][0]
 
         geom = GeometryInformation(
-            geometry_description=geometry_txt, geometry_format="crystfel"
+            geometry_description=self.geometry_txt, geometry_format="crystfel"
         )
         self.pixel_resolution = 1 / geom.get_pixel_size()
         self.pixel_maps = geom.get_pixel_maps()
@@ -73,7 +79,7 @@ class PF8Info:
         ) == 1:
             ## Get single panel transformation matrix from the geometry file
             ### Warning! Check carefully if the visualized data after reorientation of the panel makes sense, e.g. if it is equal to the real experimental data geometry.
-            detector, _, _ = _read_crystfel_geometry_from_text(text_lines=geometry_txt)
+            detector, _, _ = _read_crystfel_geometry_from_text(text_lines=self.geometry_txt)
             detector_panels = dict(detector["panels"])
             panel_name = list(detector_panels.keys())[0]
             frame_dim_structure = [

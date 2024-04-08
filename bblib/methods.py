@@ -753,8 +753,8 @@ class FriedelPairs(CenteringMethod):
 
     def _run_centering(self, **kwargs) -> tuple:
        
-        peak_list_y_in_frame = self.peak_list_x_in_frame.copy()
-        peak_list_x_in_frame = self.peak_list_y_in_frame.copy()
+        peak_list_x_in_frame = self.peak_list_x_in_frame.copy()
+        peak_list_y_in_frame = self.peak_list_y_in_frame.copy()
 
         peaks = list(zip(peak_list_x_in_frame, peak_list_y_in_frame))
         inverted_peaks_x = [-1 * k for k in peak_list_x_in_frame]
@@ -850,7 +850,7 @@ class FriedelPairs(CenteringMethod):
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/centered_friedel/{self.plots_info["file_name"]}.png'
             )
             plt.close("all")
-
+            
             original_peaks_x = [
                 np.round(k + self.initial_guess[0]) for k in peak_list_x_in_frame
             ]
@@ -886,6 +886,7 @@ class FriedelPairs(CenteringMethod):
                 linewidth=1.5,
                 label="original peaks",
             )
+            
             ax.scatter(
                 inverted_non_shifted_peaks_x,
                 inverted_non_shifted_peaks_y,
@@ -908,6 +909,7 @@ class FriedelPairs(CenteringMethod):
                 edgecolor="blue",
                 label="shift of inverted peaks",
             )
+            
             ax.set_xlim(200, 900)
             ax.set_ylim(200, 900)
             plt.title("Bragg peaks alignement")

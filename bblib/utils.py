@@ -28,8 +28,12 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
         mask = np.ones_like(data)
     data = data * mask
     indexes = np.where(data > 0)
-    xc = np.sum(data[indexes] * indexes[1]) / np.sum(data[indexes])
-    yc = np.sum(data[indexes] * indexes[0]) / np.sum(data[indexes])
+    if np.sum(data[indexes])>1e-7:
+        xc = np.sum(data[indexes] * indexes[1]) / np.sum(data[indexes])
+        yc = np.sum(data[indexes] * indexes[0]) / np.sum(data[indexes])
+    else:
+        xc = -1
+        yc = -1
 
     if np.isnan(xc) or np.isnan(yc):
         xc = -1

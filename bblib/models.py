@@ -42,6 +42,7 @@ class PF8Info:
             self.pixel_maps["radius"] = np.sqrt(
                 np.square(self.pixel_maps["x"]) + np.square(self.pixel_maps["y"])
             ).reshape(self._data_shape)
+            self.pixel_maps["phi"] = np.arctan2(self.pixel_maps["y"], self.pixel_maps["x"])
         else:
             raise ValueError(
                 f"Pixel maps have been moved once before, to avoid errors reset the geometry before moving it again."

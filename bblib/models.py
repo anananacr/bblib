@@ -26,6 +26,7 @@ class PF8Info:
     pixel_maps: TypePixelMaps = None
     pixel_resolution: float = None
     _shifted_pixel_maps: bool = False
+    geometry_txt: list = None
 
     def update_pixel_maps(self, detector_shift_x: int, detector_shift_y: int):
         if not self._shifted_pixel_maps:
@@ -41,24 +42,30 @@ class PF8Info:
             self.pixel_maps["radius"] = np.sqrt(
                 np.square(self.pixel_maps["x"]) + np.square(self.pixel_maps["y"])
             ).reshape(self._data_shape)
+            self.pixel_maps["phi"] = np.arctan2(self.pixel_maps["y"], self.pixel_maps["x"])
         else:
             raise ValueError(
                 f"Pixel maps have been moved once before, to avoid errors reset the geometry before moving it again."
             )
 
-    def set_geometry_from_file(self, geometry_filename: str):
-        geometry_txt = open(geometry_filename, "r").readlines()
+    def set_geometry_from_file(self, geometry_filename: str = None):
+        if geometry_filename:
+            self.geometry_txt = open(geometry_filename, "r").readlines()
+        else:
+            if not self.geometry_txt:
+                raise ValueError("Please, specify the detector geometry in CrystFEL format.")
+
         self.bad_pixel_map_filename = [
             x.split(" = ")[-1][:-1]
-            for x in geometry_txt
+            for x in self.geometry_txt
             if x.split(" = ")[0] == "mask_file"
         ][0]
         self.bad_pixel_map_hdf5_path = [
-            x.split(" = ")[-1][:-1] for x in geometry_txt if x.split(" = ")[0] == "mask"
+            x.split(" = ")[-1][:-1] for x in self.geometry_txt if x.split(" = ")[0] == "mask"
         ][0]
 
         geom = GeometryInformation(
-            geometry_description=geometry_txt, geometry_format="crystfel"
+            geometry_description=self.geometry_txt, geometry_format="crystfel"
         )
         self.pixel_resolution = 1 / geom.get_pixel_size()
         self.pixel_maps = geom.get_pixel_maps()
@@ -73,7 +80,7 @@ class PF8Info:
         ) == 1:
             ## Get single panel transformation matrix from the geometry file
             ### Warning! Check carefully if the visualized data after reorientation of the panel makes sense, e.g. if it is equal to the real experimental data geometry.
-            detector, _, _ = _read_crystfel_geometry_from_text(text_lines=geometry_txt)
+            detector, _, _ = _read_crystfel_geometry_from_text(text_lines=self.geometry_txt)
             detector_panels = dict(detector["panels"])
             panel_name = list(detector_panels.keys())[0]
             frame_dim_structure = [
@@ -132,6 +139,7 @@ class PF8Info:
 
     def get_detector_center(self) -> list:
         if not self._shifted_pixel_maps:
+            
             if (
                 self.pf8_detector_info["nasics_x"] * self.pf8_detector_info["nasics_y"]
                 > 1
@@ -167,6 +175,7 @@ class PF8Info:
                 _img_center_x = int(abs(np.min(self.pixel_maps["x"])))
                 _img_center_y = int(abs(np.min(self.pixel_maps["y"])))
         else:
+            print("Warning! The detector center was moved by a previous operation, the detector center is not the same as in the geometry file.")
             _img_center_x = self.detector_center_from_geom[0] + self._detector_shift_x
             _img_center_y = self.detector_center_from_geom[1] + self._detector_shift_y
         return [_img_center_x, _img_center_y]

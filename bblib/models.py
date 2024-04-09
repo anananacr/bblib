@@ -34,10 +34,10 @@ class PF8Info:
             self._detector_shift_y = detector_shift_y
             self._shifted_pixel_maps = True
             self.pixel_maps["x"] = (
-                self.pixel_maps["x"].flatten() + detector_shift_x
+                self.pixel_maps["x"].flatten() - detector_shift_x
             ).reshape(self._data_shape)
             self.pixel_maps["y"] = (
-                self.pixel_maps["y"].flatten() + detector_shift_y
+                self.pixel_maps["y"].flatten() - detector_shift_y
             ).reshape(self._data_shape)
             self.pixel_maps["radius"] = np.sqrt(
                 np.square(self.pixel_maps["x"]) + np.square(self.pixel_maps["y"])
@@ -139,6 +139,7 @@ class PF8Info:
 
     def get_detector_center(self) -> list:
         if not self._shifted_pixel_maps:
+            
             if (
                 self.pf8_detector_info["nasics_x"] * self.pf8_detector_info["nasics_y"]
                 > 1
@@ -174,6 +175,7 @@ class PF8Info:
                 _img_center_x = int(abs(np.min(self.pixel_maps["x"])))
                 _img_center_y = int(abs(np.min(self.pixel_maps["y"])))
         else:
+            print("Warning! The detector center was moved by a previous operation, the detector center is not the same as in the geometry file.")
             _img_center_x = self.detector_center_from_geom[0] + self._detector_shift_x
             _img_center_y = self.detector_center_from_geom[1] + self._detector_shift_y
         return [_img_center_x, _img_center_y]

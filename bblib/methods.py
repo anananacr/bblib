@@ -397,16 +397,16 @@ class MinimizePeakFWHM(CenteringMethod):
     def _prep_for_centering(self, data: np.ndarray, initial_guess: tuple) -> None:
         self.initial_guess = initial_guess
         self.initial_detector_center = self.PF8Config.get_detector_center()
+        non_shifted_pixel_maps_for_visualization = self.PF8Config.pixel_maps.copy()
         ## Find peaks
         self.PF8Config.update_pixel_maps(
             initial_guess[0] - self.initial_detector_center[0],
             initial_guess[1] - self.initial_detector_center[1],
         )
         pf8 = PF8(self.PF8Config)
-
         # Assemble data and mask
-        data_visualize = geometry.DataVisualizer(pixel_maps=self.PF8Config.pixel_maps)
-
+        data_visualize = geometry.DataVisualizer(pixel_maps=non_shifted_pixel_maps_for_visualization)
+        
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
@@ -678,6 +678,8 @@ class FriedelPairs(CenteringMethod):
 
         self.initial_guess = initial_guess
         self.initial_detector_center = self.PF8Config.get_detector_center()
+        non_shifted_pixel_maps_for_visualization = self.PF8Config.pixel_maps.copy()
+
         ## Find peaks
         self.PF8Config.update_pixel_maps(
             initial_guess[0] - self.initial_detector_center[0],
@@ -687,7 +689,7 @@ class FriedelPairs(CenteringMethod):
         pf8 = PF8(self.PF8Config)
 
         # Assemble data and mask
-        data_visualize = geometry.DataVisualizer(pixel_maps=self.PF8Config.pixel_maps)
+        data_visualize = geometry.DataVisualizer(pixel_maps=non_shifted_pixel_maps_for_visualization)
 
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])

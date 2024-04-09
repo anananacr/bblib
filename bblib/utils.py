@@ -413,30 +413,39 @@ def get_distance_map_global_min(
     proj_x = np.sum(z, axis=0)
     # print('proj',len(proj_x))
     x = np.arange(x[0], x[-1] + pixel_step, pixel_step)
+    
     # print('x',len(x))
-    index_x = np.unravel_index(np.argmin(proj_x, axis=None), proj_x.shape)
-    # print(index_x)
-    xc = x[index_x]
-    ax2.scatter(x, proj_x + pixel_step, color="b")
-    ax2.scatter(xc, proj_x[index_x], color="r", label=f"xc: {np.round(xc,1)}")
-    ax2.set_ylabel("Average distance [px]")
-    ax2.set_xlabel("xc [px]")
-    ax2.set_title("Distance projection in x")
-    ax2.legend()
+    if len(proj_x)==len(x):
+        index_x = np.unravel_index(np.argmin(proj_x, axis=None), proj_x.shape)
+        xc = x[index_x]
+        ax2.scatter(x, proj_x + pixel_step, color="b")
+        ax2.scatter(xc, proj_x[index_x], color="r", label=f"xc: {np.round(xc,1)}")
+        ax2.set_ylabel("Average distance [px]")
+        ax2.set_xlabel("xc [px]")
+        ax2.set_title("Distance projection in x")
+        ax2.legend()
+    else:
+        converged = 0
+        xc = -1
+        yc = -1
 
     proj_y = np.sum(z, axis=1)
     x = np.arange(y[0], y[-1] + pixel_step, pixel_step)
-    index_y = np.unravel_index(np.argmin(proj_y, axis=None), proj_y.shape)
-    yc = x[index_y]
-    ax3.scatter(x, proj_y, color="b")
-    ax3.scatter(yc, proj_y[index_y], color="r", label=f"yc: {np.round(yc,1)}")
-    ax3.set_ylabel("Average Distance [px]")
-    ax3.set_xlabel("yc [px]")
-    ax3.set_title("Distance projection in y")
-    ax3.legend()
-
-    fig.colorbar(pos1, ax=ax1, shrink=0.6)
-
+    if len(proj_y)==len(x):
+        index_y = np.unravel_index(np.argmin(proj_y, axis=None), proj_y.shape)
+        yc = x[index_y]
+        ax3.scatter(x, proj_y, color="b")
+        ax3.scatter(yc, proj_y[index_y], color="r", label=f"yc: {np.round(yc,1)}")
+        ax3.set_ylabel("Average Distance [px]")
+        ax3.set_xlabel("yc [px]")
+        ax3.set_title("Distance projection in y")
+        ax3.legend()
+        fig.colorbar(pos1, ax=ax1, shrink=0.6)
+    else:
+        converged = 0
+        xc = -1
+        yc = -1
+        
     if int(np.sum(proj_y)) == 0 or int(np.sum(proj_x)) == 0:
         converged = 0
         xc = -1

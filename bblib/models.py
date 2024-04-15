@@ -12,14 +12,14 @@ from om.lib.geometry import (
 
 @dataclass
 class PF8Info:
-    max_num_peaks: np.int32
-    adc_threshold: np.int32
-    minimum_snr: np.float32
-    min_pixel_count: np.int16
-    max_pixel_count: np.int16
-    local_bg_radius: np.int16
-    min_res: np.int16
-    max_res: np.int16
+    max_num_peaks: np.int32 = 200
+    adc_threshold: np.int32 = 0
+    minimum_snr: np.float32 = 5
+    min_pixel_count: np.int16 = 2
+    max_pixel_count: np.int16 = 2000
+    local_bg_radius: np.int16 = 3
+    min_res: np.int16 = 0 
+    max_res: np.int16 = 1200
     pf8_detector_info: TypeDetectorLayoutInformation = None
     bad_pixel_map_filename: str = None
     bad_pixel_map_hdf5_path: str = None

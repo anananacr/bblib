@@ -445,7 +445,7 @@ def get_distance_map_global_min(
         converged = 0
         xc = -1
         yc = -1
-        
+
     if int(np.sum(proj_y)) == 0 or int(np.sum(proj_x)) == 0:
         converged = 0
         xc = -1
@@ -456,41 +456,6 @@ def get_distance_map_global_min(
             plt.savefig(f"{output_folder}/distance_map/{label}.png")
     plt.close()
     return [np.round(xc, 1), np.round(yc, 1)]
-
-
-def shift_image_by_n_pixels(data: np.ndarray, n: int, axis: int) -> np.ndarray:
-    """
-    Linear translation of image by n pixels in given axis. Empty values in the shifted image is filled with zero.
-
-    Parameters
-    ----------
-    data: np.ndarray
-        Input image to be shifted
-    n: int
-        Number of pixels to be shifted.
-    axis: int
-        Axis in which the image will be shifted. Axis 0 corresponds to a shift in the rows (y-axis), axis 1 shifts in the columns (x-axis).
-    Returns
-    ----------
-    shifted_data: np.ndarray
-        Data shifted by n pixels in axis.
-    """
-    max_row, max_col = data.shape
-    # print(max_row,max_col)
-    if axis == 1 and n >= 0:
-        shifted_data = np.pad(data, pad_width=[(0, 0), (abs(n), 0)], mode="constant")
-        image_cut = shifted_data[:max_row, :max_col]
-    elif axis == 1 and n < 0:
-        shifted_data = np.pad(data, pad_width=[(0, 0), (0, abs(n))], mode="constant")
-        image_cut = shifted_data[:max_row, abs(n) :]
-    elif axis == 0 and n >= 0:
-        shifted_data = np.pad(data, pad_width=[(abs(n), 0), (0, 0)], mode="constant")
-        image_cut = shifted_data[:max_row, :max_col]
-    elif axis == 0 and n < 0:
-        shifted_data = np.pad(data, pad_width=[(0, abs(n)), (0, 0)], mode="constant")
-        image_cut = shifted_data[abs(n) :, :max_col]
-    # print("Image cut shape", image_cut.shape)
-    return image_cut
 
 
 def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:

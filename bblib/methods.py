@@ -842,7 +842,7 @@ class FriedelPairs(CenteringMethod):
             ax.scatter(
                 self.initial_guess[0],
                 self.initial_guess[1],
-                color="lime",
+                color="green",
                 marker="+",
                 s=150,
                 label=f"Initial guess:({np.round(self.initial_guess[0],1)},{np.round(self.initial_guess[1], 1)})",
@@ -912,7 +912,7 @@ class FriedelPairs(CenteringMethod):
                 s=80,
                 facecolor="none",
                 marker="s",
-                edgecolor="tab:orange",
+                edgecolor="tab:green",
                 linewidth=1.5,
                 label="inverted peaks",
                 alpha=0.8,

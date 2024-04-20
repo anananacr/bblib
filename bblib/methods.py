@@ -1093,13 +1093,16 @@ class FriedelPairsFast(CenteringMethod):
         self.peaks_list_original = [x for x, y in pairs_list]
         self.peaks_list_inverted = [y for x, y in pairs_list]
 
-        friedel_coordinates_in_x = [x for x, y in self.peaks_list_original]
-        friedel_coordinates_in_y = [y for x, y in self.peaks_list_original]
+        if len(pairs_list)>0:
+            friedel_coordinates_in_x = [x for x, y in self.peaks_list_original]
+            friedel_coordinates_in_y = [y for x, y in self.peaks_list_original]
 
-        shift_x = sum(friedel_coordinates_in_x)/len(friedel_coordinates_in_x)
-        shift_y = sum(friedel_coordinates_in_y)/len(friedel_coordinates_in_y)
+            shift_x = sum(friedel_coordinates_in_x)/len(friedel_coordinates_in_x)
+            shift_y = sum(friedel_coordinates_in_y)/len(friedel_coordinates_in_y)
 
-        center = [self.initial_guess[0]+shift_x, self.initial_guess[1]+shift_y]
+            center = [self.initial_guess[0]+shift_x, self.initial_guess[1]+shift_y]
+        else:
+            center = [-1, -1]
 
         if self.config["plots_flag"] and self.centering_converged(center):
 

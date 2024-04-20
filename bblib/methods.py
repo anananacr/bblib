@@ -121,7 +121,7 @@ class CenterOfMass(CenteringMethod):
             ax1.imshow(
                 self.visual_data * self.mask_for_center_of_mass,
                 norm=LogNorm(),
-                cmap="YlGn",
+                cmap="spring",
                 origin="lower",
             )
             ax1.scatter(
@@ -261,7 +261,7 @@ class CircleDetection(CenteringMethod):
                 self.visual_data * self.mask_for_circle_detection,
                 norm=LogNorm(),
                 origin="lower",
-                cmap="YlGn",
+                cmap="spring",
             )
             ax1.scatter(
                 self.initial_detector_center[0],
@@ -538,7 +538,7 @@ class MinimizePeakFWHM(CenteringMethod):
                 self.visual_data * self.mask_for_fwhm_min,
                 norm=LogNorm(),
                 origin="lower",
-                cmap="YlGn",
+                cmap="spring",
             )
             ax1.scatter(
                 self.initial_detector_center[0],
@@ -829,7 +829,7 @@ class FriedelPairs(CenteringMethod):
 
             fig, ax = plt.subplots(1, 1, figsize=(10, 10))
             pos = ax.imshow(
-                self.visual_data, norm=LogNorm(), cmap="YlGn", origin="lower"
+                self.visual_data, norm=LogNorm(), cmap="spring", origin="lower"
             )
             ax.scatter(
                 self.initial_detector_center[0],
@@ -893,7 +893,7 @@ class FriedelPairs(CenteringMethod):
             ## Check pairs alignement
             fig, ax = plt.subplots(1, 1, figsize=(10, 10))
             pos = ax.imshow(
-                self.visual_data, norm=LogNorm(), cmap="YlGn", origin="lower"
+                self.visual_data, norm=LogNorm(), cmap="spring", origin="lower"
             )
             ax.scatter(
                 original_peaks_x,
@@ -1108,7 +1108,7 @@ class FriedelPairsFast(CenteringMethod):
 
             fig, ax = plt.subplots(1, 1, figsize=(10, 10))
             pos = ax.imshow(
-                self.visual_data, norm=LogNorm(), cmap="YlGn", origin="lower"
+                self.visual_data, norm=LogNorm(), cmap="spring", origin="lower"
             )
             ax.scatter(
                 self.initial_detector_center[0],
@@ -1172,7 +1172,7 @@ class FriedelPairsFast(CenteringMethod):
             ## Check pairs alignement
             fig, ax = plt.subplots(1, 1, figsize=(10, 10))
             pos = ax.imshow(
-                self.visual_data, norm=LogNorm(), cmap="YlGn", origin="lower"
+                self.visual_data, norm=LogNorm(), cmap="spring", origin="lower"
             )
             ax.scatter(
                 original_peaks_x,

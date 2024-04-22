@@ -1094,13 +1094,20 @@ class FriedelPairsFast(CenteringMethod):
         self.peaks_list_inverted = [y for x, y in pairs_list]
 
         if len(pairs_list)>0:
+            print(f"--------------  Fridel pairs search --------------\nNumber of Friedel Pairs in frame: {len(pairs_list)/2}")
             friedel_coordinates_in_x = [x for x, y in self.peaks_list_original]
             friedel_coordinates_in_y = [y for x, y in self.peaks_list_original]
+            print(f"Friedel pairs position before center correction in pixels:")
+            print(self.peaks_list_original)
 
             shift_x = sum(friedel_coordinates_in_x)/len(friedel_coordinates_in_x)
             shift_y = sum(friedel_coordinates_in_y)/len(friedel_coordinates_in_y)
 
             center = [self.initial_guess[0]+shift_x, self.initial_guess[1]+shift_y]
+
+            print(f"Friedel pairs position after center correction in pixels:")
+            pairs_list_after_correction=[(x[0]-shift_x, x[1]-shift_y) for x in self.peaks_list_original]
+            print(pairs_list_after_correction)
         else:
             center = [-1, -1]
 

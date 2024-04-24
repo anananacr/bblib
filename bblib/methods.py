@@ -590,20 +590,6 @@ class FriedelPairs(CenteringMethod):
 	        "folder_name": "",
 	        "root_path": ""
             }
-    def _remove_repeated_pairs(self, pairs_list: list) -> list:
-        x_vector = []
-        y_vector = []
-        unique_pairs = []
-
-        for pair in pairs_list:
-            peak_0, peak_1 = pair
-            x = peak_0[0] - peak_1[0]
-            y = peak_0[1] - peak_1[1]
-            if x not in x_vector and y not in y_vector:
-                x_vector.append(x)
-                y_vector.append(y)
-                unique_pairs.append((peak_0, peak_1))
-        return unique_pairs
 
     def _shift_inverted_peaks_and_calculate_minimum_distance(
         self,
@@ -646,7 +632,6 @@ class FriedelPairs(CenteringMethod):
                 radius += 1
             if found_peak:
                 peaks.append((found_peak, i))
-        # peaks = self._remove_repeated_pairs(peaks)
         return peaks
 
     def _find_a_peak_in_the_surrounding(
@@ -963,30 +948,33 @@ class FriedelPairsFast(CenteringMethod):
             }
 
     def _select_closest_peaks(self, peaks_list: list, inverted_peaks: list) -> list:
-        peaks = []
-        for i in inverted_peaks:
-            radius = 1
+        pairs_list = []
+        for i in peaks_list:
+            radius = 0.1
             found_peak = False
             while not found_peak and radius <= self.config["search_radius"]:
-                found_peak = self._find_a_peak_in_the_surrounding(peaks_list, i, radius)
-                radius += 1
+                found_peak = self._find_a_peak_in_the_surrounding(i, inverted_peaks, radius)
+                radius += 0.1
             if found_peak:
-                peaks.append((found_peak, i))
-        return peaks
+                pairs_list.append((i, found_peak))
+        print(f"Pairs list before check:{len(pairs_list)/2}")
+        pairs_list = self._check_paired_reflections(pairs_list)
+        print(f"Pairs list after check:{len(pairs_list)/2}")
+        return pairs_list
 
     def _find_a_peak_in_the_surrounding(
-        self, peaks_list: list, inverted_peak: list, radius: int
+        self, peak: list, inverted_peaks_list: list, radius: float
     ) -> list:
         cut_peaks_list = []
         cut_peaks_list = [
             (
-                peak,
+                inverted_peak,
                 math.sqrt(
                     (peak[0] - inverted_peak[0]) ** 2
                     + (peak[1] - inverted_peak[1]) ** 2
                 ),
             )
-            for peak in peaks_list
+            for inverted_peak in inverted_peaks_list
             if math.sqrt(
                 (peak[0] - inverted_peak[0]) ** 2 + (peak[1] - inverted_peak[1]) ** 2
             )
@@ -998,6 +986,19 @@ class FriedelPairsFast(CenteringMethod):
             return False
         else:
             return cut_peaks_list[0][0]
+
+    def _check_paired_reflections(self, pairs_list:list)-> list:
+        ## check if the reversed peak is also on the list
+        filtered_pairs = []
+        
+        for original_peak, inverted_peak in pairs_list:
+            inverted_peak_inverted_twice = (-1*inverted_peak[0],-1*inverted_peak[1])
+            original_peak_inverted_twice = (-1*original_peak[0],-1*original_peak[1])
+            inverted_pair=(inverted_peak_inverted_twice,original_peak_inverted_twice)
+            if inverted_pair in pairs_list:
+                filtered_pairs.append((original_peak, inverted_peak))
+
+        return filtered_pairs
 
     def _prep_for_centering(self, data: np.ndarray, initial_guess: tuple) -> None:
 
@@ -1088,21 +1089,26 @@ class FriedelPairsFast(CenteringMethod):
         inverted_peaks = list(zip(inverted_peaks_x, inverted_peaks_y))
         pairs_list = self._select_closest_peaks(peaks, inverted_peaks)
 
-        ## Calculcate the detector center shift
+        ## Calculcate the beam center shift
         
         self.peaks_list_original = [x for x, y in pairs_list]
         self.peaks_list_inverted = [y for x, y in pairs_list]
 
         if len(pairs_list)>0:
             print(f"--------------  Fridel pairs search --------------\nNumber of Friedel Pairs in frame: {len(pairs_list)/2}")
+            print(f"Pairs list for debug:")
+            print(pairs_list)
+
             friedel_coordinates_in_x = [x for x, y in self.peaks_list_original]
             friedel_coordinates_in_y = [y for x, y in self.peaks_list_original]
+            
             print(f"Friedel pairs position before center correction in pixels:")
             print(self.peaks_list_original)
-
+            
             shift_x = sum(friedel_coordinates_in_x)/len(friedel_coordinates_in_x)
             shift_y = sum(friedel_coordinates_in_y)/len(friedel_coordinates_in_y)
-
+            print("Center shift in x", shift_x)
+            print("Center shift in y", shift_y)
             center = [self.initial_guess[0]+shift_x, self.initial_guess[1]+shift_y]
 
             print(f"Friedel pairs position after center correction in pixels:")

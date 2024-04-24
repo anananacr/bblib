@@ -1095,7 +1095,7 @@ class FriedelPairsFast(CenteringMethod):
         self.peaks_list_inverted = [y for x, y in pairs_list]
 
         if len(pairs_list)>0:
-            print(f"--------------  Fridel pairs search --------------\nNumber of Friedel Pairs in frame: {len(pairs_list)/2}")
+            print(f"--------------  Friedel pairs search --------------\nNumber of Friedel Pairs in frame: {len(pairs_list)/2}")
             print(f"Pairs list for debug:")
             print(pairs_list)
 

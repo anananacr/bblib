@@ -601,9 +601,7 @@ class FriedelPairs(CenteringMethod):
                 radius += 0.1
             if found_peak:
                 pairs_list.append((i, found_peak))
-        print(f"Pairs list before check:{len(pairs_list)/2}")
         pairs_list = self._check_paired_reflections(pairs_list)
-        print(f"Pairs list after check:{len(pairs_list)/2}")
         return pairs_list
 
     def _find_a_peak_in_the_surrounding(
@@ -760,7 +758,6 @@ class FriedelPairs(CenteringMethod):
             print(pairs_list_after_correction)
         else:
             center = [-1, -1]
-            pairs_list_after_correction = [-1, -1]
 
         if self.config["plots_flag"] and self.centering_converged(center):
 
@@ -879,4 +876,4 @@ class FriedelPairs(CenteringMethod):
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/peaks/{self.plots_info["file_name"]}.png'
             )
             plt.close()
-        return (center, pairs_list_after_correction)
+        return center

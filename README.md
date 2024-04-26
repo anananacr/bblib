@@ -103,7 +103,15 @@ The methods `FriedelPairs`, `MinimizePeakFWHM` and  `CircleDetection ` need a `p
 plots_info =  {
 	"file_name": ...,
 	"folder_name": ...,
-	"root_path": ...
+	"root_path": ...,
+	"value_auto": ...,
+	"value_max": ...,
+	"value_min": ...,
+	"axis_lim_auto": ...,
+	"xlim_min": ...,
+	"xlim_max": ...,
+	"ylim_min": ...,
+	"ylim_max": ...
 }
 ```
 To calculate the refined detector center of raw data frame as a numpy array using the following methods: 

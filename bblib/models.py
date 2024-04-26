@@ -59,23 +59,24 @@ class PF8Info:
         # Warning! It will look for campus in the geom file either 'mask0_file' or 'mask_file'. 
         # It doesn't look for multiple masks. 
         # It assumes bad pixels as zeros and good pixels as ones.
-        
-        self.bad_pixel_map_filename = [
-            x.split(" = ")[-1][:-1]
-            for x in self.geometry_txt
-            if x.split(" = ")[0] == "mask0_file"
-        ][0]
-        if not self.bad_pixel_map_filename:
+        try:
+            self.bad_pixel_map_filename = [
+                x.split(" = ")[-1][:-1]
+                for x in self.geometry_txt
+                if x.split(" = ")[0] == "mask0_file"
+            ][0]
+        except IndexError:
             self.bad_pixel_map_filename = [
                x.split(" = ")[-1][:-1]
                 for x in self.geometry_txt
                 if x.split(" = ")[0] == "mask_file"
             ][0]
 
-        self.bad_pixel_map_hdf5_path = [
-            x.split(" = ")[-1][:-1] for x in self.geometry_txt if x.split(" = ")[0] == "mask0_data"
-        ][0]
-        if not self.bad_pixel_map_hdf5_path:
+        try:
+            self.bad_pixel_map_hdf5_path = [
+                x.split(" = ")[-1][:-1] for x in self.geometry_txt if x.split(" = ")[0] == "mask0_data"
+            ][0]
+        except IndexError:
             self.bad_pixel_map_hdf5_path = [
                 x.split(" = ")[-1][:-1] for x in self.geometry_txt if x.split(" = ")[0] == "mask"
             ][0]

@@ -302,13 +302,12 @@ class CircleDetection(CenteringMethod):
             )
             path.mkdir(parents=True, exist_ok=True)
             ax1.legend()
-            plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_circle_detection/{self.plots_info["file_name"]}.png'
-            )
             if not self.plots_info["axis_lim_auto"]:
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
-
+            plt.savefig(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_circle_detection/{self.plots_info["file_name"]}.png'
+            )
             plt.close()
         return center
 
@@ -598,12 +597,12 @@ class MinimizePeakFWHM(CenteringMethod):
             )
             path.mkdir(parents=True, exist_ok=True)
             ax1.legend()
-            plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_fwhm_minimization/{self.plots_info["file_name"]}.png'
-            )
             if not self.plots_info["axis_lim_auto"]:
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
+            plt.savefig(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_fwhm_minimization/{self.plots_info["file_name"]}.png'
+            )
             plt.close()
 
         return center

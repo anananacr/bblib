@@ -103,7 +103,7 @@ The methods `FriedelPairs`, `MinimizePeakFWHM` and  `CircleDetection ` need a `p
 plots_info =  {
 	"file_name": ...,
 	"folder_name": ...,
-	"root_path": ...
+	"root_path": ...,
 	"value_auto": ...,
 	"value_max": ...,
 	"value_min": ...,

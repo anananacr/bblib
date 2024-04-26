@@ -118,12 +118,20 @@ class CenterOfMass(CenteringMethod):
 
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-            ax1.imshow(
-                self.visual_data * self.mask_for_center_of_mass,
-                norm=LogNorm(),
-                cmap="spring",
-                origin="lower",
-            )
+            if self.plots_info["value_auto"]:
+                ax1.imshow(
+                    self.visual_data * self.mask_for_center_of_mass,
+                    norm=LogNorm(),
+                    cmap="spring",
+                    origin="lower",
+                )
+            else: 
+                ax1.imshow(
+                    self.visual_data * self.mask_for_center_of_mass,
+                    norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]),
+                    cmap="spring",
+                    origin="lower",
+                )
             ax1.scatter(
                 self.initial_detector_center[0],
                 self.initial_detector_center[1],
@@ -143,6 +151,10 @@ class CenterOfMass(CenteringMethod):
             )
             path.mkdir(parents=True, exist_ok=True)
             ax1.legend()
+            if not self.plots_info["axis_lim_auto"]:
+                ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
+                ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
+
             plt.savefig(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_of_mass/{self.plots_info["file_name"]}.png'
             )
@@ -257,12 +269,20 @@ class CircleDetection(CenteringMethod):
         center = [xc, yc]
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-            ax1.imshow(
-                self.visual_data * self.mask_for_circle_detection,
-                norm=LogNorm(),
-                origin="lower",
-                cmap="spring",
-            )
+            if self.plots_info["value_auto"]:
+                ax1.imshow(
+                    self.visual_data * self.mask_for_circle_detection,
+                    norm=LogNorm(),
+                    origin="lower",
+                    cmap="spring",
+                )
+            else:
+                ax1.imshow(
+                    self.visual_data * self.mask_for_circle_detection,
+                    norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]),
+                    origin="lower",
+                    cmap="spring",
+                )
             ax1.scatter(
                 self.initial_detector_center[0],
                 self.initial_detector_center[1],
@@ -285,6 +305,10 @@ class CircleDetection(CenteringMethod):
             plt.savefig(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_circle_detection/{self.plots_info["file_name"]}.png'
             )
+            if not self.plots_info["axis_lim_auto"]:
+                ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
+                ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
+
             plt.close()
         return center
 
@@ -534,12 +558,20 @@ class MinimizePeakFWHM(CenteringMethod):
 
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-            ax1.imshow(
-                self.visual_data * self.mask_for_fwhm_min,
-                norm=LogNorm(),
-                origin="lower",
-                cmap="spring",
-            )
+            if self.plots_info["value_auto"]:
+                ax1.imshow(
+                    self.visual_data * self.mask_for_fwhm_min,
+                    norm=LogNorm(),
+                    origin="lower",
+                    cmap="spring",
+                )
+            else:
+                ax1.imshow(
+                    self.visual_data * self.mask_for_fwhm_min,
+                    norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]),
+                    origin="lower",
+                    cmap="spring",
+                )
             ax1.scatter(
                 self.initial_detector_center[0],
                 self.initial_detector_center[1],
@@ -569,6 +601,9 @@ class MinimizePeakFWHM(CenteringMethod):
             plt.savefig(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_fwhm_minimization/{self.plots_info["file_name"]}.png'
             )
+            if not self.plots_info["axis_lim_auto"]:
+                ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
+                ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
             plt.close()
 
         return center
@@ -761,11 +796,16 @@ class FriedelPairs(CenteringMethod):
 
         if self.config["plots_flag"] and self.centering_converged(center):
 
-            fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-            pos = ax.imshow(
-                self.visual_data, norm=LogNorm(), cmap="spring", origin="lower"
-            )
-            ax.scatter(
+            fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
+            if self.plots_info["value_auto"]:
+                pos = ax1.imshow(
+                    self.visual_data, norm=LogNorm(), cmap="spring", origin="lower"
+                )
+            else:
+                pos = ax1.imshow(
+                    self.visual_data, norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]), cmap="spring", origin="lower"
+                )
+            ax1.scatter(
                 self.initial_detector_center[0],
                 self.initial_detector_center[1],
                 color="b",
@@ -773,7 +813,7 @@ class FriedelPairs(CenteringMethod):
                 s=25,
                 label=f"Initial detector center:({np.round(self.initial_detector_center[0],1)},{np.round(self.initial_detector_center[1], 1)})",
             )
-            ax.scatter(
+            ax1.scatter(
                 self.initial_guess[0],
                 self.initial_guess[1],
                 color="lime",
@@ -782,7 +822,7 @@ class FriedelPairs(CenteringMethod):
                 label=f"Initial guess:({np.round(self.initial_guess[0],1)},{np.round(self.initial_guess[1], 1)})",
             )
 
-            ax.scatter(
+            ax1.scatter(
                 center[0],
                 center[1],
                 color="r",
@@ -790,11 +830,14 @@ class FriedelPairs(CenteringMethod):
                 s=25,
                 label=f"Refined detector center:({np.round(center[0],1)}, {np.round(center[1],1)})",
             )
-            #ax.set_xlim(200, 900)
-            #ax.set_ylim(200, 900)
+            
             plt.title("Center refinement: autocorrelation of Friedel pairs")
             fig.colorbar(pos, shrink=0.6)
-            ax.legend()
+            ax1.legend()
+            if not self.plots_info["axis_lim_auto"]:
+                ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
+                ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
+
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/centered_friedel/'
             )
@@ -825,11 +868,17 @@ class FriedelPairs(CenteringMethod):
             ]
 
             ## Check pairs alignement
-            fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-            pos = ax.imshow(
-                self.visual_data, norm=LogNorm(), cmap="spring", origin="lower"
-            )
-            ax.scatter(
+            fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
+            if self.plots_info["value_auto"]:
+                pos = ax1.imshow(
+                    self.visual_data, norm=LogNorm(), cmap="spring", origin="lower"
+                )
+            else:
+                pos = ax1.imshow(
+                    self.visual_data, norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]), cmap="spring", origin="lower"
+                )
+                
+            ax1.scatter(
                 original_peaks_x,
                 original_peaks_y,
                 facecolor="none",
@@ -840,7 +889,7 @@ class FriedelPairs(CenteringMethod):
                 label="original peaks",
             )
             
-            ax.scatter(
+            ax1.scatter(
                 inverted_non_shifted_peaks_x,
                 inverted_non_shifted_peaks_y,
                 s=80,
@@ -851,7 +900,7 @@ class FriedelPairs(CenteringMethod):
                 label="inverted peaks",
                 alpha=0.8,
             )
-            ax.scatter(
+            ax1.scatter(
                 inverted_shifted_peaks_x,
                 inverted_shifted_peaks_y,
                 facecolor="none",
@@ -863,11 +912,13 @@ class FriedelPairs(CenteringMethod):
                 label="shift of inverted peaks",
             )
             
-            #ax.set_xlim(200, 900)
-            #ax.set_ylim(200, 900)
+            if not self.plots_info["axis_lim_auto"]:
+                ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
+                ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
+            
             plt.title("Bragg peaks alignement")
             fig.colorbar(pos, shrink=0.6)
-            ax.legend()
+            ax1.legend()
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/peaks/'
             )

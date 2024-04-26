@@ -54,15 +54,31 @@ class PF8Info:
         else:
             if not self.geometry_txt:
                 raise ValueError("Please, specify the detector geometry in CrystFEL format.")
-
+        
+        # Passing bad pixel maps to PF8. 
+        # Warning! It will look for campus in the geom file either 'mask0_file' or 'mask_file'. 
+        # It doesn't look for multiple masks. 
+        # It assumes bad pixels as zeros and good pixels as ones.
+        
         self.bad_pixel_map_filename = [
             x.split(" = ")[-1][:-1]
             for x in self.geometry_txt
-            if x.split(" = ")[0] == "mask_file"
+            if x.split(" = ")[0] == "mask0_file"
         ][0]
+        if not self.bad_pixel_map_filename:
+            self.bad_pixel_map_filename = [
+               x.split(" = ")[-1][:-1]
+                for x in self.geometry_txt
+                if x.split(" = ")[0] == "mask_file"
+            ][0]
+
         self.bad_pixel_map_hdf5_path = [
-            x.split(" = ")[-1][:-1] for x in self.geometry_txt if x.split(" = ")[0] == "mask"
+            x.split(" = ")[-1][:-1] for x in self.geometry_txt if x.split(" = ")[0] == "mask0_data"
         ][0]
+        if not self.bad_pixel_map_hdf5_path:
+            self.bad_pixel_map_hdf5_path = [
+                x.split(" = ")[-1][:-1] for x in self.geometry_txt if x.split(" = ")[0] == "mask"
+            ][0]
 
         geom = GeometryInformation(
             geometry_description=self.geometry_txt, geometry_format="crystfel"

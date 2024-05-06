@@ -772,7 +772,7 @@ class FriedelPairs(CenteringMethod):
 
         if len(pairs_list)>0:
             print(f"--------------  Friedel pairs search --------------\nNumber of Friedel Pairs in frame: {len(pairs_list)/2}")
-            print(f"Pairs list for debug:")
+            print(f"Pairs list for analysis:")
             print(pairs_list)
 
             friedel_coordinates_in_x = [x for x, y in self.peaks_list_original]
@@ -790,6 +790,10 @@ class FriedelPairs(CenteringMethod):
             print(f"Friedel pairs position after center correction in pixels:")
             pairs_list_after_correction=[(x[0]-shift_x, x[1]-shift_y) for x in self.peaks_list_original]
             print(pairs_list_after_correction)
+            print(f"All reflections after center correction in pixels:")
+            peaks_list_after_correction=[(x[0]-shift_x, x[1]-shift_y) for x in peaks]
+            print(peaks_list_after_correction)
+
         else:
             center = [-1, -1]
 

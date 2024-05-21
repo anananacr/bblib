@@ -111,7 +111,8 @@ plots_info =  {
 	"xlim_min": ...,
 	"xlim_max": ...,
 	"ylim_min": ...,
-	"ylim_max": ...
+	"ylim_max": ...,
+	"color_map": ...
 }
 ```
 To calculate the refined detector center of raw data frame as a numpy array using the following methods: 

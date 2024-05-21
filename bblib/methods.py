@@ -122,14 +122,14 @@ class CenterOfMass(CenteringMethod):
                 ax1.imshow(
                     self.visual_data * self.mask_for_center_of_mass,
                     norm=LogNorm(),
-                    cmap="spring",
+                    cmap=self.plots_info["color_map"],
                     origin="lower",
                 )
             else: 
                 ax1.imshow(
                     self.visual_data * self.mask_for_center_of_mass,
                     norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]),
-                    cmap="spring",
+                    cmap=self.plots_info["color_map"],
                     origin="lower",
                 )
             ax1.scatter(
@@ -274,14 +274,14 @@ class CircleDetection(CenteringMethod):
                     self.visual_data * self.mask_for_circle_detection,
                     norm=LogNorm(),
                     origin="lower",
-                    cmap="spring",
+                    cmap=self.plots_info["color_map"],
                 )
             else:
                 ax1.imshow(
                     self.visual_data * self.mask_for_circle_detection,
                     norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]),
                     origin="lower",
-                    cmap="spring",
+                    cmap=self.plots_info["color_map"],
                 )
             ax1.scatter(
                 self.initial_detector_center[0],
@@ -562,14 +562,14 @@ class MinimizePeakFWHM(CenteringMethod):
                     self.visual_data * self.mask_for_fwhm_min,
                     norm=LogNorm(),
                     origin="lower",
-                    cmap="spring",
+                    cmap=self.plots_info["color_map"],
                 )
             else:
                 ax1.imshow(
                     self.visual_data * self.mask_for_fwhm_min,
                     norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]),
                     origin="lower",
-                    cmap="spring",
+                    cmap=self.plots_info["color_map"],
                 )
             ax1.scatter(
                 self.initial_detector_center[0],
@@ -802,11 +802,11 @@ class FriedelPairs(CenteringMethod):
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
                 pos = ax1.imshow(
-                    self.visual_data, norm=LogNorm(), cmap="spring", origin="lower"
+                    self.visual_data, norm=LogNorm(), cmap=self.plots_info["color_map"], origin="lower"
                 )
             else:
                 pos = ax1.imshow(
-                    self.visual_data, norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]), cmap="spring", origin="lower"
+                    self.visual_data, norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]), cmap=self.plots_info["color_map"], origin="lower"
                 )
             ax1.scatter(
                 self.initial_detector_center[0],
@@ -874,11 +874,11 @@ class FriedelPairs(CenteringMethod):
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
                 pos = ax1.imshow(
-                    self.visual_data, norm=LogNorm(), cmap="spring", origin="lower"
+                    self.visual_data, norm=LogNorm(), cmap=self.plots_info["color_map"], origin="lower"
                 )
             else:
                 pos = ax1.imshow(
-                    self.visual_data, norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]), cmap="spring", origin="lower"
+                    self.visual_data, norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]), cmap=self.plots_info["color_map"], origin="lower"
                 )
                 
             ax1.scatter(

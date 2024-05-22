@@ -11,9 +11,7 @@ pip install bblib
 
 ## Usage
 
-To utilize the methods `CenterOfMass`,  `FriedelPairs`, `MinimizePeakFWHM`  and `CircleDetection` it is required to have two configuration dictionaries, one for PeakFinder8 and another one for this library itself. The follow snippet shows the expected structure for both:
-
-Disclaimer: This is the most general structure for the config dictionary. Parameters that have no effect to the method you are using can be omitted.
+To utilize the methods `CenterOfMass`,  `FriedelPairs`, `MinimizePeakFWHM`  and `CircleDetection` it is required to have two configuration dictionaries, one for PeakFinder8 and another one for this library itself. The follow snippet shows the general structure for both (parameters not used in your case can be omitted):
 
 ```python
 config = {

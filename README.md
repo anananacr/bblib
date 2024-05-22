@@ -13,6 +13,8 @@ pip install bblib
 
 To utilize the methods `CenterOfMass`,  `FriedelPairs`, `MinimizePeakFWHM`  and `CircleDetection` it is required to have two configuration dictionaries, one for PeakFinder8 and another one for this library itself. The follow snippet shows the expected structure for both:
 
+Disclaimer: This is the most general structure for the config dictionary. Parameters that have no effect to the method you are using can be omitted.
+
 ```python
 config = {
     "plots_flag": ...,
@@ -48,11 +50,7 @@ config = {
 		"value": ...
 		}
 }
-```
 
-Disclaimer: This is the most general structure for the config dictionary. Parameters that have no effect to the method you are using can be omitted.
-
-```python
 PF8Info = {
 	"max_num_peaks": 
 	"adc_threshold": 

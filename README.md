@@ -16,11 +16,6 @@ To utilize the methods `CenterOfMass`,  `FriedelPairs`, `MinimizePeakFWHM`  and 
 ```python
 config = {
     "plots_flag": ...,
-	"force_center": {
-		"mode": ...,
-		"x": ...,
-		"y": ...
-		},
 	"search_radius": ...,
 	"pf8": {
 		"max_num_peaks": ...,
@@ -32,7 +27,6 @@ config = {
 		"min_res": ...,
 		"max_res": ...
 		},
-	"starting_frame": ...,
 	"offset": {
 		"x": ...,
 		"y": ...
@@ -41,24 +35,24 @@ config = {
 		"min": ...,
 		"max": ...
 		},
-	"outlier_distance": ...,
 	"canny":{
 		"sigma": ...,
 		"low_threshold": ...,
 		"high_threshold": ...
 		},	
-	"method": ...,
 	"bragg_peaks_positions_for_center_of_mass_calculation": ...,
 	"pixels_for_mask_of_bragg_peaks": ...,
-	"skip_methods": ...,
 	"polarization": {
 		"skip": ...,
 		"axis": ...,
 		"value": ...
 		}
 }
+```
 
+Disclaimer: This is the most general structure for the config dictionary. Parameters that have no effect to the method you are using can be omitted.
 
+```python
 PF8Info = {
 	"max_num_peaks": 
 	"adc_threshold": 
@@ -153,9 +147,9 @@ center_coordinates_from_friedel_pairs = friedel_pairs_method(
 ```         
 ## Author:
 
-Ana Carolina Rodrigues (2021 - )
+Ana Carolina Rodrigues (2021 - 2024)
 
-email: ana.rodrigues@desy.de
+Email: sc.anarodrigues@gmail.com
 
 
 

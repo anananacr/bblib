@@ -2,6 +2,8 @@
 
 beambusters library. Python library to refine the detector center of diffraction patterns.
 
+For more information, see: https://github.com/anananacr/beambusters
+
 ## Python version
 
 Python 3.10.5 

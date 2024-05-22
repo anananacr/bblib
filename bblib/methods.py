@@ -527,10 +527,6 @@ class MinimizePeakFWHM(CenteringMethod):
         )
         coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
 
-        ## TEST avoid effects from secondary peaks
-        # ring_mask_array=ring_mask(masked_data,initial_guess config["peak_region"]["min"], config["peak_region"]["max"])
-        # masked_data[~ring_mask_array]=0
-
         pool = multiprocessing.Pool()
         with pool:
             self.fwhm_summary = pool.map(self._calculate_fwhm, coordinates)

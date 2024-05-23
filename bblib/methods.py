@@ -793,7 +793,7 @@ class FriedelPairs(CenteringMethod):
             )
             print("Center shift in x", shift_x)
             print("Center shift in y", shift_y)
-            center = [self.initial_guess[0] + shift_x, self.initial_guess[1] + shift_y]
+            center = [np.round(self.initial_guess[0] + shift_x,1), np.round(self.initial_guess[1] + shift_y,1)]
 
             print(f"Friedel pairs position after center correction in pixels:")
             pairs_list_after_correction = [

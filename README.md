@@ -1,6 +1,8 @@
 # beambusters library
 
-beambusters library. It refines the detector center of diffraction patterns.
+beambusters library. Python library to refine the detector center of diffraction patterns.
+
+For more information, see: https://github.com/anananacr/beambusters
 
 ## Python version
 
@@ -11,7 +13,7 @@ pip install bblib
 
 ## Usage
 
-To utilize the methods `CenterOfMass`,  `FriedelPairs`, `MinimizePeakFWHM`  and `CircleDetection` it is required to have two configuration dictionaries, one for PeakFinder8 and another one for this library itself. The follow snippet shows the expected structure for both:
+To utilize the methods `CenterOfMass`,  `FriedelPairs`, `MinimizePeakFWHM`  and `CircleDetection` it is required to have two configuration dictionaries, one for PeakFinder8 and another one for this library itself. The following snippet shows the general structure for both (parameters not used in your case can be omitted):
 
 ```python
 config = {
@@ -48,11 +50,7 @@ config = {
 		"value": ...
 		}
 }
-```
 
-Disclaimer: This is the most general structure for the config dictionary. Parameters that have no effect to the method you are using can be omitted.
-
-```python
 PF8Info = {
 	"max_num_peaks": 
 	"adc_threshold": 

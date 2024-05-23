@@ -23,6 +23,7 @@ import pathlib
 from scipy.optimize import curve_fit
 from matplotlib.colors import LogNorm
 
+
 class CenteringMethod(ABC):
     @abstractmethod
     def __init__(self, **kwargs) -> None: ...
@@ -55,11 +56,7 @@ class CenterOfMass(CenteringMethod):
             )
 
         if not config["plots_flag"] and not plots_info:
-            plots_info =  {
-	        "file_name": "",
-	        "folder_name": "",
-	        "root_path": ""
-            }
+            plots_info = {"file_name": "", "folder_name": "", "root_path": ""}
 
     def _prep_for_centering(self, data: np.ndarray) -> None:
         self.initial_detector_center = self.PF8Config.get_detector_center()
@@ -125,10 +122,12 @@ class CenterOfMass(CenteringMethod):
                     cmap=self.plots_info["color_map"],
                     origin="lower",
                 )
-            else: 
+            else:
                 ax1.imshow(
                     self.visual_data * self.mask_for_center_of_mass,
-                    norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]),
+                    norm=LogNorm(
+                        self.plots_info["value_min"], self.plots_info["value_max"]
+                    ),
                     cmap=self.plots_info["color_map"],
                     origin="lower",
                 )
@@ -173,11 +172,7 @@ class CircleDetection(CenteringMethod):
             )
 
         if not config["plots_flag"] and not plots_info:
-            plots_info =  {
-	        "file_name": "",
-	        "folder_name": "",
-	        "root_path": ""
-            }
+            plots_info = {"file_name": "", "folder_name": "", "root_path": ""}
 
     def _prep_for_centering(self, data: np.ndarray) -> None:
         self.initial_detector_center = self.PF8Config.get_detector_center()
@@ -279,7 +274,9 @@ class CircleDetection(CenteringMethod):
             else:
                 ax1.imshow(
                     self.visual_data * self.mask_for_circle_detection,
-                    norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]),
+                    norm=LogNorm(
+                        self.plots_info["value_min"], self.plots_info["value_max"]
+                    ),
                     origin="lower",
                     cmap=self.plots_info["color_map"],
                 )
@@ -324,12 +321,7 @@ class MinimizePeakFWHM(CenteringMethod):
             )
 
         if not config["plots_flag"] and not plots_info:
-            plots_info =  {
-	        "file_name": "",
-	        "folder_name": "",
-	        "root_path": ""
-            }
-
+            plots_info = {"file_name": "", "folder_name": "", "root_path": ""}
 
     def _calculate_fwhm(self, coordinate: tuple) -> dict:
         center_to_radial_average = coordinate
@@ -398,8 +390,8 @@ class MinimizePeakFWHM(CenteringMethod):
             )
 
             plt.title("Azimuthal integration")
-            #plt.xlim(0, 500)
-            #plt.ylim(0, 5)
+            # plt.xlim(0, 500)
+            # plt.ylim(0, 5)
             plt.legend()
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/'
@@ -428,8 +420,10 @@ class MinimizePeakFWHM(CenteringMethod):
         )
         pf8 = PF8(self.PF8Config)
         # Assemble data and mask
-        data_visualize = geometry.DataVisualizer(pixel_maps=non_shifted_pixel_maps_for_visualization)
-        
+        data_visualize = geometry.DataVisualizer(
+            pixel_maps=non_shifted_pixel_maps_for_visualization
+        )
+
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
@@ -546,10 +540,10 @@ class MinimizePeakFWHM(CenteringMethod):
             self.config["plots_flag"],
         )
 
-        xc += self.config["offset"]["x"] 
+        xc += self.config["offset"]["x"]
         yc += self.config["offset"]["y"]
         center = [xc, yc]
-        
+
         if self.centering_converged(center):
             self.plot_fwhm_flag = True
             self._calculate_fwhm(center)
@@ -567,7 +561,9 @@ class MinimizePeakFWHM(CenteringMethod):
             else:
                 ax1.imshow(
                     self.visual_data * self.mask_for_fwhm_min,
-                    norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]),
+                    norm=LogNorm(
+                        self.plots_info["value_min"], self.plots_info["value_max"]
+                    ),
                     origin="lower",
                     cmap=self.plots_info["color_map"],
                 )
@@ -617,13 +613,9 @@ class FriedelPairs(CenteringMethod):
             raise ValueError(
                 "From config you want to save plots, please indicate the information to save the plots."
             )
-        
+
         if not config["plots_flag"] and not plots_info:
-            plots_info =  {
-	        "file_name": "",
-	        "folder_name": "",
-	        "root_path": ""
-            }
+            plots_info = {"file_name": "", "folder_name": "", "root_path": ""}
 
     def _select_closest_peaks(self, peaks_list: list, inverted_peaks: list) -> list:
         pairs_list = []
@@ -631,7 +623,9 @@ class FriedelPairs(CenteringMethod):
             radius = 0.1
             found_peak = False
             while not found_peak and radius <= self.config["search_radius"]:
-                found_peak = self._find_a_peak_in_the_surrounding(i, inverted_peaks, radius)
+                found_peak = self._find_a_peak_in_the_surrounding(
+                    i, inverted_peaks, radius
+                )
                 radius += 0.1
             if found_peak:
                 pairs_list.append((i, found_peak))
@@ -663,14 +657,20 @@ class FriedelPairs(CenteringMethod):
         else:
             return cut_peaks_list[0][0]
 
-    def _check_paired_reflections(self, pairs_list:list)-> list:
+    def _check_paired_reflections(self, pairs_list: list) -> list:
         ## check if the reversed peak is also on the list
         filtered_pairs = []
-        
+
         for original_peak, inverted_peak in pairs_list:
-            inverted_peak_inverted_twice = (-1*inverted_peak[0],-1*inverted_peak[1])
-            original_peak_inverted_twice = (-1*original_peak[0],-1*original_peak[1])
-            inverted_pair=(inverted_peak_inverted_twice,original_peak_inverted_twice)
+            inverted_peak_inverted_twice = (
+                -1 * inverted_peak[0],
+                -1 * inverted_peak[1],
+            )
+            original_peak_inverted_twice = (
+                -1 * original_peak[0],
+                -1 * original_peak[1],
+            )
+            inverted_pair = (inverted_peak_inverted_twice, original_peak_inverted_twice)
             if inverted_pair in pairs_list:
                 filtered_pairs.append((original_peak, inverted_peak))
 
@@ -691,7 +691,9 @@ class FriedelPairs(CenteringMethod):
         pf8 = PF8(self.PF8Config)
 
         # Assemble data and mask
-        data_visualize = geometry.DataVisualizer(pixel_maps=non_shifted_pixel_maps_for_visualization)
+        data_visualize = geometry.DataVisualizer(
+            pixel_maps=non_shifted_pixel_maps_for_visualization
+        )
 
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
@@ -755,7 +757,7 @@ class FriedelPairs(CenteringMethod):
         self.peak_list_x_in_frame, self.peak_list_y_in_frame = peak_list_in_slab
 
     def _run_centering(self, **kwargs) -> tuple:
-       
+
         peak_list_x_in_frame = self.peak_list_x_in_frame.copy()
         peak_list_y_in_frame = self.peak_list_y_in_frame.copy()
 
@@ -766,32 +768,44 @@ class FriedelPairs(CenteringMethod):
         pairs_list = self._select_closest_peaks(peaks, inverted_peaks)
 
         ## Calculcate the beam center shift
-        
+
         self.peaks_list_original = [x for x, y in pairs_list]
         self.peaks_list_inverted = [y for x, y in pairs_list]
 
-        if len(pairs_list)>0:
-            print(f"--------------  Friedel pairs search --------------\nNumber of Friedel Pairs in frame: {len(pairs_list)/2}")
+        if len(pairs_list) > 0:
+            print(
+                f"--------------  Friedel pairs search --------------\nNumber of Friedel Pairs in frame: {len(pairs_list)/2}"
+            )
             print(f"Pairs list for analysis:")
             print(pairs_list)
 
             friedel_coordinates_in_x = [x for x, y in self.peaks_list_original]
             friedel_coordinates_in_y = [y for x, y in self.peaks_list_original]
-            
+
             print(f"Friedel pairs position before center correction in pixels:")
             print(self.peaks_list_original)
-            
-            shift_x = self.config["offset"]["x"] + (sum(friedel_coordinates_in_x)/len(friedel_coordinates_in_x))
-            shift_y = self.config["offset"]["y"] + (sum(friedel_coordinates_in_y)/len(friedel_coordinates_in_y))
+
+            shift_x = self.config["offset"]["x"] + (
+                sum(friedel_coordinates_in_x) / len(friedel_coordinates_in_x)
+            )
+            shift_y = self.config["offset"]["y"] + (
+                sum(friedel_coordinates_in_y) / len(friedel_coordinates_in_y)
+            )
             print("Center shift in x", shift_x)
             print("Center shift in y", shift_y)
-            center = [self.initial_guess[0] + shift_x , self.initial_guess[1] + shift_y ]
+            center = [self.initial_guess[0] + shift_x, self.initial_guess[1] + shift_y]
 
             print(f"Friedel pairs position after center correction in pixels:")
-            pairs_list_after_correction=[(x[0]-shift_x, x[1]-shift_y) for x in self.peaks_list_original]
+            pairs_list_after_correction = [
+                (np.round(x[0] - shift_x, 1), np.round(x[1] - shift_y, 1))
+                for x in self.peaks_list_original
+            ]
             print(pairs_list_after_correction)
             print(f"All reflections after center correction in pixels:")
-            peaks_list_after_correction=[(x[0]-shift_x, x[1]-shift_y) for x in peaks]
+            peaks_list_after_correction = [
+                (np.round(x[0] - shift_x, 1), np.round(x[1] - shift_y, 1))
+                for x in peaks
+            ]
             print(peaks_list_after_correction)
 
         else:
@@ -802,11 +816,19 @@ class FriedelPairs(CenteringMethod):
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
                 pos = ax1.imshow(
-                    self.visual_data, norm=LogNorm(), cmap=self.plots_info["color_map"], origin="lower"
+                    self.visual_data,
+                    norm=LogNorm(),
+                    cmap=self.plots_info["color_map"],
+                    origin="lower",
                 )
             else:
                 pos = ax1.imshow(
-                    self.visual_data, norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]), cmap=self.plots_info["color_map"], origin="lower"
+                    self.visual_data,
+                    norm=LogNorm(
+                        self.plots_info["value_min"], self.plots_info["value_max"]
+                    ),
+                    cmap=self.plots_info["color_map"],
+                    origin="lower",
                 )
             ax1.scatter(
                 self.initial_detector_center[0],
@@ -833,7 +855,7 @@ class FriedelPairs(CenteringMethod):
                 s=25,
                 label=f"Refined detector center:({np.round(center[0],1)}, {np.round(center[1],1)})",
             )
-            
+
             plt.title("Center refinement: autocorrelation of Friedel pairs")
             fig.colorbar(pos, shrink=0.6)
             ax1.legend()
@@ -849,7 +871,7 @@ class FriedelPairs(CenteringMethod):
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/centered_friedel/{self.plots_info["file_name"]}.png'
             )
             plt.close("all")
-            
+
             original_peaks_x = [
                 np.round(k + self.initial_guess[0]) for k in peak_list_x_in_frame
             ]
@@ -864,23 +886,33 @@ class FriedelPairs(CenteringMethod):
                 np.round(k[1] + self.initial_guess[1]) for k in self.peaks_list_inverted
             ]
             inverted_shifted_peaks_x = [
-                np.round(k[0] + self.initial_guess[0] + shift_x) for k in self.peaks_list_inverted
+                np.round(k[0] + self.initial_guess[0] + shift_x)
+                for k in self.peaks_list_inverted
             ]
             inverted_shifted_peaks_y = [
-                np.round(k[1] + self.initial_guess[1] + shift_y) for k in self.peaks_list_inverted
+                np.round(k[1] + self.initial_guess[1] + shift_y)
+                for k in self.peaks_list_inverted
             ]
 
             ## Check pairs alignement
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
                 pos = ax1.imshow(
-                    self.visual_data, norm=LogNorm(), cmap=self.plots_info["color_map"], origin="lower"
+                    self.visual_data,
+                    norm=LogNorm(),
+                    cmap=self.plots_info["color_map"],
+                    origin="lower",
                 )
             else:
                 pos = ax1.imshow(
-                    self.visual_data, norm=LogNorm(self.plots_info["value_min"], self.plots_info["value_max"]), cmap=self.plots_info["color_map"], origin="lower"
+                    self.visual_data,
+                    norm=LogNorm(
+                        self.plots_info["value_min"], self.plots_info["value_max"]
+                    ),
+                    cmap=self.plots_info["color_map"],
+                    origin="lower",
                 )
-                
+
             ax1.scatter(
                 original_peaks_x,
                 original_peaks_y,
@@ -891,7 +923,7 @@ class FriedelPairs(CenteringMethod):
                 linewidth=1.5,
                 label="original peaks",
             )
-            
+
             ax1.scatter(
                 inverted_non_shifted_peaks_x,
                 inverted_non_shifted_peaks_y,
@@ -914,11 +946,11 @@ class FriedelPairs(CenteringMethod):
                 edgecolor="blue",
                 label="shift of inverted peaks",
             )
-            
+
             if not self.plots_info["axis_lim_auto"]:
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
-            
+
             plt.title("Bragg peaks alignement")
             fig.colorbar(pos, shrink=0.6)
             ax1.legend()

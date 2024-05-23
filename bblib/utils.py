@@ -28,7 +28,7 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
         mask = np.ones_like(data)
     data = data * mask
     indexes = np.where(data > 0)
-    if np.sum(data[indexes])>1e-7:
+    if np.sum(data[indexes]) > 1e-7:
         xc = np.sum(data[indexes] * indexes[1]) / np.sum(data[indexes])
         yc = np.sum(data[indexes] * indexes[0]) / np.sum(data[indexes])
     else:
@@ -413,9 +413,9 @@ def get_distance_map_global_min(
     proj_x = np.sum(z, axis=0)
     # print('proj',len(proj_x))
     x = np.arange(x[0], x[-1] + pixel_step, pixel_step)
-    
+
     # print('x',len(x))
-    if len(proj_x)==len(x):
+    if len(proj_x) == len(x):
         index_x = np.unravel_index(np.argmin(proj_x, axis=None), proj_x.shape)
         xc = x[index_x]
         ax2.scatter(x, proj_x + pixel_step, color="b")
@@ -431,7 +431,7 @@ def get_distance_map_global_min(
 
     proj_y = np.sum(z, axis=1)
     x = np.arange(y[0], y[-1] + pixel_step, pixel_step)
-    if len(proj_y)==len(x):
+    if len(proj_y) == len(x):
         index_y = np.unravel_index(np.argmin(proj_y, axis=None), proj_y.shape)
         yc = x[index_y]
         ax3.scatter(x, proj_y, color="b")

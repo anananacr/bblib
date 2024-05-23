@@ -260,8 +260,8 @@ class CircleDetection(CenteringMethod):
         )
 
         if len(xc) > 0:
-            xc = xc[0]
-            yc = yc[0]
+            xc = xc[0] + self.config["offset"]["x"]
+            yc = yc[0] + self.config["offset"]["y"]
         else:
             xc = -1
             yc = -1
@@ -538,7 +538,7 @@ class MinimizePeakFWHM(CenteringMethod):
             )
             path.mkdir(parents=True, exist_ok=True)
 
-        center = get_fwhm_map_global_min(
+        xc, yc = get_fwhm_map_global_min(
             self.fwhm_summary,
             f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}',
             f'{self.plots_info["file_name"]}',
@@ -546,6 +546,10 @@ class MinimizePeakFWHM(CenteringMethod):
             self.config["plots_flag"],
         )
 
+        xc += self.config["offset"]["x"] 
+        yc += self.config["offset"]["y"]
+        center = [xc, yc]
+        
         if self.centering_converged(center):
             self.plot_fwhm_flag = True
             self._calculate_fwhm(center)
@@ -777,11 +781,11 @@ class FriedelPairs(CenteringMethod):
             print(f"Friedel pairs position before center correction in pixels:")
             print(self.peaks_list_original)
             
-            shift_x = sum(friedel_coordinates_in_x)/len(friedel_coordinates_in_x)
-            shift_y = sum(friedel_coordinates_in_y)/len(friedel_coordinates_in_y)
+            shift_x = self.config["offset"]["x"] + (sum(friedel_coordinates_in_x)/len(friedel_coordinates_in_x))
+            shift_y = self.config["offset"]["y"] + (sum(friedel_coordinates_in_y)/len(friedel_coordinates_in_y))
             print("Center shift in x", shift_x)
             print("Center shift in y", shift_y)
-            center = [self.initial_guess[0]+shift_x, self.initial_guess[1]+shift_y]
+            center = [self.initial_guess[0] + shift_x , self.initial_guess[1] + shift_y ]
 
             print(f"Friedel pairs position after center correction in pixels:")
             pairs_list_after_correction=[(x[0]-shift_x, x[1]-shift_y) for x in self.peaks_list_original]

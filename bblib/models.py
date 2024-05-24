@@ -18,7 +18,7 @@ class PF8Info:
     min_pixel_count: np.int16 = 2
     max_pixel_count: np.int16 = 2000
     local_bg_radius: np.int16 = 3
-    min_res: np.int16 = 0 
+    min_res: np.int16 = 0
     max_res: np.int16 = 1200
     pf8_detector_info: TypeDetectorLayoutInformation = None
     bad_pixel_map_filename: str = None
@@ -42,7 +42,9 @@ class PF8Info:
             self.pixel_maps["radius"] = np.sqrt(
                 np.square(self.pixel_maps["x"]) + np.square(self.pixel_maps["y"])
             ).reshape(self._data_shape)
-            self.pixel_maps["phi"] = np.arctan2(self.pixel_maps["y"], self.pixel_maps["x"])
+            self.pixel_maps["phi"] = np.arctan2(
+                self.pixel_maps["y"], self.pixel_maps["x"]
+            )
         else:
             raise ValueError(
                 f"Pixel maps have been moved once before, to avoid errors reset the geometry before moving it again."
@@ -53,11 +55,13 @@ class PF8Info:
             self.geometry_txt = open(geometry_filename, "r").readlines()
         else:
             if not self.geometry_txt:
-                raise ValueError("Please, specify the detector geometry in CrystFEL format.")
-        
-        # Passing bad pixel maps to PF8. 
-        # Warning! It will look for campus in the geom file either 'mask0_file' or 'mask_file'. 
-        # It doesn't look for multiple masks. 
+                raise ValueError(
+                    "Please, specify the detector geometry in CrystFEL format."
+                )
+
+        # Passing bad pixel maps to PF8.
+        # Warning! It will look for campus in the geom file either 'mask0_file' or 'mask_file'.
+        # It doesn't look for multiple masks.
         # It assumes bad pixels as zeros and good pixels as ones.
         try:
             self.bad_pixel_map_filename = [
@@ -67,18 +71,22 @@ class PF8Info:
             ][0]
         except IndexError:
             self.bad_pixel_map_filename = [
-               x.split(" = ")[-1][:-1]
+                x.split(" = ")[-1][:-1]
                 for x in self.geometry_txt
                 if x.split(" = ")[0] == "mask_file"
             ][0]
 
         try:
             self.bad_pixel_map_hdf5_path = [
-                x.split(" = ")[-1][:-1] for x in self.geometry_txt if x.split(" = ")[0] == "mask0_data"
+                x.split(" = ")[-1][:-1]
+                for x in self.geometry_txt
+                if x.split(" = ")[0] == "mask0_data"
             ][0]
         except IndexError:
             self.bad_pixel_map_hdf5_path = [
-                x.split(" = ")[-1][:-1] for x in self.geometry_txt if x.split(" = ")[0] == "mask"
+                x.split(" = ")[-1][:-1]
+                for x in self.geometry_txt
+                if x.split(" = ")[0] == "mask"
             ][0]
 
         geom = GeometryInformation(
@@ -97,7 +105,9 @@ class PF8Info:
         ) == 1:
             ## Get single panel transformation matrix from the geometry file
             ### Warning! Check carefully if the visualized data after reorientation of the panel makes sense, e.g. if it is equal to the real experimental data geometry.
-            detector, _, _ = _read_crystfel_geometry_from_text(text_lines=self.geometry_txt)
+            detector, _, _ = _read_crystfel_geometry_from_text(
+                text_lines=self.geometry_txt
+            )
             detector_panels = dict(detector["panels"])
             panel_name = list(detector_panels.keys())[0]
             frame_dim_structure = [
@@ -156,7 +166,7 @@ class PF8Info:
 
     def get_detector_center(self) -> list:
         if not self._shifted_pixel_maps:
-            
+
             if (
                 self.pf8_detector_info["nasics_x"] * self.pf8_detector_info["nasics_y"]
                 > 1
@@ -192,7 +202,9 @@ class PF8Info:
                 _img_center_x = int(abs(np.min(self.pixel_maps["x"])))
                 _img_center_y = int(abs(np.min(self.pixel_maps["y"])))
         else:
-            print("Warning! The detector center was moved by a previous operation, the detector center is not the same as in the geometry file.")
+            print(
+                "Warning! The detector center was moved by a previous operation, the detector center is not the same as in the geometry file."
+            )
             _img_center_x = self.detector_center_from_geom[0] + self._detector_shift_x
             _img_center_y = self.detector_center_from_geom[1] + self._detector_shift_y
         return [_img_center_x, _img_center_y]

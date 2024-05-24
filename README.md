@@ -6,7 +6,7 @@ For more information, see: https://github.com/anananacr/beambusters
 
 ## Python version
 
-Python 3.10.5 
+Python 3.10
 
 ## Installation
 pip install bblib

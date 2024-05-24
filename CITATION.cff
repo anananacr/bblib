@@ -1,0 +1,28 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: bblib
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Ana Carolina
+    family-names: Rodrigues
+    email: sc.anarodrigues@gmail.com
+    orcid: 'https://orcid.org/0000-0001-6180-9522'
+repository-code: 'https://github.com/anananacr/bblib'
+abstract: >-
+  beambusters library. Python library to refine the detector
+  center of diffraction patterns. Implementation of methods
+  to determine the direct beam center of diffraction
+  patterns.
+keywords:
+  - beambusters
+  - diffraction
+  - xray
+  - electron
+  - crystallography
+  - serial crystallography
+license: GPL-3.0

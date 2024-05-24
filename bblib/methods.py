@@ -114,17 +114,19 @@ class CenterOfMass(CenteringMethod):
             center[1] += self.config["offset"]["y"]
 
         if self.config["plots_flag"]:
+            visual_img = self.visual_data * self.mask_for_center_of_mass
+            visual_img[np.where(visual_img<1)] = 1 # For better visualization of plots in logarithmic scale
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
                 ax1.imshow(
-                    self.visual_data * self.mask_for_center_of_mass,
+                    visual_img,
                     norm=LogNorm(),
                     cmap=self.plots_info["color_map"],
                     origin="lower",
                 )
             else:
                 ax1.imshow(
-                    self.visual_data * self.mask_for_center_of_mass,
+                    visual_img,
                     norm=LogNorm(
                         self.plots_info["value_min"], self.plots_info["value_max"]
                     ),
@@ -263,17 +265,19 @@ class CircleDetection(CenteringMethod):
 
         center = [xc, yc]
         if self.config["plots_flag"]:
+            visual_img = self.visual_data * self.mask_for_circle_detection
+            visual_img[np.where(visual_img<1)] = 1 # For better visualization of plots in logarithmic scale
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
                 ax1.imshow(
-                    self.visual_data * self.mask_for_circle_detection,
+                    visual_img,
                     norm=LogNorm(),
                     origin="lower",
                     cmap=self.plots_info["color_map"],
                 )
             else:
                 ax1.imshow(
-                    self.visual_data * self.mask_for_circle_detection,
+                    visual_img,
                     norm=LogNorm(
                         self.plots_info["value_min"], self.plots_info["value_max"]
                     ),
@@ -550,17 +554,19 @@ class MinimizePeakFWHM(CenteringMethod):
             self.plot_fwhm_flag = False
 
         if self.config["plots_flag"]:
+            visual_img = self.visual_data * self.mask_for_fwhm_min
+            visual_img[np.where(visual_img<1)] = 1 # For better visualization of plots in logarithmic scale
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
                 ax1.imshow(
-                    self.visual_data * self.mask_for_fwhm_min,
+                    visual_img,
                     norm=LogNorm(),
                     origin="lower",
                     cmap=self.plots_info["color_map"],
                 )
             else:
                 ax1.imshow(
-                    self.visual_data * self.mask_for_fwhm_min,
+                    visual_img,
                     norm=LogNorm(
                         self.plots_info["value_min"], self.plots_info["value_max"]
                     ),

@@ -118,14 +118,14 @@ class CenterOfMass(CenteringMethod):
             visual_img[np.where(visual_img<1)] = 1 # For better visualization of plots in logarithmic scale
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
-                ax1.imshow(
+                pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(),
                     cmap=self.plots_info["color_map"],
                     origin="lower",
                 )
             else:
-                ax1.imshow(
+                pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(
                         self.plots_info["value_min"], self.plots_info["value_max"]
@@ -147,15 +147,15 @@ class CenterOfMass(CenteringMethod):
                 marker="o",
                 label=f"Refined detector center: ({center[0]}, {center[1]})",
             )
+            ax1.legend()
+            fig.colorbar(pos, ax=ax1, shrink=0.6)
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_of_mass/'
             )
             path.mkdir(parents=True, exist_ok=True)
-            ax1.legend()
             if not self.plots_info["axis_lim_auto"]:
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
-
             plt.savefig(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_of_mass/{self.plots_info["file_name"]}.png'
             )
@@ -237,7 +237,8 @@ class CircleDetection(CenteringMethod):
 
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-            ax1.imshow(edges, origin="lower", cmap=self.plots_info["color_map"])
+            pos = ax1.imshow(edges, origin="lower", cmap=self.plots_info["color_map"])
+            fig.colorbar(pos, ax=ax1, shrink=0.6)
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/edges/'
             )
@@ -269,14 +270,14 @@ class CircleDetection(CenteringMethod):
             visual_img[np.where(visual_img<1)] = 1 # For better visualization of plots in logarithmic scale
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
-                ax1.imshow(
+                pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(),
                     origin="lower",
                     cmap=self.plots_info["color_map"],
                 )
             else:
-                ax1.imshow(
+                pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(
                         self.plots_info["value_min"], self.plots_info["value_max"]
@@ -303,6 +304,7 @@ class CircleDetection(CenteringMethod):
             )
             path.mkdir(parents=True, exist_ok=True)
             ax1.legend()
+            fig.colorbar(pos, ax=ax1, shrink=0.6)
             if not self.plots_info["axis_lim_auto"]:
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
@@ -558,14 +560,14 @@ class MinimizePeakFWHM(CenteringMethod):
             visual_img[np.where(visual_img<1)] = 1 # For better visualization of plots in logarithmic scale
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
-                ax1.imshow(
+                pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(),
                     origin="lower",
                     cmap=self.plots_info["color_map"],
                 )
             else:
-                ax1.imshow(
+                pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(
                         self.plots_info["value_min"], self.plots_info["value_max"]
@@ -599,6 +601,7 @@ class MinimizePeakFWHM(CenteringMethod):
             )
             path.mkdir(parents=True, exist_ok=True)
             ax1.legend()
+            fig.colorbar(pos, ax=ax1, shrink=0.6)
             if not self.plots_info["axis_lim_auto"]:
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
@@ -866,7 +869,7 @@ class FriedelPairs(CenteringMethod):
             )
 
             plt.title("Center refinement: autocorrelation of Friedel pairs")
-            fig.colorbar(pos, shrink=0.6)
+            fig.colorbar(pos, ax=ax1, shrink=0.6)
             ax1.legend()
             if not self.plots_info["axis_lim_auto"]:
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
@@ -961,7 +964,7 @@ class FriedelPairs(CenteringMethod):
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
 
             plt.title("Bragg peaks alignement")
-            fig.colorbar(pos, shrink=0.6)
+            fig.colorbar(pos, ax=ax1, shrink=0.6)
             ax1.legend()
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/peaks/'

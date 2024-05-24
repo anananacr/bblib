@@ -45,7 +45,7 @@ config = {
 	"bragg_peaks_positions_for_center_of_mass_calculation": ...,
 	"pixels_for_mask_of_bragg_peaks": ...,
 	"polarization": {
-		"skip": ...,
+		"apply_polarization_correction": ...,
 		"axis": ...,
 		"value": ...
 		}

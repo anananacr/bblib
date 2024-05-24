@@ -235,7 +235,7 @@ class CircleDetection(CenteringMethod):
 
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-            ax1.imshow(edges, origin="lower")
+            ax1.imshow(edges, origin="lower", cmap=self.plots_info["color_map"])
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/edges/'
             )

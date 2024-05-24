@@ -433,7 +433,7 @@ class MinimizePeakFWHM(CenteringMethod):
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
-        if self.config["polarization"]["skip"]:
+        if not self.config["polarization"]["apply_polarization_correction"]:
             peak_list = pf8.get_peaks_pf8(data=data)
             if (
                 self.PF8Config.pf8_detector_info["nasics_x"]
@@ -707,7 +707,7 @@ class FriedelPairs(CenteringMethod):
         with h5py.File(f"{self.PF8Config.bad_pixel_map_filename}", "r") as f:
             mask = np.array(f[f"{self.PF8Config.bad_pixel_map_hdf5_path}"])
 
-        if self.config["polarization"]["skip"]:
+        if not self.config["polarization"]["apply_polarization_correction"]:
             peak_list = pf8.get_peaks_pf8(data=data)
             if (
                 self.PF8Config.pf8_detector_info["nasics_x"]

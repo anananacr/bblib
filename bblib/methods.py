@@ -794,12 +794,9 @@ class FriedelPairs(CenteringMethod):
             print(f"Friedel pairs position before center correction in pixels:")
             print(self.peaks_list_original)
 
-            shift_x = self.config["offset"]["x"] + (
-                sum(friedel_coordinates_in_x) / len(friedel_coordinates_in_x)
-            )
-            shift_y = self.config["offset"]["y"] + (
-                sum(friedel_coordinates_in_y) / len(friedel_coordinates_in_y)
-            )
+            shift_x = sum(friedel_coordinates_in_x) / len(friedel_coordinates_in_x)
+            shift_y = sum(friedel_coordinates_in_y) / len(friedel_coordinates_in_y)
+
             print("Center shift in x", shift_x)
             print("Center shift in y", shift_y)
             center = [
@@ -819,7 +816,10 @@ class FriedelPairs(CenteringMethod):
                 for x in peaks
             ]
             print(peaks_list_after_correction)
+            print(f"-- End --")
 
+            center[0] += self.config["offset"]["x"] 
+            center[1] += self.config["offset"]["y"]
         else:
             center = [-1, -1]
 

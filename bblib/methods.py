@@ -6,7 +6,6 @@ from bblib.utils import (
     azimuthal_average,
     gaussian_lin,
     get_fwhm_map_global_min,
-    get_distance_map_global_min,
     correct_polarization,
     visualize_single_panel,
 )

@@ -120,25 +120,16 @@ class PF8Info:
                 self.ss_in_rows = True
             else:
                 self.ss_in_rows = False
+            
+            ## The transformation matrix here are only for visualization purposes. Small stretching factors won't have an impact on the visualization of the images (slabby data).
             self.transformation_matrix = [
                 [
-                    detector_panels[panel_name]["fsx"],
-                    detector_panels[panel_name]["fsy"],
+                    int(detector_panels[panel_name]["fsx"]),
+                    int(detector_panels[panel_name]["fsy"]),
                 ],
                 [
-                    detector_panels[panel_name]["ssx"],
-                    detector_panels[panel_name]["ssy"],
-                ],
-            ]
-
-            self.transformation_matrix = [
-                [
-                    detector_panels[panel_name]["fsx"],
-                    detector_panels[panel_name]["fsy"],
-                ],
-                [
-                    detector_panels[panel_name]["ssx"],
-                    detector_panels[panel_name]["ssy"],
+                    int(detector_panels[panel_name]["ssx"]),
+                    int(detector_panels[panel_name]["ssy"]),
                 ],
             ]
 

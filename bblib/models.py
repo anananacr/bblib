@@ -145,7 +145,7 @@ class PF8Info:
             except(ValueError):
                 ssx, ssy = re.findall(pattern, ss_string)
 
-            ## The transformation matrix here are only for visualization purposes. Small stretching factors won't have an impact on the visualization of the images (slabby data).
+            ## The transformation matrix here is only for visualization purposes. Small stretching factors won't have an impact on the visualization of the images (slabby data).
             self.transformation_matrix = [
                 [
                     np.round(float(fsx)),

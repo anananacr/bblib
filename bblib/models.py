@@ -1,6 +1,7 @@
 import numpy as np
 from dataclasses import dataclass, field
 import math
+import re
 from om.algorithms.crystallography import TypePeakList, Peakfinder8PeakDetection
 from om.lib.geometry import (
     TypePixelMaps,
@@ -116,7 +117,6 @@ class PF8Info:
                 for x in detector_panels[panel_name]["dim_structure"]
                 if x == "ss" or x == "fs"
             ]
-
             if frame_dim_structure[0] == "ss":
                 self.ss_in_rows = True
             else:
@@ -133,19 +133,27 @@ class PF8Info:
                 for x in self.geometry_txt
                 if (x.split(" = ")[0]).split("/")[-1] == "ss"
             ][0]
+            pattern = r"([-+]?\d*\.?\d+)(?=[xyz])"
+            
+            try:    
+                fsx, fsy, fsz = re.findall(pattern, fs_string)
+            except(ValueError):
+                fsx, fsy = re.findall(pattern, fs_string)
 
-            fsx, fsy, _= _parse_direction(fs_string)
-            ssx, ssy, _= _parse_direction(ss_string)
+            try:    
+                ssx, ssy, ssz = re.findall(pattern, ss_string)
+            except(ValueError):
+                ssx, ssy = re.findall(pattern, ss_string)
 
             ## The transformation matrix here are only for visualization purposes. Small stretching factors won't have an impact on the visualization of the images (slabby data).
             self.transformation_matrix = [
                 [
-                    np.round(fsx),
-                    np.round(fsy),
+                    np.round(float(fsx)),
+                    np.round(float(fsy)),
                 ],
                 [
-                    np.round(ssx),
-                    np.round(ssy),
+                    np.round(float(ssx)),
+                    np.round(float(ssy)),
                 ],
             ]
 

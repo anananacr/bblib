@@ -1,12 +1,14 @@
 import numpy as np
 from dataclasses import dataclass, field
 import math
+import re
 from om.algorithms.crystallography import TypePeakList, Peakfinder8PeakDetection
 from om.lib.geometry import (
     TypePixelMaps,
     TypeDetectorLayoutInformation,
     GeometryInformation,
     _read_crystfel_geometry_from_text,
+    _parse_direction
 )
 
 
@@ -115,21 +117,43 @@ class PF8Info:
                 for x in detector_panels[panel_name]["dim_structure"]
                 if x == "ss" or x == "fs"
             ]
-
             if frame_dim_structure[0] == "ss":
                 self.ss_in_rows = True
             else:
                 self.ss_in_rows = False
             
-            ## The transformation matrix here are only for visualization purposes. Small stretching factors won't have an impact on the visualization of the images (slabby data).
+            fs_string = [
+                x.split(" = ")[-1][:-1]
+                for x in self.geometry_txt
+                if (x.split(" = ")[0]).split("/")[-1] == "fs"
+            ][0]
+
+            ss_string = [
+                x.split(" = ")[-1][:-1]
+                for x in self.geometry_txt
+                if (x.split(" = ")[0]).split("/")[-1] == "ss"
+            ][0]
+            pattern = r"([-+]?\d*\.?\d+)(?=[xyz])"
+            
+            try:    
+                fsx, fsy, fsz = re.findall(pattern, fs_string)
+            except(ValueError):
+                fsx, fsy = re.findall(pattern, fs_string)
+
+            try:    
+                ssx, ssy, ssz = re.findall(pattern, ss_string)
+            except(ValueError):
+                ssx, ssy = re.findall(pattern, ss_string)
+
+            ## The transformation matrix here is only for visualization purposes. Small stretching factors won't have an impact on the visualization of the images (slabby data).
             self.transformation_matrix = [
                 [
-                    np.round(detector_panels[panel_name]["fsx"]),
-                    np.round(detector_panels[panel_name]["fsy"]),
+                    np.round(float(fsx)),
+                    np.round(float(fsy)),
                 ],
                 [
-                    np.round(detector_panels[panel_name]["ssx"]),
-                    np.round(detector_panels[panel_name]["ssy"]),
+                    np.round(float(ssx)),
+                    np.round(float(ssy)),
                 ],
             ]
 

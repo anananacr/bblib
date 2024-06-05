@@ -124,12 +124,12 @@ class PF8Info:
             ## The transformation matrix here are only for visualization purposes. Small stretching factors won't have an impact on the visualization of the images (slabby data).
             self.transformation_matrix = [
                 [
-                    int(detector_panels[panel_name]["fsx"]),
-                    int(detector_panels[panel_name]["fsy"]),
+                    np.round(detector_panels[panel_name]["fsx"]),
+                    np.round(detector_panels[panel_name]["fsy"]),
                 ],
                 [
-                    int(detector_panels[panel_name]["ssx"]),
-                    int(detector_panels[panel_name]["ssy"]),
+                    np.round(detector_panels[panel_name]["ssx"]),
+                    np.round(detector_panels[panel_name]["ssy"]),
                 ],
             ]
 

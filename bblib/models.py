@@ -7,6 +7,7 @@ from om.lib.geometry import (
     TypeDetectorLayoutInformation,
     GeometryInformation,
     _read_crystfel_geometry_from_text,
+    _parse_direction
 )
 
 
@@ -121,15 +122,30 @@ class PF8Info:
             else:
                 self.ss_in_rows = False
             
+            fs_string = [
+                x.split(" = ")[-1][:-1]
+                for x in self.geometry_txt
+                if (x.split(" = ")[0]).split("/")[-1] == "fs"
+            ][0]
+
+            ss_string = [
+                x.split(" = ")[-1][:-1]
+                for x in self.geometry_txt
+                if (x.split(" = ")[0]).split("/")[-1] == "ss"
+            ][0]
+
+            fsx, fsy, _= _parse_direction(fs_string)
+            ssx, ssy, _= _parse_direction(ss_string)
+
             ## The transformation matrix here are only for visualization purposes. Small stretching factors won't have an impact on the visualization of the images (slabby data).
             self.transformation_matrix = [
                 [
-                    np.round(detector_panels[panel_name]["fsx"]),
-                    np.round(detector_panels[panel_name]["fsy"]),
+                    np.round(fsx),
+                    np.round(fsy),
                 ],
                 [
-                    np.round(detector_panels[panel_name]["ssx"]),
-                    np.round(detector_panels[panel_name]["ssy"]),
+                    np.round(ssx),
+                    np.round(ssy),
                 ],
             ]
 

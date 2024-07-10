@@ -113,7 +113,7 @@ class CenterOfMass(CenteringMethod):
             center[1] += self.config["offset"]["y"]
 
         if self.config["plots_flag"]:
-            visual_img = self.visual_data * self.mask_for_center_of_mass
+            visual_img = self.visual_data * self.mask_for_center_of_mass 
             visual_img[np.where(visual_img<1)] = 1 # For better visualization of plots in logarithmic scale
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
@@ -121,7 +121,7 @@ class CenterOfMass(CenteringMethod):
                     visual_img,
                     norm=LogNorm(),
                     cmap=self.plots_info["color_map"],
-                    origin="lower",
+                    origin="lower"
                 )
             else:
                 pos = ax1.imshow(
@@ -130,11 +130,12 @@ class CenterOfMass(CenteringMethod):
                         self.plots_info["value_min"], self.plots_info["value_max"]
                     ),
                     cmap=self.plots_info["color_map"],
-                    origin="lower",
+                    origin="lower"
                 )
             ax1.scatter(
                 self.initial_detector_center[0],
                 self.initial_detector_center[1],
+                s=50,
                 color="blue",
                 marker="o",
                 label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})",
@@ -142,12 +143,19 @@ class CenterOfMass(CenteringMethod):
             ax1.scatter(
                 center[0],
                 center[1],
+                s=50,
                 color="r",
-                marker="o",
+                marker="^",
                 label=f"Refined detector center: ({center[0]}, {center[1]})",
             )
-            ax1.legend()
-            fig.colorbar(pos, ax=ax1, shrink=0.6)
+            ax1.legend(fontsize=14,  loc=1, markerscale=1)
+            plt.tick_params(axis='both', which='major', labelsize=16)
+            ax1.set_xlabel("x (pixel)", fontsize=20)
+            ax1.set_ylabel("y (pixel)", fontsize=20)
+
+            cbar = fig.colorbar(pos, ax=ax1, shrink=0.6)
+            cbar.ax.tick_params(labelsize=20)
+
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_of_mass/'
             )
@@ -237,7 +245,12 @@ class CircleDetection(CenteringMethod):
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             pos = ax1.imshow(edges, origin="lower", cmap=self.plots_info["color_map"])
-            fig.colorbar(pos, ax=ax1, shrink=0.6)
+            plt.tick_params(axis='both', which='major', labelsize=16)
+            ax1.set_xlabel("x (pixel)", fontsize=20)
+            ax1.set_ylabel("y (pixel)", fontsize=20)
+            cbar = fig.colorbar(pos, ax=ax1, shrink=0.6)
+            cbar.ax.tick_params(labelsize=20)
+
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/edges/'
             )

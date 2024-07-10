@@ -130,7 +130,7 @@ class CenterOfMass(CenteringMethod):
                 color_map = copy.copy(
                     matplotlib.colormaps[self.plots_info["color_map"]]
                 )
-                color_map.set_bad(color_map.colors(0))
+                color_map.set_bad(color_map(0))
                 pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(

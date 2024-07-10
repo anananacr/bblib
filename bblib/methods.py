@@ -146,7 +146,7 @@ class CenterOfMass(CenteringMethod):
                 color="blue",
                 marker="o",
                 edgecolor="black",
-                linewidth=1,
+                linewidth=0.5,
                 label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})",
             )
             ax1.scatter(
@@ -156,7 +156,7 @@ class CenterOfMass(CenteringMethod):
                 color="r",
                 marker="^",
                 edgecolor="black",
-                linewidth=1,
+                linewidth=0.5,
                 label=f"Refined detector center: ({center[0]}, {center[1]})",
             )
             ax1.legend(fontsize=14, loc=1, markerscale=1)
@@ -324,7 +324,7 @@ class CircleDetection(CenteringMethod):
                 color="blue",
                 marker="o",
                 edgecolor="black",
-                linewidth=1,
+                linewidth=0.5,
                 label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})",
             )
             ax1.scatter(
@@ -334,7 +334,7 @@ class CircleDetection(CenteringMethod):
                 color="r",
                 marker="^",
                 edgecolor="black",
-                linewidth=1,
+                linewidth=0.5,
                 label=f"Refined detector center: ({center[0]}, {center[1]})",
             )
             path = pathlib.Path(
@@ -633,7 +633,7 @@ class MinimizePeakFWHM(CenteringMethod):
                 color="blue",
                 marker="o",
                 edgecolor="black",
-                linewidth=1,
+                linewidth=0.5,
                 label=f"Initial guess: ({np.round(self.initial_guess[0])}, {np.round(self.initial_guess[1])})",
             )
             ax1.scatter(
@@ -643,7 +643,7 @@ class MinimizePeakFWHM(CenteringMethod):
                 color="r",
                 marker="^",
                 edgecolor="black",
-                linewidth=1,
+                linewidth=0.5,
                 label=f"Refined detector center: ({center[0]}, {center[1]})",
             )
             path = pathlib.Path(

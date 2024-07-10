@@ -308,15 +308,20 @@ class CircleDetection(CenteringMethod):
                 center[0],
                 center[1],
                 color="r",
-                marker="o",
+                marker="^",
                 label=f"Refined detector center: ({center[0]}, {center[1]})",
             )
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_circle_detection/'
             )
             path.mkdir(parents=True, exist_ok=True)
-            ax1.legend()
-            fig.colorbar(pos, ax=ax1, shrink=0.6)
+            ax1.legend(fontsize=14,  loc=1, markerscale=1)
+            cbar = fig.colorbar(pos, ax=ax1, shrink=0.6)
+            cbar.ax.tick_params(labelsize=20)
+            plt.tick_params(axis='both', which='major', labelsize=16)
+            ax1.set_xlabel("x (pixel)", fontsize=20)
+            ax1.set_ylabel("y (pixel)", fontsize=20)
+
             if not self.plots_info["axis_lim_auto"]:
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])

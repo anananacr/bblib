@@ -360,6 +360,7 @@ def get_fwhm_map_global_min(
     plt.close()
     return [np.round(xc, 0), np.round(yc, 0)]
 
+
 def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:
     """
     Make a  ring mask for the data

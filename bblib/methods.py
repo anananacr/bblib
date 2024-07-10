@@ -21,6 +21,8 @@ import multiprocessing
 import pathlib
 from scipy.optimize import curve_fit
 from matplotlib.colors import LogNorm
+import copy
+import matplotlib
 
 
 class CenteringMethod(ABC):
@@ -114,40 +116,57 @@ class CenterOfMass(CenteringMethod):
 
         if self.config["plots_flag"]:
             visual_img = self.visual_data * self.mask_for_center_of_mass
-            visual_img[np.where(visual_img<1)] = 1 # For better visualization of plots in logarithmic scale
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
+                color_map = copy.copy(
+                    matplotlib.colormaps[self.plots_info["color_map"]]
+                )
+                color_map.set_bad(color_map(0))
                 pos = ax1.imshow(
-                    visual_img,
-                    norm=LogNorm(),
-                    cmap=self.plots_info["color_map"],
-                    origin="lower",
+                    visual_img, norm=LogNorm(), cmap=color_map, origin="lower"
                 )
             else:
+
+                color_map = copy.copy(
+                    matplotlib.colormaps[self.plots_info["color_map"]]
+                )
+                color_map.set_bad(color_map.colors(0))
                 pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(
                         self.plots_info["value_min"], self.plots_info["value_max"]
                     ),
-                    cmap=self.plots_info["color_map"],
+                    cmap=color_map,
                     origin="lower",
                 )
             ax1.scatter(
                 self.initial_detector_center[0],
                 self.initial_detector_center[1],
+                s=self.plots_info["marker_size"],
                 color="blue",
                 marker="o",
+                edgecolor="black",
+                linewidth=0.5,
                 label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})",
             )
             ax1.scatter(
                 center[0],
                 center[1],
+                s=self.plots_info["marker_size"],
                 color="r",
-                marker="o",
+                marker="^",
+                edgecolor="black",
+                linewidth=0.5,
                 label=f"Refined detector center: ({center[0]}, {center[1]})",
             )
-            ax1.legend()
-            fig.colorbar(pos, ax=ax1, shrink=0.6)
+            ax1.legend(fontsize=14, loc=1, markerscale=1)
+            plt.tick_params(axis="both", which="major", labelsize=16)
+            ax1.set_xlabel("x (pixel)", fontsize=20)
+            ax1.set_ylabel("y (pixel)", fontsize=20)
+
+            cbar = fig.colorbar(pos, ax=ax1, shrink=0.6)
+            cbar.ax.tick_params(labelsize=20)
+
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_of_mass/'
             )
@@ -236,8 +255,15 @@ class CircleDetection(CenteringMethod):
 
         if self.config["plots_flag"]:
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
-            pos = ax1.imshow(edges, origin="lower", cmap=self.plots_info["color_map"])
-            fig.colorbar(pos, ax=ax1, shrink=0.6)
+            color_map = copy.copy(matplotlib.colormaps[self.plots_info["color_map"]])
+            color_map.set_bad(color_map(0))
+            pos = ax1.imshow(edges, origin="lower", cmap=color_map)
+            plt.tick_params(axis="both", which="major", labelsize=16)
+            ax1.set_xlabel("x (pixel)", fontsize=20)
+            ax1.set_ylabel("y (pixel)", fontsize=20)
+            cbar = fig.colorbar(pos, ax=ax1, shrink=0.6)
+            cbar.ax.tick_params(labelsize=20)
+
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/edges/'
             )
@@ -266,44 +292,62 @@ class CircleDetection(CenteringMethod):
         center = [xc, yc]
         if self.config["plots_flag"]:
             visual_img = self.visual_data * self.mask_for_circle_detection
-            visual_img[np.where(visual_img<1)] = 1 # For better visualization of plots in logarithmic scale
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
+                color_map = copy.copy(
+                    matplotlib.colormaps[self.plots_info["color_map"]]
+                )
+                color_map.set_bad(color_map(0))
                 pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(),
                     origin="lower",
-                    cmap=self.plots_info["color_map"],
+                    cmap=color_map,
                 )
             else:
+                color_map = copy.copy(
+                    matplotlib.colormaps[self.plots_info["color_map"]]
+                )
+                color_map.set_bad(color_map(0))
                 pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(
                         self.plots_info["value_min"], self.plots_info["value_max"]
                     ),
                     origin="lower",
-                    cmap=self.plots_info["color_map"],
+                    cmap=color_map,
                 )
             ax1.scatter(
                 self.initial_detector_center[0],
                 self.initial_detector_center[1],
+                s=self.plots_info["marker_size"],
                 color="blue",
                 marker="o",
+                edgecolor="black",
+                linewidth=0.5,
                 label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})",
             )
             ax1.scatter(
                 center[0],
                 center[1],
+                s=self.plots_info["marker_size"],
                 color="r",
-                marker="o",
+                marker="^",
+                edgecolor="black",
+                linewidth=0.5,
                 label=f"Refined detector center: ({center[0]}, {center[1]})",
             )
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_circle_detection/'
             )
             path.mkdir(parents=True, exist_ok=True)
-            ax1.legend()
-            fig.colorbar(pos, ax=ax1, shrink=0.6)
+            ax1.legend(fontsize=14, loc=1, markerscale=1)
+            cbar = fig.colorbar(pos, ax=ax1, shrink=0.6)
+            cbar.ax.tick_params(labelsize=20)
+            plt.tick_params(axis="both", which="major", labelsize=16)
+            ax1.set_xlabel("x (pixel)", fontsize=20)
+            ax1.set_ylabel("y (pixel)", fontsize=20)
+
             if not self.plots_info["axis_lim_auto"]:
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
@@ -345,8 +389,11 @@ class MinimizePeakFWHM(CenteringMethod):
             }
 
         if self.plot_fwhm_flag:
-            fig, ax1 = plt.subplots(1, 1, figsize=(5, 5))
+            fig, ax1 = plt.subplots(1, 1, figsize=(8, 8))
             plt.plot(x_all, y_all)
+            ax1.set_xlabel("Radial distance (pixel)", fontsize=20)
+            ax1.set_ylabel("Intensity (ADU)", fontsize=20)
+            plt.tick_params(axis="both", which="major", labelsize=16)
 
         ## Define background peak region
         x_min = self.config["peak_region"]["min"]
@@ -394,10 +441,7 @@ class MinimizePeakFWHM(CenteringMethod):
                 label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM : {round(fwhm,3)}",
             )
 
-            plt.title("Azimuthal integration")
-            # plt.xlim(0, 500)
-            # plt.ylim(0, 5)
-            plt.legend()
+            plt.legend(fontsize=14, loc=1, markerscale=1)
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/'
             )
@@ -556,51 +600,64 @@ class MinimizePeakFWHM(CenteringMethod):
 
         if self.config["plots_flag"]:
             visual_img = self.visual_data * self.mask_for_fwhm_min
-            visual_img[np.where(visual_img<1)] = 1 # For better visualization of plots in logarithmic scale
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
+                color_map = copy.copy(
+                    matplotlib.colormaps[self.plots_info["color_map"]]
+                )
+                color_map.set_bad(color_map(0))
                 pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(),
                     origin="lower",
-                    cmap=self.plots_info["color_map"],
+                    cmap=color_map,
                 )
             else:
+                color_map = copy.copy(
+                    matplotlib.colormaps[self.plots_info["color_map"]]
+                )
+                color_map.set_bad(color_map(0))
                 pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(
                         self.plots_info["value_min"], self.plots_info["value_max"]
                     ),
                     origin="lower",
-                    cmap=self.plots_info["color_map"],
+                    cmap=color_map,
                 )
+
             ax1.scatter(
-                self.initial_detector_center[0],
-                self.initial_detector_center[1],
+                self.initial_guess[0],
+                self.initial_guess[1],
+                s=self.plots_info["marker_size"],
                 color="blue",
                 marker="o",
-                label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})",
-            )
-            ax1.scatter(
-                self.initial_detector_center[0],
-                self.initial_detector_center[1],
-                color="blue",
-                marker="o",
+                edgecolor="black",
+                linewidth=0.5,
                 label=f"Initial guess: ({np.round(self.initial_guess[0])}, {np.round(self.initial_guess[1])})",
             )
             ax1.scatter(
                 center[0],
                 center[1],
+                s=self.plots_info["marker_size"],
                 color="r",
-                marker="o",
+                marker="^",
+                edgecolor="black",
+                linewidth=0.5,
                 label=f"Refined detector center: ({center[0]}, {center[1]})",
             )
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_fwhm_minimization/'
             )
             path.mkdir(parents=True, exist_ok=True)
-            ax1.legend()
-            fig.colorbar(pos, ax=ax1, shrink=0.6)
+            ax1.legend(fontsize=14, loc=1, markerscale=1)
+            plt.tick_params(axis="both", which="major", labelsize=16)
+            ax1.set_xlabel("x (pixel)", fontsize=20)
+            ax1.set_ylabel("y (pixel)", fontsize=20)
+
+            cbar = fig.colorbar(pos, ax=ax1, shrink=0.6)
+            cbar.ax.tick_params(labelsize=20)
+
             if not self.plots_info["axis_lim_auto"]:
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
@@ -714,14 +771,14 @@ class FriedelPairs(CenteringMethod):
                 > 1
             ):
                 self.visual_data = data_visualize.visualize_data(data=data * mask)
-                visual_mask = data_visualize.visualize_data(data=mask).astype(int)
+                self.visual_mask = data_visualize.visualize_data(data=mask).astype(int)
             else:
                 self.visual_data = visualize_single_panel(
                     data,
                     self.PF8Config.transformation_matrix,
                     self.PF8Config.ss_in_rows,
                 )
-                visual_mask = visualize_single_panel(
+                self.visual_mask = visualize_single_panel(
                     mask,
                     self.PF8Config.transformation_matrix,
                     self.PF8Config.ss_in_rows,
@@ -748,14 +805,14 @@ class FriedelPairs(CenteringMethod):
                 self.visual_data = data_visualize.visualize_data(
                     data=pol_corrected_data * mask
                 )
-                visual_mask = data_visualize.visualize_data(data=mask).astype(int)
+                self.visual_mask = data_visualize.visualize_data(data=mask).astype(int)
             else:
                 self.visual_data = visualize_single_panel(
                     pol_corrected_data,
                     self.PF8Config.transformation_matrix,
                     self.PF8Config.ss_in_rows,
                 )
-                visual_mask = visualize_single_panel(
+                self.visual_mask = visualize_single_panel(
                     mask,
                     self.PF8Config.transformation_matrix,
                     self.PF8Config.ss_in_rows,
@@ -817,7 +874,7 @@ class FriedelPairs(CenteringMethod):
             print(peaks_list_after_correction)
             print(f"-- End --")
 
-            center[0] += self.config["offset"]["x"] 
+            center[0] += self.config["offset"]["x"]
             center[1] += self.config["offset"]["y"]
         else:
             center = [-1, -1]
@@ -826,21 +883,30 @@ class FriedelPairs(CenteringMethod):
 
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
+                color_map = copy.copy(
+                    matplotlib.colormaps[self.plots_info["color_map"]]
+                )
+                color_map.set_bad(color_map(0))
                 pos = ax1.imshow(
-                    self.visual_data,
+                    self.visual_data * self.visual_mask,
                     norm=LogNorm(),
-                    cmap=self.plots_info["color_map"],
+                    cmap=color_map,
                     origin="lower",
                 )
             else:
+                color_map = copy.copy(
+                    matplotlib.colormaps[self.plots_info["color_map"]]
+                )
+                color_map.set_bad(color_map(0))
                 pos = ax1.imshow(
-                    self.visual_data,
+                    self.visual_data * self.visual_mask,
                     norm=LogNorm(
                         self.plots_info["value_min"], self.plots_info["value_max"]
                     ),
-                    cmap=self.plots_info["color_map"],
+                    cmap=color_map,
                     origin="lower",
                 )
+            """
             ax1.scatter(
                 self.initial_detector_center[0],
                 self.initial_detector_center[1],
@@ -849,12 +915,15 @@ class FriedelPairs(CenteringMethod):
                 s=25,
                 label=f"Initial detector center:({np.round(self.initial_detector_center[0],1)},{np.round(self.initial_detector_center[1], 1)})",
             )
+            """
             ax1.scatter(
                 self.initial_guess[0],
                 self.initial_guess[1],
-                color="lime",
-                marker="+",
-                s=150,
+                color="b",
+                marker="o",
+                edgecolor="black",
+                linewidth=0.5,
+                s=self.plots_info["marker_size"],
                 label=f"Initial guess:({np.round(self.initial_guess[0],1)},{np.round(self.initial_guess[1], 1)})",
             )
 
@@ -862,14 +931,20 @@ class FriedelPairs(CenteringMethod):
                 center[0],
                 center[1],
                 color="r",
-                marker="o",
-                s=25,
+                marker="^",
+                edgecolor="black",
+                linewidth=0.5,
+                s=self.plots_info["marker_size"],
                 label=f"Refined detector center:({np.round(center[0],1)}, {np.round(center[1],1)})",
             )
 
-            plt.title("Center refinement: autocorrelation of Friedel pairs")
-            fig.colorbar(pos, ax=ax1, shrink=0.6)
-            ax1.legend()
+            cbar = fig.colorbar(pos, ax=ax1, shrink=0.6)
+            cbar.ax.tick_params(labelsize=20)
+            ax1.legend(fontsize=14, loc=1, markerscale=1)
+            plt.tick_params(axis="both", which="major", labelsize=16)
+            ax1.set_xlabel("x (pixel)", fontsize=20)
+            ax1.set_ylabel("y (pixel)", fontsize=20)
+
             if not self.plots_info["axis_lim_auto"]:
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
@@ -908,19 +983,27 @@ class FriedelPairs(CenteringMethod):
             ## Check pairs alignement
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
+                color_map = copy.copy(
+                    matplotlib.colormaps[self.plots_info["color_map"]]
+                )
+                color_map.set_bad(color_map(0))
                 pos = ax1.imshow(
-                    self.visual_data,
+                    self.visual_data * self.visual_mask,
                     norm=LogNorm(),
-                    cmap=self.plots_info["color_map"],
+                    cmap=color_map,
                     origin="lower",
                 )
             else:
+                color_map = copy.copy(
+                    matplotlib.colormaps[self.plots_info["color_map"]]
+                )
+                color_map.set_bad(color_map(0))
                 pos = ax1.imshow(
-                    self.visual_data,
+                    self.visual_data * self.visual_mask,
                     norm=LogNorm(
                         self.plots_info["value_min"], self.plots_info["value_max"]
                     ),
-                    cmap=self.plots_info["color_map"],
+                    cmap=color_map,
                     origin="lower",
                 )
 
@@ -928,43 +1011,46 @@ class FriedelPairs(CenteringMethod):
                 original_peaks_x,
                 original_peaks_y,
                 facecolor="none",
-                s=80,
-                marker="s",
+                s=0.8 * self.plots_info["marker_size"],
+                marker="o",
                 edgecolor="red",
-                linewidth=1.5,
+                linewidth=1.8,
                 label="original peaks",
             )
 
             ax1.scatter(
                 inverted_non_shifted_peaks_x,
                 inverted_non_shifted_peaks_y,
-                s=80,
+                s=1.2 * self.plots_info["marker_size"],
                 facecolor="none",
                 marker="s",
-                edgecolor="tab:orange",
-                linewidth=1.5,
+                edgecolor="blue",
+                linewidth=1.8,
                 label="inverted peaks",
-                alpha=0.8,
+                alpha=1,
             )
             ax1.scatter(
                 inverted_shifted_peaks_x,
                 inverted_shifted_peaks_y,
                 facecolor="none",
-                s=120,
+                s=1.2 * self.plots_info["marker_size"],
                 marker="D",
                 linewidth=1.8,
-                alpha=0.8,
-                edgecolor="blue",
-                label="shift of inverted peaks",
+                alpha=1,
+                edgecolor="green",
+                label="inverted peaks shifted",
             )
 
             if not self.plots_info["axis_lim_auto"]:
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
 
-            plt.title("Bragg peaks alignement")
-            fig.colorbar(pos, ax=ax1, shrink=0.6)
-            ax1.legend()
+            cbar = fig.colorbar(pos, ax=ax1, shrink=0.6)
+            cbar.ax.tick_params(labelsize=20)
+            ax1.legend(fontsize=14, loc=1, markerscale=1)
+            plt.tick_params(axis="both", which="major", labelsize=16)
+            ax1.set_xlabel("x (pixel)", fontsize=20)
+            ax1.set_ylabel("y (pixel)", fontsize=20)
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/peaks/'
             )

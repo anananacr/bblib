@@ -9,6 +9,7 @@ from om.lib.geometry import (
     GeometryInformation,
     _read_crystfel_geometry_from_text,
 )
+from bblib.geometry import VdsGeometryInformation
 
 
 @dataclass
@@ -155,6 +156,58 @@ class PF8Info:
                     np.round(float(ssy)),
                 ],
             ]
+
+
+    def set_vds_geometry_from_file(self, geometry_filename: str = None):
+        if geometry_filename:
+            self.geometry_txt = open(geometry_filename, "r").readlines()
+        else:
+            if not self.geometry_txt:
+                raise ValueError(
+                    "Please, specify the detector geometry in CrystFEL format."
+                )
+
+        try:
+            self.bad_pixel_map_filename = [
+                x.split(" = ")[-1][:-1]
+                for x in self.geometry_txt
+                if x.split(" = ")[0] == "mask0_file"
+            ][0]
+        except IndexError:
+            self.bad_pixel_map_filename = [
+                x.split(" = ")[-1][:-1]
+                for x in self.geometry_txt
+                if x.split(" = ")[0] == "mask_file"
+            ][0]
+
+        try:
+            self.bad_pixel_map_hdf5_path = [
+                x.split(" = ")[-1][:-1]
+                for x in self.geometry_txt
+                if x.split(" = ")[0] == "mask0_data"
+            ][0]
+        except IndexError:
+            self.bad_pixel_map_hdf5_path = [
+                x.split(" = ")[-1][:-1]
+                for x in self.geometry_txt
+                if x.split(" = ")[0] == "mask"
+            ][0]
+
+        #geom = GeometryInformation(
+        #    geometry_description=self.geometry_txt, geometry_format="crystfel"
+        #)
+        # Refactored for vds
+        geom = VdsGeometryInformation(geometry_description=self.geometry_txt, geometry_format="crystfel")
+
+        self.pixel_resolution = 1 / geom.get_pixel_size()
+        self.pixel_maps = geom.get_pixel_maps()
+        self._data_shape = self.pixel_maps["x"].shape
+        self._flattened_data_shape = self.pixel_maps["x"].flatten().shape[0]
+        self.pf8_detector_info = geom.get_layout_info()
+        self._shifted_pixel_maps = False
+        self.detector_center_from_geom = self.get_detector_center()
+        
+
 
     def get(self, parameter: str):
         if parameter == "max_num_peaks":

@@ -85,7 +85,7 @@ class CenterOfMass(CenteringMethod):
             * self.PF8Config.pf8_detector_info["nasics_y"]
             > 1
         ):
-            self.visual_data = data_visualize.visualize_data(data=data * mask)
+            self.visual_data = data_visualize.visualize_data(data=data)
             visual_mask = data_visualize.visualize_data(data=mask).astype(int)
         else:
 
@@ -221,7 +221,7 @@ class CircleDetection(CenteringMethod):
             * self.PF8Config.pf8_detector_info["nasics_y"]
             > 1
         ):
-            self.visual_data = data_visualize.visualize_data(data=data * mask)
+            self.visual_data = data_visualize.visualize_data(data=data)
             visual_mask = data_visualize.visualize_data(data=mask).astype(int)
         else:
 
@@ -483,7 +483,7 @@ class MinimizePeakFWHM(CenteringMethod):
                 * self.PF8Config.pf8_detector_info["nasics_y"]
                 > 1
             ):
-                self.visual_data = data_visualize.visualize_data(data=data * mask)
+                self.visual_data = data_visualize.visualize_data(data=data)
                 visual_mask = data_visualize.visualize_data(data=mask).astype(int)
             else:
                 self.visual_data = visualize_single_panel(
@@ -516,7 +516,7 @@ class MinimizePeakFWHM(CenteringMethod):
                 > 1
             ):
                 self.visual_data = data_visualize.visualize_data(
-                    data=pol_corrected_data * mask
+                    data=pol_corrected_data
                 )
                 visual_mask = data_visualize.visualize_data(data=mask).astype(int)
             else:
@@ -770,7 +770,7 @@ class FriedelPairs(CenteringMethod):
                 * self.PF8Config.pf8_detector_info["nasics_y"]
                 > 1
             ):
-                self.visual_data = data_visualize.visualize_data(data=data * mask)
+                self.visual_data = data_visualize.visualize_data(data=data)
                 self.visual_mask = data_visualize.visualize_data(data=mask).astype(int)
             else:
                 self.visual_data = visualize_single_panel(
@@ -803,7 +803,7 @@ class FriedelPairs(CenteringMethod):
                 > 1
             ):
                 self.visual_data = data_visualize.visualize_data(
-                    data=pol_corrected_data * mask
+                    data=pol_corrected_data
                 )
                 self.visual_mask = data_visualize.visualize_data(data=mask).astype(int)
             else:

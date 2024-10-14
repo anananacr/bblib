@@ -279,12 +279,12 @@ class CircleDetection(CenteringMethod):
         hough_res = hough_circle(edges, hough_radii)
         # Select the most prominent 1 circle
         accums, xc, yc, radii = hough_circle_peaks(
-            hough_res, hough_radii, total_num_peaks=1
+            hough_res, hough_radii, total_num_peaks = self.config["hough_rank"]
         )
 
         if len(xc) > 0:
-            xc = xc[0] + self.config["offset"]["x"]
-            yc = yc[0] + self.config["offset"]["y"]
+            xc = xc[self.config["hough_rank"] - 1] + self.config["offset"]["x"]
+            yc = yc[self.config["hough_rank"] - 1] + self.config["offset"]["y"]
         else:
             xc = -1
             yc = -1

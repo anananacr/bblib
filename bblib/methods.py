@@ -57,7 +57,7 @@ class CenterOfMass(CenteringMethod):
             )
 
         if not config["plots_flag"] and not plots_info:
-            plots_info = {"file_name": "", "folder_name": "", "root_path": ""}
+            plots_info = {"filename": "", "folder_name": "", "root_path": ""}
 
     def _prep_for_centering(self, data: np.ndarray) -> None:
         self.initial_detector_center = self.PF8Config.get_detector_center()
@@ -175,7 +175,7 @@ class CenterOfMass(CenteringMethod):
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
             plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_of_mass/{self.plots_info["file_name"]}.png'
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_of_mass/{self.plots_info["filename"]}.png'
             )
             plt.close()
         return np.round(center, 0)
@@ -192,7 +192,7 @@ class CircleDetection(CenteringMethod):
             )
 
         if not config["plots_flag"] and not plots_info:
-            plots_info = {"file_name": "", "folder_name": "", "root_path": ""}
+            plots_info = {"filename": "", "folder_name": "", "root_path": ""}
 
     def _prep_for_centering(self, data: np.ndarray) -> None:
         self.initial_detector_center = self.PF8Config.get_detector_center()
@@ -269,7 +269,7 @@ class CircleDetection(CenteringMethod):
             )
             path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/edges/{self.plots_info["file_name"]}.png'
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/edges/{self.plots_info["filename"]}.png'
             )
             plt.close()
         # Detect radii
@@ -352,7 +352,7 @@ class CircleDetection(CenteringMethod):
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
             plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_circle_detection/{self.plots_info["file_name"]}.png'
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_circle_detection/{self.plots_info["filename"]}.png'
             )
             plt.close()
         return center
@@ -370,7 +370,7 @@ class MinimizePeakFWHM(CenteringMethod):
             )
 
         if not config["plots_flag"] and not plots_info:
-            plots_info = {"file_name": "", "folder_name": "", "root_path": ""}
+            plots_info = {"filename": "", "folder_name": "", "root_path": ""}
 
     def _calculate_fwhm(self, coordinate: tuple) -> dict:
         center_to_radial_average = coordinate
@@ -447,7 +447,7 @@ class MinimizePeakFWHM(CenteringMethod):
             )
             path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/{self.plots_info["file_name"]}.png'
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/{self.plots_info["filename"]}.png'
             )
             plt.close()
 
@@ -584,7 +584,7 @@ class MinimizePeakFWHM(CenteringMethod):
         xc, yc = get_fwhm_map_global_min(
             self.fwhm_summary,
             f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}',
-            f'{self.plots_info["file_name"]}',
+            f'{self.plots_info["filename"]}',
             self.pixel_step,
             self.config["plots_flag"],
         )
@@ -662,7 +662,7 @@ class MinimizePeakFWHM(CenteringMethod):
                 ax1.set_xlim(self.plots_info["xlim_min"], self.plots_info["xlim_max"])
                 ax1.set_ylim(self.plots_info["ylim_min"], self.plots_info["ylim_max"])
             plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_fwhm_minimization/{self.plots_info["file_name"]}.png'
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_fwhm_minimization/{self.plots_info["filename"]}.png'
             )
             plt.close()
 
@@ -680,7 +680,7 @@ class FriedelPairs(CenteringMethod):
             )
 
         if not config["plots_flag"] and not plots_info:
-            plots_info = {"file_name": "", "folder_name": "", "root_path": ""}
+            plots_info = {"filename": "", "folder_name": "", "root_path": ""}
 
     def _select_closest_peaks(self, peaks_list: list, inverted_peaks: list) -> list:
         pairs_list = []
@@ -954,7 +954,7 @@ class FriedelPairs(CenteringMethod):
             )
             path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/centered_friedel/{self.plots_info["file_name"]}.png'
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/centered_friedel/{self.plots_info["filename"]}.png'
             )
             plt.close("all")
 
@@ -1056,7 +1056,7 @@ class FriedelPairs(CenteringMethod):
             )
             path.mkdir(parents=True, exist_ok=True)
             plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/peaks/{self.plots_info["file_name"]}.png'
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/peaks/{self.plots_info["filename"]}.png'
             )
             plt.close()
         return center

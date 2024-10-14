@@ -41,7 +41,8 @@ config = {
 		"sigma": ...,
 		"low_threshold": ...,
 		"high_threshold": ...
-		},	
+		},
+	"hough_rank": ...,
 	"bragg_peaks_positions_for_center_of_mass_calculation": ...,
 	"pixels_for_mask_of_bragg_peaks": ...,
 	"polarization": {

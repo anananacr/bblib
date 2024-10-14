@@ -277,7 +277,7 @@ class CircleDetection(CenteringMethod):
             self.config["peak_region"]["min"], self.config["peak_region"]["max"], 1
         )
         hough_res = hough_circle(edges, hough_radii)
-        # Select the most prominent 1 circle
+        # Select the most prominent circle gien the hough_rank chosen
         accums, xc, yc, radii = hough_circle_peaks(
             hough_res, hough_radii, total_num_peaks = self.config["hough_rank"]
         )

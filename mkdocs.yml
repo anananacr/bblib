@@ -1,0 +1,28 @@
+site_name: bblib
+repo_url: https://github.com/anananacr/bblib.git
+repo_name: bblib
+
+theme:
+  name: material
+  favicon: assets/icon.png
+  logo: assets/icon.png
+  palette:
+    primary: deep orange
+  icon:
+    repo: fontawesome/brands/github
+extra_css:
+  - stylesheets/typewriter.css
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_submodule: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_root_toc_entry: false
+  - search
+nav:
+  - About bblib: reference/index.md
+  - API reference:
+      - utils: reference/utils.md

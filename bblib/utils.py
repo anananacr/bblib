@@ -11,17 +11,13 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
     Adapted from Robert Bücker work on diffractem (https://github.com/robertbuecker/diffractem/tree/master)
     Bücker, R., Hogan-Lamarre, P., Mehrabi, P. et al. Serial protein crystallography in an electron microscope. Nat Commun 11, 996 (2020). https://doi.org/10.1038/s41467-020-14793-0
 
-    Parameters
-    ----------
-    data: np.ndarray
-        Input data in which center of mass will be calculated. Values equal or less than zero will not be considered.
-    mask: np.ndarray
-        Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
+    Attributes:
+        data (np.ndarray): Input data in which center of mass will be calculated. Values equal or less than zero will not be considered.
+        mask (np.ndarray): Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
 
-    Returns
-    ----------
-    xc, yc: int
-         coordinates of the diffraction center in x and y, such as the image center corresponds to data[yc, xc].
+    Returns:
+        xc (int): Coordinate of the diffraction center in x, such that the image center corresponds to data [yc, xc].
+        yc (int): Coordinate of the diffraction center in y, such that the image center corresponds to data [yc, xc].
     """
 
     if mask is None:
@@ -50,21 +46,14 @@ def azimuthal_average(
     Adapted from L. P. René de Cotret work on scikit-ued (https://github.com/LaurentRDC/scikit-ued/tree/master)
     L. P. René de Cotret, M. R. Otto, M. J. Stern. and B. J. Siwick, An open-source software ecosystem for the interactive exploration of ultrafast electron scattering data, Advanced Structural and Chemical Imaging 4:11 (2018) DOI: 10.1186/s40679-018-0060-y.
 
-    Parameters
-    ----------
-    data: np.ndarray
-        Input data in which center of mass will be calculated. Values equal or less than zero will not be considered.
-    center: tuple
-        Center coordinates of the radial average (xc, yc)->(col, row).
-    mask: np.ndarray
-        Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
-    Returns
-    ----------
-    radius: np.ndarray
-        radial axis radius in pixels
+    Attributes:
+        data (np.ndarray): Input data in which center of mass will be calculated. Values equal or less than zero will not be considered.
+        center (tuple): Center coordinates of the radial average (xc, yc)->(col, row).
+        mask (np.ndarray): Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
 
-    intensity: np.ndarray
-        Integrated intensity normalized by the number of valid pixels
+    Returns:
+        radius (np.ndarray): Radial axis in pixels.
+        intensity (np.ndarray): Integrated intensity normalized by the number of valid pixels.
     """
     a = data.shape[0]
     b = data.shape[1]
@@ -105,25 +94,16 @@ def correct_polarization(
     Correct data for polarisation effect, version in Python. It is based on pMakePolarisationArray from https://github.com/galchenm/vdsCsPadMaskMaker/blob/main/new-versions/maskMakerGUI-v2.py#L234
     Acknowledgements: Oleksandr Yefanov, Marina Galchenkova
 
-    Parameters
-    ----------
-    x: np.ndarray
-        Array containg pixels coordinates in x (pixels) distance from the direct beam. It has same shape of data.
-    y: np.ndarray
-        Array containg pixels coordinates in y (pixels) distance from the direct beam. It has same shape of data.
-    dist: float
-        z distance coordinates of the detector position in PIXELS.
-    data: np.ndarray
-        Raw data frame in which polarization correction will be applied.
-    mask: np.ndarray
-        Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
+    Attributes:
+        x (np.ndarray): Array containg pixels coordinates in x (pixels) distance from the direct beam. It has same shape of data.
+        y (np.ndarray): Array containg pixels coordinates in y (pixels) distance from the direct beam. It has same shape of data.
+        dist (float): z distance coordinates of the detector position in pixels.
+        data (np.ndarray): Raw data frame in which polarization correction will be applied.
+        mask (np.ndarray): Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
 
-    Returns
-    ----------
-    corrected_data: np.ndarray
-        Corrected data frame for polarization effect.
-    pol: np.ndarray
-        Polarization array for polarization correction.
+    Returns:
+        corrected_data (np.ndarray): Corrected data frame for polarization effect.
+        pol (np.ndarray): Polarization array for polarization correction.
     """
 
     mask = mask.astype(bool)
@@ -142,22 +122,14 @@ def make_polarization_array(
     Create the polarization array for horizontal polarization correction, version in Python. It is based on pMakePolarisationArray from https://github.com/galchenm/vdsCsPadMaskMaker/blob/main/new-versions/maskMakerGUI-v2.py#L234
     Acknowledgements: Oleksandr Yefanov, Marina Galchenkova
 
-    Parameters
-    ----------
-    pol: np.ndarray
-        An array where polarization arra will be built based on its shape. Mask shape is the same size of data. Unvalid pixels (values containing 0) will be skipped from calculation and put 1.
-    cox: np.ndarray
-        Array containg pixels coordinates in x (pixels) distance from the direct beam. It has same shape of data.
-    coy: np.ndarray
-        Array containg pixels coordinates in y (pixels) distance from the direct beam. It has same shape of data.
-    detdist: float
-        Detector distance from the sample in meters . The detctor distance will be transformed in pixel units based on Res defined as global parameter.
-    poldegree: float
-        Polarization degree, horizontal polarization at DESY p=0.99.
-    Returns
-    ----------
-    pol: np.ndarray
-        Polarization array for polarization correction.
+    Attributes:
+        pol (np.ndarray): An array where polarization arra will be built based on its shape. Mask shape is the same size of data. Unvalid pixels (values containing 0) will be skipped from calculation and put 1.
+        cox (np.ndarray): Array containg pixels coordinates in x (pixels) distance from the direct beam. It has same shape of data.
+        coy (np.ndarray): Array containg pixels coordinates in y (pixels) distance from the direct beam. It has same shape of data.
+        detdist (float): Detector distance from the sample in meters . The detctor distance will be transformed in pixel units based on Res defined as global parameter.
+        poldegree (float): Polarization degree from [0,1]. The horizontal polarization at most synchrotrons sources, e.g DESY, p is 0.99.
+    Returns:
+        pol (np.ndarray): Polarization array for polarization correction.
     """
 
     z = detdist * np.ones(cox.shape[0])
@@ -175,20 +147,15 @@ def make_polarization_array(
 def mask_peaks(mask: np.ndarray, indexes: tuple, bragg: int, n: int) -> np.ndarray:
     """
     Gather coordinates of a box of 1x1 pixels around each point from the indexes list. Bragg flag indicates if the mask returned will contain only bragg peaks regions (bragg =1), no bragg peaks regions (bragg=0), or both (bragg =-1).
-    Parameters
-    ----------
-    mask: np.ndarray
-        An array where mask will be built based on its shape. Mask shape is the same size of data.
-    indexes: tuple
-        Bragg peaks coordinates, indexes[0] contains x-coordinates of Bragg peaks and indexes[1] the corresponding y-coordinates.
-    bragg: int
-        Bragg flag, choose between return only peaks, only background or both (bypass masking of peaks).
-    n: int
-        n pixels to build a 2n box around the peak.
-    Returns
-    ----------
-    surrounding_mask: np.ndarray
-        Corresponding mask according to bragg flag choice. It contains zeros for unvalid pixels and one for valid pixels. Mask shape is the same size of data.
+
+    Attributes:
+        mask (np.ndarray): An array where mask will be built based on its shape. Mask shape is the same size of data.
+        indexes (tuple): Bragg peaks coordinates, indexes[0] contains x-coordinates of Bragg peaks and indexes[1] the corresponding y-coordinates.
+        bragg (int): Bragg flag, choose between return only peaks, only background or both (bypass masking of peaks).
+        n (int): Number of pixels to build a 2*n box around the Bragg peaks.
+
+    Returns:
+        surrounding_mask (np.ndarray): Corresponding mask according to bragg flag choice. It contains zeros for unvalid pixels and one for valid pixels. Mask shape is the same size of data.
     """
     surrounding_positions = []
     count = 0
@@ -222,18 +189,16 @@ def gaussian(x: np.ndarray, a: float, x0: float, sigma: float) -> np.ndarray:
     """
     Gaussian function.
 
-    Parameters
-    ----------
-    x: np.ndarray
-        x array of the spectrum.
-    a, x0, sigma: float
-        gaussian parameters
+    Attributes:
+        x (np.ndarray): x-axis.
+        a (float): Amplitude of the Gaussian.
+        x0 (float): Average of the Gaussian.
+        sigma (float): Standard deviation of the Gaussian.
 
-    Returns
-    ----------
-    y: np.ndarray
-        value of the function evaluated
+    Returns:
+        y (np.ndarray): y-axis.
     """
+
     return a * exp(-((x - x0) ** 2) / (2 * sigma**2))
 
 
@@ -241,19 +206,18 @@ def gaussian_lin(
     x: np.ndarray, a: float, x0: float, sigma: float, m: float, n: float
 ) -> np.ndarray:
     """
-    Gaussian function.
+    Gaussian function summed to a linear function.
 
-    Parameters
-    ----------
-    x: np.ndarray
-        x array of the spectrum.
-    a, x0, sigma: float
-        gaussian parameters
+    Attributes:
+        x (np.ndarray): x-axis.
+        a (float): Amplitude of the Gaussian.
+        x0 (float): Average of the Gaussian.
+        sigma (float): Standard deviation of the Gaussian.
+        m: Angular coefficient.
+        n: Linear coefficient.
 
-    Returns
-    ----------
-    y: np.ndarray
-        value of the function evaluated
+    Returns:
+        y (np.ndarray): y-axis.
     """
     return m * x + n + a * exp(-((x - x0) ** 2) / (2 * sigma**2))
 
@@ -263,10 +227,11 @@ def get_fwhm_map_global_min(
 ) -> tuple:
     """
     Open FWHM grid search optmization plot, fit projections in both axis to get the point of maximum sharpness of the radial average.
-    Parameters
-    ----------
-    lines: list
-        Output of grid search for FWHM optmization, each line should contain a dictionary contaning entries for xc, yc and fwhm_over_radius.
+    # To rewrite.
+
+    Attributes:
+        lines (list): Output of grid search for FWHM optmization, each line should contain a dictionary contaning entries for xc, yc and fwhm_over_radius.
+
     """
     n = int(math.sqrt(len(lines)))
 
@@ -365,16 +330,12 @@ def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:
     """
     Make a  ring mask for the data
 
-    Parameters
-    ----------
-    data: np.ndarray
-        Image in which mask will be shaped
-    radius: int
-        Outer radius of the mask
+    Attributes:
+        data (np.ndarray): Image in which mask will be shaped
+        radius (int): Outer radius of the mask
 
-    Returns
-    ----------
-    mask: np.ndarray
+    Returns:
+        mask (np.ndarray): Mask array containg zeros (pixels to be masked) and ones (valid pixels).
     """
 
     bin_size = bin
@@ -392,18 +353,14 @@ def ring_mask(
     """
     Make a  ring mask for the data
 
-    Parameters
-    ----------
-    data: np.ndarray
-        Image in which mask will be shaped
-    center: tuple (xc,yc)
+    Attributes:
+        data (np.ndarray): Image in which mask will be shaped
+        center (tuple): (xc,yc)
+        inner_radius (int):
+        outer_radius (int):
 
-    inner_radius: int
-
-    outer_radius: int
-    Returns
-    ----------
-    mask: np.ndarray
+    Returns:
+        mask (np.ndarray): Mask array containg zeros (pixels to be masked) and ones (valid pixels).
     """
 
     bin_size = bin

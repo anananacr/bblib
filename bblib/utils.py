@@ -11,7 +11,7 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
     Adapted from Robert Bücker work on diffractem (https://github.com/robertbuecker/diffractem/tree/master)
     Bücker, R., Hogan-Lamarre, P., Mehrabi, P. et al. Serial protein crystallography in an electron microscope. Nat Commun 11, 996 (2020). https://doi.org/10.1038/s41467-020-14793-0
 
-    Attributes:
+    Args:
         data (np.ndarray): Input data in which center of mass will be calculated. Values equal or less than zero will not be considered.
         mask (np.ndarray): Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
 
@@ -46,7 +46,7 @@ def azimuthal_average(
     Adapted from L. P. René de Cotret work on scikit-ued (https://github.com/LaurentRDC/scikit-ued/tree/master)
     L. P. René de Cotret, M. R. Otto, M. J. Stern. and B. J. Siwick, An open-source software ecosystem for the interactive exploration of ultrafast electron scattering data, Advanced Structural and Chemical Imaging 4:11 (2018) DOI: 10.1186/s40679-018-0060-y.
 
-    Attributes:
+    Args:
         data (np.ndarray): Input data in which center of mass will be calculated. Values equal or less than zero will not be considered.
         center (tuple): Center coordinates of the radial average (xc, yc)->(col, row).
         mask (np.ndarray): Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
@@ -94,7 +94,7 @@ def correct_polarization(
     Correct data for polarisation effect, version in Python. It is based on pMakePolarisationArray from https://github.com/galchenm/vdsCsPadMaskMaker/blob/main/new-versions/maskMakerGUI-v2.py#L234
     Acknowledgements: Oleksandr Yefanov, Marina Galchenkova
 
-    Attributes:
+    Args:
         x (np.ndarray): Array containg pixels coordinates in x (pixels) distance from the direct beam. It has same shape of data.
         y (np.ndarray): Array containg pixels coordinates in y (pixels) distance from the direct beam. It has same shape of data.
         dist (float): z distance coordinates of the detector position in pixels.
@@ -122,7 +122,7 @@ def make_polarization_array(
     Create the polarization array for horizontal polarization correction, version in Python. It is based on pMakePolarisationArray from https://github.com/galchenm/vdsCsPadMaskMaker/blob/main/new-versions/maskMakerGUI-v2.py#L234
     Acknowledgements: Oleksandr Yefanov, Marina Galchenkova
 
-    Attributes:
+    Args:
         pol (np.ndarray): An array where polarization arra will be built based on its shape. Mask shape is the same size of data. Unvalid pixels (values containing 0) will be skipped from calculation and put 1.
         cox (np.ndarray): Array containg pixels coordinates in x (pixels) distance from the direct beam. It has same shape of data.
         coy (np.ndarray): Array containg pixels coordinates in y (pixels) distance from the direct beam. It has same shape of data.
@@ -148,7 +148,7 @@ def mask_peaks(mask: np.ndarray, indexes: tuple, bragg: int, n: int) -> np.ndarr
     """
     Gather coordinates of a box of 1x1 pixels around each point from the indexes list. Bragg flag indicates if the mask returned will contain only bragg peaks regions (bragg =1), no bragg peaks regions (bragg=0), or both (bragg =-1).
 
-    Attributes:
+    Args:
         mask (np.ndarray): An array where mask will be built based on its shape. Mask shape is the same size of data.
         indexes (tuple): Bragg peaks coordinates, indexes[0] contains x-coordinates of Bragg peaks and indexes[1] the corresponding y-coordinates.
         bragg (int): Bragg flag, choose between return only peaks, only background or both (bypass masking of peaks).
@@ -189,7 +189,7 @@ def gaussian(x: np.ndarray, a: float, x0: float, sigma: float) -> np.ndarray:
     """
     Gaussian function.
 
-    Attributes:
+    Args:
         x (np.ndarray): x-axis.
         a (float): Amplitude of the Gaussian.
         x0 (float): Average of the Gaussian.
@@ -208,7 +208,7 @@ def gaussian_lin(
     """
     Gaussian function summed to a linear function.
 
-    Attributes:
+    Args:
         x (np.ndarray): x-axis.
         a (float): Amplitude of the Gaussian.
         x0 (float): Average of the Gaussian.
@@ -227,11 +227,18 @@ def get_fwhm_map_global_min(
 ) -> tuple:
     """
     Open FWHM grid search optmization plot, fit projections in both axis to get the point of maximum sharpness of the radial average.
-    # To rewrite.
+    TODO Refactor.
 
-    Attributes:
-        lines (list): Output of grid search for FWHM optmization, each line should contain a dictionary contaning entries for xc, yc and fwhm_over_radius.
+    Args:
+        lines (list): Output of grid search for FWHM optmization, each line must contain a dictionary contaning entries for xc, yc and fwhm_over_radius.
+        output_folder (str): Path to the folder where plots are saved.
+        label (str): Plots filename label.
+        pixel_step (str): Step size between grid points in pixels.
+        plots_flag (bool): If True, plots can be generated.
 
+    Returns:
+        xc (int): Coordinate of the diffraction center in x, such that the image center corresponds to data [yc, xc].
+        yc (int): Coordinate of the diffraction center in y, such that the image center corresponds to data [yc, xc].
     """
     n = int(math.sqrt(len(lines)))
 
@@ -330,7 +337,7 @@ def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:
     """
     Make a  ring mask for the data
 
-    Attributes:
+    Args:
         data (np.ndarray): Image in which mask will be shaped
         radius (int): Outer radius of the mask
 
@@ -353,7 +360,7 @@ def ring_mask(
     """
     Make a  ring mask for the data
 
-    Attributes:
+    Args:
         data (np.ndarray): Image in which mask will be shaped
         center (tuple): (xc,yc)
         inner_radius (int):
@@ -375,6 +382,18 @@ def ring_mask(
 def visualize_single_panel(
     data: np.ndarray, transformation_matrix: np.ndarray, ss_in_rows: bool
 ) -> np.ndarray:
+    """
+    Creates a visulization array for single panel detectors after applying the detector geometry.
+
+    Args:
+        data (np.ndarray): Image in which mask will be shaped
+        transformation_matrix (np.ndarray): A 2x2 transformation matrix used to map
+                    from fast-scan/slow-scan to x/y coordinates.
+                ss_in_rows (bool): If True, the slow-scan axis is mapped to rows; otherwise to columns.
+
+            Returns:
+                np.ndarray: The transformed visualization array.
+    """
     visual_data = np.full((2 * max(data.shape) + 1, 2 * max(data.shape) + 1), np.nan)
 
     for i in range(data.shape[0]):
@@ -393,6 +412,18 @@ def visualize_single_panel(
 
 
 def fsss_to_xy(point: tuple, m: list) -> tuple:
+    """
+    Transforms from the fast-scan/slow-scan basis to the x/y basis.
+
+    Args:
+        point (tuple):
+        m (list): A 2x2 transformation matrix.
+
+    Returns:
+        tuple: The corresponding (x, y) coordinates.
+
+    """
+
     d = m[0][0] * m[1][1] - m[0][1] * m[1][0]
     ss = point[0] + 1
     fs = point[1] + 1

@@ -24,5 +24,10 @@ plugins:
   - search
 nav:
   - About bblib: reference/index.md
+  - Tutorials:
+      - Center of mass: tutorial/center_of_mass/center_of_mass.md
+      - Circle detection: tutorial/circle_detection/circle_detection.md
+      - Minimize peak FWHM: tutorial/minimize_peak_fwhm/minimize_peak_fwhm.md
+      - Friedel pairs: tutorial/friedel_pairs/friedel_pairs.md
   - API reference:
       - utils: reference/utils.md

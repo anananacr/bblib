@@ -1,3 +1,7 @@
+"""
+This module defines auxiliary funtions to process the data.
+"""
+
 from numpy import exp
 import numpy as np
 import matplotlib.pyplot as plt

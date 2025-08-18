@@ -1,3 +1,7 @@
+"""
+This module defines the classes that determines the center of a diffraction pattern.
+"""
+
 from abc import ABC, abstractmethod
 import om.lib.geometry as geometry
 from bblib.utils import (
@@ -26,6 +30,10 @@ import matplotlib
 
 
 class CenteringMethod(ABC):
+    """
+    This class defines the structure of a centering method used to determine the center of diffraction patterns.
+
+    """
     @abstractmethod
     def __init__(self, **kwargs) -> None: ...
 
@@ -47,26 +55,45 @@ class CenteringMethod(ABC):
 
 
 class CenterOfMass(CenteringMethod):
+    """
+    This class determine the center of a diffraction pattern by calculating the center of mass of the image.
+
+    """
     def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict = None):
+        """
+        This method initializes the CenterOfMass centering method.
+
+        Args:
+            config (dict): A configuration dictionary in a format expected by beambusters.
+            PF8Config (PF8Info): Peakfinder8 parameters.
+            plots_info (dict): Configuration parameters to generate plots.
+        """
+
         self.config = config
         self.PF8Config = PF8Config
         self.plots_info = plots_info
+
         if config["plots_flag"] and not plots_info:
             raise ValueError(
                 "From config you want to save plots, please indicate the information to save the plots."
             )
 
+        # Creates an empty plots_info dictionary.
         if not config["plots_flag"] and not plots_info:
             plots_info = {"filename": "", "folder_name": "", "root_path": ""}
 
-    def _prep_for_centering(self, data: np.ndarray) -> None:
+    def _prep_for_centering(self, data: np.ndarray):
+
         self.initial_detector_center = self.PF8Config.get_detector_center()
+
+        # Determine Bragg peaks position.
         pf8 = PF8(self.PF8Config)
         peak_list = pf8.get_peaks_pf8(data=data)
         peak_list_x_in_frame, peak_list_y_in_frame = pf8.peak_list_in_slab(peak_list)
         row_indexes = np.zeros(peak_list["num_peaks"], dtype=int)
         col_indexes = np.zeros(peak_list["num_peaks"], dtype=int)
 
+        # Calculate the peaks index in the data array.
         for idx, k in enumerate(peak_list_y_in_frame):
             row_peak = int(k + self.initial_detector_center[1])
             col_peak = int(peak_list_x_in_frame[idx] + self.initial_detector_center[0])
@@ -108,7 +135,8 @@ class CenterOfMass(CenteringMethod):
         )
         self.mask_for_center_of_mass = peaks_mask * visual_mask
 
-    def _run_centering(self, **kwargs) -> tuple:
+    def _run_centering(self) -> tuple:
+
         center = center_of_mass(self.visual_data, self.mask_for_center_of_mass)
         if self.centering_converged(center):
             center[0] += self.config["offset"]["x"]
@@ -182,7 +210,18 @@ class CenterOfMass(CenteringMethod):
 
 
 class CircleDetection(CenteringMethod):
+    """
+    This class determines the center of a diffraction pattern as the center of a circle contained in the image.
+    """
     def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict = None):
+        """
+        This method initializes the CircleDetection centering method.
+
+        Args:
+            config (dict): A configuration dictionary in a format expected by beambusters.
+            PF8Config (PF8Info): Peakfinder8 parameters.
+            plots_info (dict): Configuration parameters to generate plots.
+        """
         self.config = config
         self.PF8Config = PF8Config
         self.plots_info = plots_info
@@ -359,7 +398,19 @@ class CircleDetection(CenteringMethod):
 
 
 class MinimizePeakFWHM(CenteringMethod):
+    """
+    This class determines the center of a diffraction pattern by minimizing the FWHM of a Gaussian curve fitted to an interval in the azimuthal integration.
+    """
+
     def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict = None):
+        """
+        This method initializes the MinimizePeakFWHM centering method.
+
+        Args:
+            config (dict): A configuration dictionary in a format expected by beambusters.
+            PF8Config (PF8Info): Peakfinder8 parameters.
+            plots_info (dict): Configuration parameters to generate plots.
+        """
         self.config = config
         self.PF8Config = PF8Config
         self.plots_info = plots_info
@@ -670,7 +721,19 @@ class MinimizePeakFWHM(CenteringMethod):
 
 
 class FriedelPairs(CenteringMethod):
+    """
+    This class determines the center of a diffraction pattern through the selection of Friedel pairs candidates and matching of their coordinates.
+    """
+
     def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict = None):
+        """
+        This method initializes the FriedelPairs centering method.
+
+        Args:
+            config (dict): A configuration dictionary in a format expected by beambusters.
+            PF8Config (PF8Info): Peakfinder8 parameters.
+            plots_info (dict): Configuration parameters to generate plots.
+        """
         self.config = config
         self.PF8Config = PF8Config
         self.plots_info = plots_info
@@ -723,7 +786,7 @@ class FriedelPairs(CenteringMethod):
             return cut_peaks_list[0][0]
 
     def _check_paired_reflections(self, pairs_list: list) -> list:
-        ## check if the reversed peak is also on the list
+        # Check if the reversed peak is also on the list
         filtered_pairs = []
 
         for original_peak, inverted_peak in pairs_list:
@@ -747,7 +810,7 @@ class FriedelPairs(CenteringMethod):
         self.initial_detector_center = self.PF8Config.get_detector_center()
         non_shifted_pixel_maps_for_visualization = self.PF8Config.pixel_maps.copy()
 
-        ## Find peaks
+        # Find Bragg  peaks
         self.PF8Config.update_pixel_maps(
             initial_guess[0] - self.initial_detector_center[0],
             initial_guess[1] - self.initial_detector_center[1],
@@ -832,7 +895,7 @@ class FriedelPairs(CenteringMethod):
         inverted_peaks = list(zip(inverted_peaks_x, inverted_peaks_y))
         pairs_list = self._select_closest_peaks(peaks, inverted_peaks)
 
-        ## Calculcate the beam center shift
+        # Calculcate the direct beam shift
 
         self.peaks_list_original = [x for x, y in pairs_list]
         self.peaks_list_inverted = [y for x, y in pairs_list]
@@ -906,16 +969,7 @@ class FriedelPairs(CenteringMethod):
                     cmap=color_map,
                     origin="lower",
                 )
-            """
-            ax1.scatter(
-                self.initial_detector_center[0],
-                self.initial_detector_center[1],
-                color="b",
-                marker="o",
-                s=25,
-                label=f"Initial detector center:({np.round(self.initial_detector_center[0],1)},{np.round(self.initial_detector_center[1], 1)})",
-            )
-            """
+
             ax1.scatter(
                 self.initial_guess[0],
                 self.initial_guess[1],
@@ -980,7 +1034,7 @@ class FriedelPairs(CenteringMethod):
                 for k in self.peaks_list_inverted
             ]
 
-            ## Check pairs alignement
+            # Check pairs alignement
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 10))
             if self.plots_info["value_auto"]:
                 color_map = copy.copy(

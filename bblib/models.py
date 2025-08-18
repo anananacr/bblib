@@ -1,3 +1,7 @@
+"""
+This module import peakfinder8 from the OnDA monitor and add extra features.
+"""
+
 import numpy as np
 from dataclasses import dataclass, field
 import math
@@ -13,6 +17,25 @@ from om.lib.geometry import (
 
 @dataclass
 class PF8Info:
+    """
+    This class defines the configuration parameters for peakfinder8.
+
+    Attributes:
+        max_num_peaks (np.int32): Maximum number of peaks.
+        adc_threshold (np.int32): Minimum threshold in arbitrary detector counts (ADC) units.
+        minimum_snr (np.float32): Minimum signal-to-noise ration.
+        min_pixel_count (np.int16): Minimum number of pixels to consider a Bragg peak.
+        max_pixel_count (np.int16): Maximum number of pixels to consider a Bragg peak.
+        local_bg_radius (np.int16): Local bakground radius in pixels.
+        min_res (np.int16): Minimum resolution ring in pixels.
+        max_res (np.int16): Maximum resolution ring in pixels.
+        pf8_detector_info (TypeDetectorLayoutInformation): Detector layout information.
+        bad_pixel_map_filename (str): Path to the bad pixels map (mask).
+        bad_pixel_map_hdf5_path (str): Key to acess the bad pixel map (mask).
+        pixel_maps (TypePixelMaps): Map of the pixels positions in the laboratory coordinates.
+        pixel_resolution (float): Reciprocal of the pixel size (1/m).
+        geometry_txt (list): Content of the geometry file (.geom), in CrystFEL format.
+    """
     max_num_peaks: np.int32 = 200
     adc_threshold: np.int32 = 0
     minimum_snr: np.float32 = 5
@@ -30,6 +53,14 @@ class PF8Info:
     geometry_txt: list = None
 
     def update_pixel_maps(self, detector_shift_x: int, detector_shift_y: int):
+        """
+        This module checks whether the pixel maps have been shifted. If not, it shifts the entire detector along the x and y axes by the specified values.
+
+        Args:
+            detector_shift_in_x (int): Number of pixels to shift the entire detector in the x-axis, according to the CXI coordinate system.
+            detector_shift_in_y (int): Number of pixels to shift the entire detector in the y-axis, according to the CXI coordinate system.
+        """
+
         if not self._shifted_pixel_maps:
             self._detector_shift_x = detector_shift_x
             self._detector_shift_y = detector_shift_y
@@ -52,6 +83,12 @@ class PF8Info:
             )
 
     def set_geometry_from_file(self, geometry_filename: str = None):
+        """
+        This module sets the class attributes in accordance with the CrystFEL geometry file (.geom).
+
+        Args:
+            geometry_filename (str): Path to the CrystFEL geometry file (.geom).
+        """
         if geometry_filename:
             self.geometry_txt = open(geometry_filename, "r").readlines()
         else:
@@ -157,6 +194,12 @@ class PF8Info:
             ]
 
     def get(self, parameter: str):
+        """
+        This module return the peakfinder8 parameters.
+
+        Args:
+            parameter (str): Peakfinder8 parameter.
+        """
         if parameter == "max_num_peaks":
             return self.max_num_peaks
         elif parameter == "adc_threshold":
@@ -179,6 +222,12 @@ class PF8Info:
             return self.bad_pixel_map_hdf5_path
 
     def get_detector_center(self) -> list:
+        """
+        This module return the detector center in x/y.
+
+        Returns:
+            center (list): The detector center in x/y.
+        """
         if not self._shifted_pixel_maps:
 
             if (
@@ -225,13 +274,31 @@ class PF8Info:
 
 
 class PF8:
+    """
+    This class defines an object that determine the Bragg peaks using the peakfinder8 algorithm from OnDA monitor.
+    """
     def __init__(self, info):
+        """
+        This method initilizes the PF8 class.
+
+        Args:
+            info (PF8Info): Peakfinder8 parameters.
+        """
         assert isinstance(
             info, PF8Info
         ), f"Info object expected type PF8Info, found {type(info)}."
         self.pf8_param = info
 
-    def get_peaks_pf8(self, data):
+    def get_peaks_pf8(self, data: np.ndarray):
+        """
+        This method determines the Bragg peaks positions using the peakfinder8 algorithm from OnDA monitor.
+
+        Args:
+            data (np.ndarray): Data in which the peakfinder8 will be performed.
+
+        Returns:
+            peak_list (dict): Bragg peaks position in the fast-scan/slow-scan axis, their integrated intensity and maximum intensity
+        """
         self._radius_pixel_map = self.pf8_param.pixel_maps["radius"]
         self._data_shape: Tuple[int, ...] = self._radius_pixel_map.shape
         self._flattened_visualization_pixel_map_x = self.pf8_param.pixel_maps[
@@ -249,7 +316,15 @@ class PF8:
         return peak_list
 
     def peak_list_in_slab(self, peak_list):
-        ## From OM
+        """
+        This method transforms the Bragg peaks positions in the fast-scan/slow-scan axis to Cartesian (x/y) coordinates using the visualization pixel map.
+        Args:
+            peak_list (dict): Bragg peaks list determined by peakfinder8.
+
+        Returns:
+            peaks_coordinates (tuple): Bragg peaks x and y coordinates in the visualization frame.
+
+        """
         peak_list_x_in_frame: List[float] = []
         peak_list_y_in_frame: List[float] = []
         peak_fs: float

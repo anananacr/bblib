@@ -57,8 +57,8 @@ class PF8Info:
         This module checks whether the pixel maps have been shifted. If not, it shifts the entire detector along the x and y axes by the specified values.
 
         Args:
-            detector_shift_in_x (int): Number of pixels to shift the entire detector in the x-axis, according to the CXI coordinate system.
-            detector_shift_in_y (int): Number of pixels to shift the entire detector in the y-axis, according to the CXI coordinate system.
+            detector_shift_x (int): Number of pixels to shift the entire detector in the x-axis, according to the CXI coordinate system.
+            detector_shift_y (int): Number of pixels to shift the entire detector in the y-axis, according to the CXI coordinate system.
         """
 
         if not self._shifted_pixel_maps:

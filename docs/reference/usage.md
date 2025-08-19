@@ -1,18 +1,4 @@
-# beambusters library
-
-The beambusters library (bblib) is a library that contains methods to determine the detector center directly from still diffraction patterns collected in serial crystallography experiments.
-
-![Python](https://img.shields.io/badge/-Python-000?&logo=Python) Python 3.10
-
-## Installation
-
-To install bblib, run the following command in a terminal:
-
-```bash
-pip install bblib
-```
-
-## Usage
+# Usage
 
 To utilize the methods `CenterOfMass`,  `FriedelPairs`, `MinimizePeakFWHM`  and `CircleDetection` it is required to have two configuration dictionaries, one for PeakFinder8 and another one for this library itself. The following snippet shows the general structure for both (parameters not used in your case can be omitted):
 
@@ -146,10 +132,3 @@ center_coordinates_from_friedel_pairs = friedel_pairs_method(
                         data = ..., initial_guess= ...
                     )
 ```
-# Contact
-
-Ana Carolina Rodrigues led the development of bblib from 2021 to 2025 at the Deutsches Elektronen-Synchrotron (DESY) in Hamburg, Germany.
-
-For questions, please contact:
-
-**Email**: sc.anarodrigues@gmail.com

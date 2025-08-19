@@ -6,6 +6,9 @@ theme:
   name: material
   favicon: assets/icon.png
   logo: assets/icon.png
+  features:
+    - content.code.copy
+    - navigation.tabs
   palette:
     primary: deep orange
   icon:
@@ -17,18 +20,32 @@ plugins:
       handlers:
         python:
           options:
-            show_submodule: true
-            show_root_heading: true
-            show_root_full_path: false
-            show_root_toc_entry: false
+            extra:
+              show_submodule: true
+              show_root_heading: true
+              show_root_full_path: false
+              show_root_toc_entry: false
   - search
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
 nav:
   - About bblib: reference/index.md
+  - Installation: reference/install.md
+  - Usage: reference/usage.md
   - Tutorials:
       - Center of mass: tutorial/center_of_mass/center_of_mass.md
       - Circle detection: tutorial/circle_detection/circle_detection.md
       - Minimize peak FWHM: tutorial/minimize_peak_fwhm/minimize_peak_fwhm.md
       - Friedel pairs: tutorial/friedel_pairs/friedel_pairs.md
+  - Contact: reference/contact.md
   - API reference:
       - methods: reference/methods.md
       - models: reference/models.md

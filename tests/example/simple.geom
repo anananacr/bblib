@@ -6,7 +6,7 @@ dim1 = ss
 dim2 = fs
 data = /data/data
 
-mask_file = /Users/minoru/Documents/ana/scripts/beambusters/docs/example/mask.h5
+mask_file = /Users/minoru/Documents/ana/scripts/bblib/tests/example/mask.h5
 mask = /data/data
 mask_good = 1
 mask_bad = 0

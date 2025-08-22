@@ -607,14 +607,14 @@ class MinimizePeakFWHM(CenteringMethod):
         self.pixel_step = 1
         xx, yy = np.meshgrid(
             np.arange(
-                self.initial_guess[0] - 10,
-                self.initial_guess[0] + 11,
+                self.initial_guess[0] - 20,
+                self.initial_guess[0] + 21,
                 self.pixel_step,
                 dtype=int,
             ),
             np.arange(
-                self.initial_guess[1] - 10,
-                self.initial_guess[1] + 11,
+                self.initial_guess[1] - 20,
+                self.initial_guess[1] + 21,
                 self.pixel_step,
                 dtype=int,
             ),

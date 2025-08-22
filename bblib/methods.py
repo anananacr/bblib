@@ -436,7 +436,7 @@ class MinimizePeakFWHM(CenteringMethod):
                 "xc": center_to_radial_average[0],
                 "yc": center_to_radial_average[1],
                 "fwhm": 10000,
-                "r_squared": 0,
+                "r_square": 0,
             }
 
         if self.plot_fwhm_flag:
@@ -472,9 +472,9 @@ class MinimizePeakFWHM(CenteringMethod):
             residuals = y - gaussian_lin(x, *popt)
             ss_res = np.sum(residuals**2)
             ss_tot = np.sum((y - np.mean(y)) ** 2)
-            r_squared = 1 - (ss_res / ss_tot)
+            r_square = 1 - (ss_res / ss_tot)
         except (ZeroDivisionError, RuntimeError):
-            r_squared = 0
+            r_square = 0
             fwhm = 10000
             popt = []
 
@@ -489,7 +489,7 @@ class MinimizePeakFWHM(CenteringMethod):
                 x_fit,
                 y_fit,
                 "r--",
-                label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM : {round(fwhm,3)}",
+                label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_square, 4)}\n FWHM : {round(fwhm,3)}",
             )
 
             plt.legend(fontsize=14, loc=1, markerscale=1)
@@ -506,7 +506,7 @@ class MinimizePeakFWHM(CenteringMethod):
             "xc": center_to_radial_average[0],
             "yc": center_to_radial_average[1],
             "fwhm": fwhm,
-            "r_squared": r_squared,
+            "r_square": r_square,
         }
 
     def _prep_for_centering(self, data: np.ndarray, initial_guess: tuple) -> None:
@@ -607,25 +607,20 @@ class MinimizePeakFWHM(CenteringMethod):
         self.pixel_step = 1
         xx, yy = np.meshgrid(
             np.arange(
-                self.initial_guess[0] - 20,
-                self.initial_guess[0] + 21,
+                self.initial_guess[0] - 10,
+                self.initial_guess[0] + 11,
                 self.pixel_step,
                 dtype=int,
             ),
             np.arange(
-                self.initial_guess[1] - 20,
-                self.initial_guess[1] + 21,
+                self.initial_guess[1] - 10,
+                self.initial_guess[1] + 11,
                 self.pixel_step,
                 dtype=int,
             ),
         )
-        coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
 
-        pool = multiprocessing.Pool()
-        with pool:
-            self.fwhm_summary = pool.map(self._calculate_fwhm, coordinates)
-
-        #self.fwhm_summary = [self._calculate_fwhm((x, y)) for x, y in zip(xx.ravel(), yy.ravel())]
+        self.fwhm_summary = [self._calculate_fwhm((x, y)) for x, y in zip(xx.ravel(), yy.ravel())]
 
 
     def _run_centering(self, **kwargs) -> tuple:

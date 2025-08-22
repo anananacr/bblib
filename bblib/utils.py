@@ -240,7 +240,7 @@ def get_fwhm_map_min_from_projection(
         plots_flag (bool): If True, plots can be generated.
 
     Returns:
-        center (list): Coordinates o fthe center of the diffraction pattern, such that the image center corresponds to data [yc, xc].
+        center (list): Coordinates of the center of the diffraction pattern in x and y.
     """
     n = int(math.sqrt(len(lines)))
 

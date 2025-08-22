@@ -9,7 +9,7 @@ from bblib.utils import (
     center_of_mass,
     azimuthal_average,
     gaussian_lin,
-    get_fwhm_map_global_min,
+    get_fwhm_map_min_from_projection,
     correct_polarization,
     visualize_single_panel,
 )
@@ -625,6 +625,9 @@ class MinimizePeakFWHM(CenteringMethod):
         with pool:
             self.fwhm_summary = pool.map(self._calculate_fwhm, coordinates)
 
+        #self.fwhm_summary = [self._calculate_fwhm((x, y)) for x, y in zip(xx.ravel(), yy.ravel())]
+
+
     def _run_centering(self, **kwargs) -> tuple:
         if self.config["plots_flag"]:
             path = pathlib.Path(
@@ -632,7 +635,7 @@ class MinimizePeakFWHM(CenteringMethod):
             )
             path.mkdir(parents=True, exist_ok=True)
 
-        xc, yc = get_fwhm_map_global_min(
+        xc, yc = get_fwhm_map_min_from_projection(
             self.fwhm_summary,
             f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}',
             f'{self.plots_info["filename"]}',

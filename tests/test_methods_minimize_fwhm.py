@@ -2,7 +2,6 @@ from bblib.methods import MinimizePeakFWHM
 from bblib.models import PF8Info
 import h5py
 import numpy as np
-import cProfile
 
 config = {
     "plots_flag": False,
@@ -47,12 +46,7 @@ def test_type_output_from_minimize_peak_fwhm_without_plot():
     minimize_peak_fwhm_method = MinimizePeakFWHM(config=config, PF8Config=PF8Config, plots_info=plots_info)
     with h5py.File("example/thick_ring_600_200.h5", "r") as f:
         data = np.array(f["data/data"])
-    pr = cProfile.Profile()
-    pr.enable()
     center_from_minimize_peak_fwhm = minimize_peak_fwhm_method(data = data, initial_guess=[602,202])
-    pr.disable()
-    pr.dump_stats("results_fast.prof")
-
     assert isinstance(center_from_minimize_peak_fwhm, list)
 
 def test_type_output_from_minimize_peak_fwhm_with_plot():

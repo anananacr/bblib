@@ -4,6 +4,7 @@ This module defines auxiliary funtions to process the data.
 
 from numpy import exp
 import numpy as np
+from numba import njit
 import matplotlib.pyplot as plt
 
 plt.switch_backend("agg")
@@ -84,6 +85,16 @@ def azimuthal_average(
 
     return radius, px_bin / r_bin
 
+@njit
+def _radial_reduce(vals, rr, maxr):
+    sums = np.zeros(maxr + 1, dtype=np.float64)
+    counts = np.zeros(maxr + 1, dtype=np.int64)
+    for i in range(rr.size):
+        r = rr[i]
+        sums[r] += vals[i]
+        counts[r] += 1
+    return sums, counts
+
 def _precompute_rbins(shape, center):
     a, b = shape
     yy, xx = np.ogrid[:a, :b]
@@ -125,11 +136,10 @@ def azimuthal_average_fast(
     rr = Rint.ravel()[m]
     vals = data.ravel()[m]
 
-    sums = np.bincount(rr, weights=vals, minlength=maxr + 1)
-    cnts = np.bincount(rr, minlength=maxr + 1)
+    sums, counts = _radial_reduce(vals, rr, maxr)
 
     with np.errstate(invalid="ignore", divide="ignore"):
-        prof = sums / np.maximum(cnts, 1)
+        prof = sums / np.maximum(counts, 1)
 
     radius = np.arange(prof.size, dtype=np.int32)
     return radius, prof
@@ -153,7 +163,7 @@ def correct_polarization(
         dist (float): z distance coordinates of the detector position in pixels.
         data (np.ndarray): Raw data frame in which polarization correction will be applied.
         mask (np.ndarray): Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
-
+        p (float): Polarization degree.
     Returns:
         corrected_data (np.ndarray): Corrected data frame for polarization effect.
         pol (np.ndarray): Polarization array for polarization correction.

@@ -24,6 +24,7 @@ config = {
 		"min": ...,
 		"max": ...
 		},
+	"grid_search_radius": ...,
 	"canny":{
 		"sigma": ...,
 		"low_threshold": ...,

@@ -42,6 +42,7 @@ config = {
 		"min": 200,
 		"max": 400
 		},
+	"grid_search_radius": 10,
 	"bragg_peaks_positions_for_center_of_mass_calculation": 0,
 	"pixels_for_mask_of_bragg_peaks": 2,
 	"polarization": {

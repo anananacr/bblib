@@ -16,14 +16,12 @@ from bblib.utils import (
     visualize_single_panel,
 )
 import math
-from scipy import ndimage
 from bblib.models import PF8Info, PF8
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.transform import hough_circle, hough_circle_peaks
 from skimage.feature import canny
-import multiprocessing
 import pathlib
 from scipy.optimize import curve_fit
 from matplotlib.colors import LogNorm
@@ -765,16 +763,19 @@ class MinimizePeakFWHM(CenteringMethod):
         self.mask_for_fwhm_min = only_peaks_mask * visual_mask
 
         self.pixel_step = 1
+
+        box_radius = self.config["grid_search_radius"]
+
         xx, yy = np.meshgrid(
             np.arange(
-                self.initial_guess[0] - 20,
-                self.initial_guess[0] + 21,
+                self.initial_guess[0] - box_radius,
+                self.initial_guess[0] + box_radius + 1,
                 self.pixel_step,
                 dtype=int,
             ),
             np.arange(
-                self.initial_guess[1] - 20,
-                self.initial_guess[1] + 21,
+                self.initial_guess[1] - box_radius,
+                self.initial_guess[1] + box_radius + 1,
                 self.pixel_step,
                 dtype=int,
             ),

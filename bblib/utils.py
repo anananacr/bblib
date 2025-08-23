@@ -337,32 +337,25 @@ def get_fwhm_map_min_from_projection(
         # Create a figure with three subplots
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 10))
         pos1 = ax1.imshow(z_grid, cmap="rainbow")
-        step = 2
+
         n = z_grid.shape[0]
+        step=2
 
         ax1.set_xticks(np.arange(0, n, step, dtype=int))
         ax1.set_yticks(np.arange(0, n, step, dtype=int))
-        if x_vals[-1]%2 ==0:
-            ax1.set_xticklabels(np.arange(x_vals[0], x_vals[-1] + step, step, dtype=int), rotation=45)
-            ax1.set_yticklabels(np.arange(y_vals[0], y_vals[-1] + step, step, dtype=int))
-        else:
-            ax1.set_xticklabels(np.arange(x_vals[0], x_vals[-1], step, dtype=int), rotation=45)
-            ax1.set_yticklabels(np.arange(y_vals[0], y_vals[-1], step, dtype=int))
+        ax1.set_xticklabels(np.arange(x_vals[0], x_vals[-1]+1, step, dtype=int), rotation=45)
+        ax1.set_yticklabels(np.arange(y_vals[0], y_vals[-1]+1, step, dtype=int))
+
+
         ax1.set_ylabel("yc [px]")
         ax1.set_xlabel("xc [px]")
         ax1.set_title("FWHM")
 
         pos2 = ax2.imshow(r_grid, cmap="rainbow")
-
         ax2.set_xticks(np.arange(0, n, step, dtype=int))
         ax2.set_yticks(np.arange(0, n, step, dtype=int))
-
-        if x_vals[-1]%2 ==0:
-            ax2.set_xticklabels(np.arange(x_vals[0], x_vals[-1] + step, step, dtype=int), rotation=45)
-            ax2.set_yticklabels(np.arange(y_vals[0], y_vals[-1] + step, step, dtype=int))
-        else:
-            ax2.set_xticklabels(np.arange(x_vals[0], x_vals[-1], step, dtype=int), rotation=45)
-            ax2.set_yticklabels(np.arange(y_vals[0], y_vals[-1], step, dtype=int))
+        ax2.set_xticklabels(np.arange(x_vals[0], x_vals[-1]+1, step, dtype=int), rotation=45)
+        ax2.set_yticklabels(np.arange(y_vals[0], y_vals[-1]+1, step, dtype=int))
 
         ax2.set_ylabel("yc [px]")
         ax2.set_xlabel("xc [px]")

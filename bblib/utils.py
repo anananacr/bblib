@@ -42,49 +42,6 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
 
     return [np.round(xc, 1), np.round(yc, 1)]
 
-
-def azimuthal_average(
-    data: np.ndarray, center: tuple = None, mask: np.ndarray = None
-) -> np.ndarray:
-    """
-    Calculate azimuthal integration of data in relation to the center of the image
-    Adapted from L. P. René de Cotret work on scikit-ued (https://github.com/LaurentRDC/scikit-ued/tree/master)
-    L. P. René de Cotret, M. R. Otto, M. J. Stern. and B. J. Siwick, An open-source software ecosystem for the interactive exploration of ultrafast electron scattering data, Advanced Structural and Chemical Imaging 4:11 (2018) DOI: 10.1186/s40679-018-0060-y.
-
-    Args:
-        data (np.ndarray): Input data in which center of mass will be calculated. Values equal or less than zero will not be considered.
-        center (tuple): Center coordinates of the radial average (xc, yc)->(col, row).
-        mask (np.ndarray): Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
-
-    Returns:
-        radius (np.ndarray): Radial axis in pixels.
-        intensity (np.ndarray): Integrated intensity normalized by the number of valid pixels.
-    """
-    a = data.shape[0]
-    b = data.shape[1]
-    if mask is None:
-        mask = np.ones((a, b), dtype=bool)
-    else:
-        mask.astype(bool)
-
-    if center is None:
-        center = [b / 2, a / 2]
-    [X, Y] = np.meshgrid(np.arange(b) - center[0], np.arange(a) - center[1])
-    R = np.sqrt(np.square(X) + np.square(Y))
-    Rint = np.rint(R).astype(int)
-
-    valid = mask.flatten()
-    data = data.flatten()
-    Rint = Rint.flatten()
-
-    px_bin = np.bincount(Rint, weights=valid * data)
-    r_bin = np.bincount(Rint, weights=valid)
-    radius = np.arange(0, r_bin.size)
-    # Replace by one if r_bin is zero for division
-    np.maximum(r_bin, 1, out=r_bin)
-
-    return radius, px_bin / r_bin
-
 @njit
 def _radial_reduce(vals, rr, maxr):
     sums = np.zeros(maxr + 1, dtype=np.float64)

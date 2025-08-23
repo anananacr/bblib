@@ -7,9 +7,7 @@ import om.lib.geometry as geometry
 from bblib.utils import (
     mask_peaks,
     center_of_mass,
-    azimuthal_average,
     azimuthal_average_fast,
-    gaussian_lin,
     gaussian,
     get_fwhm_map_min_from_projection,
     correct_polarization,
@@ -23,7 +21,6 @@ import matplotlib.pyplot as plt
 from skimage.transform import hough_circle, hough_circle_peaks
 from skimage.feature import canny
 import pathlib
-from scipy.optimize import curve_fit
 from matplotlib.colors import LogNorm
 import copy
 import matplotlib
@@ -423,85 +420,6 @@ class MinimizePeakFWHM(CenteringMethod):
         if not config["plots_flag"] and not plots_info:
             plots_info = {"filename": "", "folder_name": "", "root_path": ""}
 
-    def _calculate_fwhm_fit_moments(self, coordinate: tuple) -> dict:
-        center_to_radial_average = coordinate
-        try:
-            x_all, y_all = azimuthal_average(
-                self.visual_data,
-                center=center_to_radial_average,
-                mask=self.mask_for_fwhm_min,
-            )
-        except IndexError:
-            return {
-                "xc": center_to_radial_average[0],
-                "yc": center_to_radial_average[1],
-                "fwhm": 10000,
-                "r_square": 0,
-            }
-
-        if self.plot_fwhm_flag:
-            fig, ax1 = plt.subplots(1, 1, figsize=(8, 8))
-            plt.plot(x_all, y_all)
-            ax1.set_xlabel("Radial distance (pixel)", fontsize=20)
-            ax1.set_ylabel("Intensity (ADU)", fontsize=20)
-            plt.tick_params(axis="both", which="major", labelsize=16)
-
-        ## Define background peak region
-        x_min = self.config["peak_region"]["min"]
-        x_max = self.config["peak_region"]["max"]
-        x = x_all[x_min:x_max]
-        y = y_all[x_min:x_max]
-
-        y = np.clip(y, 1e-10, None)
-        try:
-            total = y.sum()
-            mean = (x * y).sum() / total
-            sigma = np.sqrt(((x - mean) ** 2 * y).sum() / total)
-            amp = y.max()
-            popt = [amp, mean, sigma]
-            y_pred = gaussian(x, a=amp, x0=mean, sigma=sigma)
-
-            fwhm =  2 * np.sqrt(2*np.log(2)) * sigma
-
-            ss_res = np.sum((y - y_pred)**2)
-            ss_tot = np.sum((y - np.mean(y))**2)
-            r_square = 1 - ss_res/ss_tot
-        except (ZeroDivisionError, RuntimeError):
-            r_square = 0
-            fwhm = 10000
-            popt = []
-
-        ## Display plots
-        if self.plot_fwhm_flag and len(popt) > 0:
-            x_fit = x.copy()
-            y_fit = gaussian(x_fit, *popt)
-
-            plt.vlines([x[0], x[-1]], 0, round(popt[0]) * 10, "r")
-
-            plt.plot(
-                x_fit,
-                y_fit,
-                "r--",
-                label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_square, 4)}\n FWHM : {round(fwhm,3)}",
-            )
-
-            plt.legend(fontsize=14, loc=1, markerscale=1)
-            path = pathlib.Path(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/'
-            )
-            path.mkdir(parents=True, exist_ok=True)
-            plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/{self.plots_info["filename"]}.png'
-            )
-            plt.close()
-
-        return {
-            "xc": center_to_radial_average[0],
-            "yc": center_to_radial_average[1],
-            "fwhm": fwhm,
-            "r_square": r_square,
-        }
-
     def _calculate_fwhm_log_fit(self, coordinate: tuple) -> dict:
         center_to_radial_average = coordinate
         try:
@@ -532,6 +450,7 @@ class MinimizePeakFWHM(CenteringMethod):
         y = y_all[x_min:x_max]
 
         y = np.clip(y, 1e-10, None)
+
         try:
             a, b, c = np.polyfit(x, np.log(y), 2)
 
@@ -555,91 +474,6 @@ class MinimizePeakFWHM(CenteringMethod):
         if self.plot_fwhm_flag and len(popt) > 0:
             x_fit = x.copy()
             y_fit = gaussian(x_fit, *popt)
-
-            plt.vlines([x[0], x[-1]], 0, round(popt[0]) * 10, "r")
-
-            plt.plot(
-                x_fit,
-                y_fit,
-                "r--",
-                label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_square, 4)}\n FWHM : {round(fwhm,3)}",
-            )
-
-            plt.legend(fontsize=14, loc=1, markerscale=1)
-            path = pathlib.Path(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/'
-            )
-            path.mkdir(parents=True, exist_ok=True)
-            plt.savefig(
-                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/{self.plots_info["filename"]}.png'
-            )
-            plt.close()
-
-        return {
-            "xc": center_to_radial_average[0],
-            "yc": center_to_radial_average[1],
-            "fwhm": fwhm,
-            "r_square": r_square,
-        }
-
-
-    def _calculate_fwhm(self, coordinate: tuple) -> dict:
-        center_to_radial_average = coordinate
-        try:
-            x_all, y_all = azimuthal_average(
-                self.visual_data,
-                center=center_to_radial_average,
-                mask=self.mask_for_fwhm_min,
-            )
-        except IndexError:
-            return {
-                "xc": center_to_radial_average[0],
-                "yc": center_to_radial_average[1],
-                "fwhm": 10000,
-                "r_square": 0,
-            }
-
-        if self.plot_fwhm_flag:
-            fig, ax1 = plt.subplots(1, 1, figsize=(8, 8))
-            plt.plot(x_all, y_all)
-            ax1.set_xlabel("Radial distance (pixel)", fontsize=20)
-            ax1.set_ylabel("Intensity (ADU)", fontsize=20)
-            plt.tick_params(axis="both", which="major", labelsize=16)
-
-        ## Define background peak region
-        x_min = self.config["peak_region"]["min"]
-        x_max = self.config["peak_region"]["max"]
-        x = x_all[x_min:x_max]
-        y = y_all[x_min:x_max]
-        ## Estimation of initial parameters
-
-        m0 = 0
-        n0 = 2
-        y_linear = m0 * x + n0
-        y_gaussian = y - y_linear
-
-        try:
-            mean = sum(x * y_gaussian) / sum(y_gaussian)
-            sigma = np.sqrt(sum(y_gaussian * (x - mean) ** 2) / sum(y_gaussian))
-            popt, pcov = curve_fit(
-                gaussian_lin, x, y, p0=[max(y_gaussian), mean, sigma, m0, n0]
-            )
-            fwhm = popt[2] * math.sqrt(8 * np.log(2))
-
-            ##Calculate residues
-            residuals = y - gaussian_lin(x, *popt)
-            ss_res = np.sum(residuals**2)
-            ss_tot = np.sum((y - np.mean(y)) ** 2)
-            r_square = 1 - (ss_res / ss_tot)
-        except (ZeroDivisionError, RuntimeError):
-            r_square = 0
-            fwhm = 10000
-            popt = []
-
-        ## Display plots
-        if self.plot_fwhm_flag and len(popt) > 0:
-            x_fit = x.copy()
-            y_fit = gaussian_lin(x_fit, *popt)
 
             plt.vlines([x[0], x[-1]], 0, round(popt[0]) * 10, "r")
 
@@ -804,7 +638,7 @@ class MinimizePeakFWHM(CenteringMethod):
 
         if self.centering_converged(center):
             self.plot_fwhm_flag = True
-            self._calculate_fwhm(center)
+            self._calculate_fwhm_log_fit(center)
             self.plot_fwhm_flag = False
 
         if self.config["plots_flag"]:

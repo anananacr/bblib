@@ -261,6 +261,19 @@ def get_fwhm_map_min_from_projection(
     z_grid = np.nan_to_num(z_grid)
     r_grid = np.nan_to_num(r_grid)
 
+    proj_x = np.mean(z_grid, axis=1)
+    proj_y = np.mean(z_grid, axis=0)
+
+    x_vals = np.arange(np.min(x_grid), np.max(x_grid) + pixel_step, pixel_step)
+    y_vals = np.arange(np.min(y_grid), np.max(y_grid) + pixel_step, pixel_step)
+
+    try:
+        xc = x_vals[np.argmin(proj_x)]
+        yc = y_vals[np.argmin(proj_y)]
+    except (ValueError, IndexError):
+        xc = -1.0
+        yc = -1.0
+
     if plots_flag:
         # Create a figure with three subplots
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 10))
@@ -270,9 +283,12 @@ def get_fwhm_map_min_from_projection(
 
         ax1.set_xticks(np.arange(0, n, step, dtype=int))
         ax1.set_yticks(np.arange(0, n, step, dtype=int))
-
-        ax1.set_xticklabels(np.arange(round(x_grid[0,0], 1), round(x_grid[-1,0], 1), step, dtype=int), rotation=45)
-        ax1.set_yticklabels(np.arange(round(y_grid[0,0], 1), round(y_grid[0,-1], 1), step, dtype=int))
+        if x_vals[-1]%2 ==0:
+            ax1.set_xticklabels(np.arange(x_vals[0], x_vals[-1] + step, step, dtype=int), rotation=45)
+            ax1.set_yticklabels(np.arange(y_vals[0], y_vals[-1] + step, step, dtype=int))
+        else:
+            ax1.set_xticklabels(np.arange(x_vals[0], x_vals[-1], step, dtype=int), rotation=45)
+            ax1.set_yticklabels(np.arange(y_vals[0], y_vals[-1], step, dtype=int))
         ax1.set_ylabel("yc [px]")
         ax1.set_xlabel("xc [px]")
         ax1.set_title("FWHM")
@@ -282,50 +298,37 @@ def get_fwhm_map_min_from_projection(
         ax2.set_xticks(np.arange(0, n, step, dtype=int))
         ax2.set_yticks(np.arange(0, n, step, dtype=int))
 
-        ax2.set_xticklabels(np.arange(round(x_grid[0,0], 1), round(x_grid[-1,0], 1), step, dtype=int), rotation=45)
-        ax2.set_yticklabels(np.arange(round(y_grid[0,0], 1), round(y_grid[0,-1], 1), step, dtype=int))
+        if x_vals[-1]%2 ==0:
+            ax2.set_xticklabels(np.arange(x_vals[0], x_vals[-1] + step, step, dtype=int), rotation=45)
+            ax2.set_yticklabels(np.arange(y_vals[0], y_vals[-1] + step, step, dtype=int))
+        else:
+            ax2.set_xticklabels(np.arange(x_vals[0], x_vals[-1], step, dtype=int), rotation=45)
+            ax2.set_yticklabels(np.arange(y_vals[0], y_vals[-1], step, dtype=int))
 
         ax2.set_ylabel("yc [px]")
         ax2.set_xlabel("xc [px]")
         ax2.set_title("R²")
 
-    proj_x = np.sum(z_grid, axis=1) / n
-    x = np.arange(x_grid[0,0], x_grid[-1,0] + pixel_step, pixel_step)
-    index_x = np.unravel_index(np.argmin(proj_x, axis=None), proj_x.shape)
-    xc = x[index_x]
-
-    if plots_flag:
-        ax3.scatter(x, proj_x, color="b")
-        ax3.scatter(xc, proj_x[index_x], color="r", label=f"xc: {xc}")
+        ax3.scatter(x_vals, proj_x, color="b")
+        ax3.scatter(xc, proj_x[np.argmin(proj_x)], color="r", label=f"xc: {xc}")
         ax3.set_ylabel("Average FWHM")
         ax3.set_xlabel("xc [px]")
         ax3.set_title("FWHM projection in x")
         ax3.legend()
-
-    proj_y = np.sum(z_grid, axis=0) / n
-    y = np.arange(y_grid[0,0], y_grid[0,-1] + pixel_step, pixel_step)
-    index_y = np.unravel_index(np.argmin(proj_y, axis=None), proj_y.shape)
-    yc = y[index_y]
-
-    if plots_flag:
-        ax4.scatter(x, proj_y, color="b")
-        ax4.scatter(yc, proj_y[index_y], color="r", label=f"yc: {yc}")
+        ax4.scatter(y_vals, proj_y, color="b")
+        ax4.scatter(yc, proj_y[np.argmin(proj_y)], color="r", label=f"yc: {yc}")
         ax4.set_ylabel("Average FWHM")
         ax4.set_xlabel("yc [px]")
         ax4.set_title("FWHM projection in y")
         ax4.legend()
-
         fig.colorbar(pos1, ax=ax1, shrink=0.6)
         fig.colorbar(pos2, ax=ax2, shrink=0.6)
+        plt.savefig(f"{output_folder}/fwhm_map/{label}.png")
+        plt.close()
 
     if int(np.sum(proj_y)) == 0 or int(np.sum(proj_x)) == 0:
         xc = -1
         yc = -1
-    else:
-        if plots_flag:
-            plt.savefig(f"{output_folder}/fwhm_map/{label}.png")
-    if plots_flag:
-        plt.close()
 
     return [np.round(xc, 0), np.round(yc, 0)]
 

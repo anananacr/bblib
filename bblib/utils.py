@@ -221,27 +221,6 @@ def gaussian(x: np.ndarray, a: float, x0: float, sigma: float) -> np.ndarray:
 
     return a * exp(-((x - x0) ** 2) / (2 * sigma**2))
 
-
-def gaussian_lin(
-    x: np.ndarray, a: float, x0: float, sigma: float, m: float, n: float
-) -> np.ndarray:
-    """
-    Gaussian function summed to a linear function.
-
-    Args:
-        x (np.ndarray): x-axis.
-        a (float): Amplitude of the Gaussian.
-        x0 (float): Average of the Gaussian.
-        sigma (float): Standard deviation of the Gaussian.
-        m: Angular coefficient.
-        n: Linear coefficient.
-
-    Returns:
-        y (np.ndarray): y-axis.
-    """
-    return m * x + n + a * exp(-((x - x0) ** 2) / (2 * sigma**2))
-
-
 def get_fwhm_map_min_from_projection(
     lines: list, output_folder: str, label: str, pixel_step: int, plots_flag: bool
 ) -> tuple:

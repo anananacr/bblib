@@ -8,6 +8,7 @@ from bblib.utils import (
     mask_peaks,
     center_of_mass,
     azimuthal_average,
+    azimuthal_average_fast,
     gaussian_lin,
     gaussian,
     get_fwhm_map_min_from_projection,
@@ -424,10 +425,89 @@ class MinimizePeakFWHM(CenteringMethod):
         if not config["plots_flag"] and not plots_info:
             plots_info = {"filename": "", "folder_name": "", "root_path": ""}
 
-    def _calculate_fwhm_log_fit(self, coordinate: tuple) -> dict:
+    def _calculate_fwhm_fit_moments(self, coordinate: tuple) -> dict:
         center_to_radial_average = coordinate
         try:
             x_all, y_all = azimuthal_average(
+                self.visual_data,
+                center=center_to_radial_average,
+                mask=self.mask_for_fwhm_min,
+            )
+        except IndexError:
+            return {
+                "xc": center_to_radial_average[0],
+                "yc": center_to_radial_average[1],
+                "fwhm": 10000,
+                "r_square": 0,
+            }
+
+        if self.plot_fwhm_flag:
+            fig, ax1 = plt.subplots(1, 1, figsize=(8, 8))
+            plt.plot(x_all, y_all)
+            ax1.set_xlabel("Radial distance (pixel)", fontsize=20)
+            ax1.set_ylabel("Intensity (ADU)", fontsize=20)
+            plt.tick_params(axis="both", which="major", labelsize=16)
+
+        ## Define background peak region
+        x_min = self.config["peak_region"]["min"]
+        x_max = self.config["peak_region"]["max"]
+        x = x_all[x_min:x_max]
+        y = y_all[x_min:x_max]
+
+        y = np.clip(y, 1e-10, None)
+        try:
+            total = y.sum()
+            mean = (x * y).sum() / total
+            sigma = np.sqrt(((x - mean) ** 2 * y).sum() / total)
+            amp = y.max()
+            popt = [amp, mean, sigma]
+            y_pred = gaussian(x, a=amp, x0=mean, sigma=sigma)
+
+            fwhm =  2 * np.sqrt(2*np.log(2)) * sigma
+
+            ss_res = np.sum((y - y_pred)**2)
+            ss_tot = np.sum((y - np.mean(y))**2)
+            r_square = 1 - ss_res/ss_tot
+        except (ZeroDivisionError, RuntimeError):
+            r_square = 0
+            fwhm = 10000
+            popt = []
+
+        ## Display plots
+        if self.plot_fwhm_flag and len(popt) > 0:
+            x_fit = x.copy()
+            y_fit = gaussian(x_fit, *popt)
+
+            plt.vlines([x[0], x[-1]], 0, round(popt[0]) * 10, "r")
+
+            plt.plot(
+                x_fit,
+                y_fit,
+                "r--",
+                label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_square, 4)}\n FWHM : {round(fwhm,3)}",
+            )
+
+            plt.legend(fontsize=14, loc=1, markerscale=1)
+            path = pathlib.Path(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/'
+            )
+            path.mkdir(parents=True, exist_ok=True)
+            plt.savefig(
+                f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/radial_average/{self.plots_info["filename"]}.png'
+            )
+            plt.close()
+
+        return {
+            "xc": center_to_radial_average[0],
+            "yc": center_to_radial_average[1],
+            "fwhm": fwhm,
+            "r_square": r_square,
+        }
+
+    def _calculate_fwhm_log_fit(self, coordinate: tuple) -> dict:
+        center_to_radial_average = coordinate
+        try:
+            x_all, y_all = azimuthal_average_fast(
                 self.visual_data,
                 center=center_to_radial_average,
                 mask=self.mask_for_fwhm_min,
@@ -547,8 +627,6 @@ class MinimizePeakFWHM(CenteringMethod):
                 gaussian_lin, x, y, p0=[max(y_gaussian), mean, sigma, m0, n0]
             )
             fwhm = popt[2] * math.sqrt(8 * np.log(2))
-            ## Divide by radius of the peak to get shasrpness ratio
-            fwhm_over_radius = fwhm / popt[1]
 
             ##Calculate residues
             residuals = y - gaussian_lin(x, *popt)

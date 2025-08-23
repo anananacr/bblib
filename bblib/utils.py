@@ -62,7 +62,7 @@ def azimuthal_average(
     a = data.shape[0]
     b = data.shape[1]
     if mask is None:
-        mask = np.zeros((a, b), dtype=bool)
+        mask = np.ones((a, b), dtype=bool)
     else:
         mask.astype(bool)
 
@@ -84,6 +84,55 @@ def azimuthal_average(
 
     return radius, px_bin / r_bin
 
+def _precompute_rbins(shape, center):
+    a, b = shape
+    yy, xx = np.ogrid[:a, :b]
+    dy = yy - center[1]
+    dx = xx - center[0]
+    R = np.hypot(dx, dy)
+    Rint = (R + 0.5).astype(np.int32)
+    maxr = int(Rint.max())
+    return Rint, maxr
+
+def azimuthal_average_fast(
+    data: np.ndarray, center: tuple = None, mask: np.ndarray = None
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Returns intensity over radius, where intensity is the mean per integer radius.
+    Improve performance.
+
+    Args:
+        data (np.ndarray): Input data in which center of mass will be calculated. Values equal or less than zero will not be considered.
+        center (tuple): Center coordinates of the radial average (xc, yc)->(col, row).
+        mask (np.ndarray): Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
+
+    Returns:
+        radius (np.ndarray): Radial axis in pixels.
+        intensity (np.ndarray): Integrated intensity normalized by the number of valid pixels.
+    """
+    a, b = data.shape
+    if center is None:
+        center = (b/2, a/2)
+
+    if mask is None:
+        mask = np.ones((a, b), dtype=bool)
+    else:
+        mask = mask.astype(bool, copy=False)
+
+    Rint, maxr = _precompute_rbins(data.shape, (float(center[0]), float(center[1])))
+
+    m = mask.ravel()
+    rr = Rint.ravel()[m]
+    vals = data.ravel()[m]
+
+    sums = np.bincount(rr, weights=vals, minlength=maxr + 1)
+    cnts = np.bincount(rr, minlength=maxr + 1)
+
+    with np.errstate(invalid="ignore", divide="ignore"):
+        prof = sums / np.maximum(cnts, 1)
+
+    radius = np.arange(prof.size, dtype=np.int32)
+    return radius, prof
 
 def correct_polarization(
     x: np.ndarray,

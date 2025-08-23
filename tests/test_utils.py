@@ -12,7 +12,7 @@ def test_type_output_from_fwhm_map_min_from_projection_with_plot():
     with open("example/grid_search.csv", "r") as csv_file:
         lines = list(DictReader(csv_file))
 
-    center = get_fwhm_map_min_from_projection(lines = lines, label = "test", output_folder = "center_refinement/plots", pixel_step = 1, plots_flag = True)
+    center = get_fwhm_map_min_from_projection(lines = lines, label = "test", output_folder = "center_refinement/plots/test_utils", pixel_step = 1, plots_flag = True)
     assert  isinstance(center, list)
 
 def test_output_value_from_fwhm_map_min_from_projection_without_plot():
@@ -26,5 +26,5 @@ def test_output_value_from_fwhm_map_min_from_projection_with_plot():
     with open("example/grid_search.csv", "r") as csv_file:
         lines = list(DictReader(csv_file))
 
-    center = get_fwhm_map_min_from_projection(lines = lines, label = "test", output_folder = "center_refinement/plots", pixel_step = 1, plots_flag = True)
+    center = get_fwhm_map_min_from_projection(lines = lines, label = "test", output_folder = "center_refinement/plots/test_utils", pixel_step = 1, plots_flag = True)
     assert  center == [7,13]

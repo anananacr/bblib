@@ -50,7 +50,7 @@ PF8Config = PF8Info()
 def test_type_output_from_circle_detection_without_plot():
     PF8Config.set_geometry_from_file("example/simple.geom")
     circle_detection_method = CircleDetection(config=config, PF8Config=PF8Config, plots_info=plots_info)
-    with h5py.File("example/calibrated_data_ring.h5", "r") as f:
+    with h5py.File("example/data_random_with_thin_ring.h5", "r") as f:
         data = np.array(f["data/data"])
     center_from_circle_detection = circle_detection_method(data = data)
     assert isinstance(center_from_circle_detection, list)
@@ -59,7 +59,7 @@ def test_type_output_from_circle_detection_with_plot():
     PF8Config.set_geometry_from_file("example/simple.geom")
     config["plots_flag"]=True
     circle_detection_method = CircleDetection(config=config, PF8Config=PF8Config, plots_info=plots_info)
-    with h5py.File("example/calibrated_data_ring.h5", "r") as f:
+    with h5py.File("example/data_random_with_thin_ring.h5", "r") as f:
         data = np.array(f["data/data"])
     center_from_circle_detection = circle_detection_method(data = data)
     assert isinstance(center_from_circle_detection, list)
@@ -67,7 +67,7 @@ def test_type_output_from_circle_detection_with_plot():
 def test_output_from_circle_detection_without_plot():
     PF8Config.set_geometry_from_file("example/simple.geom")
     circle_detection_method = CircleDetection(config=config, PF8Config=PF8Config, plots_info=plots_info)
-    with h5py.File("example/calibrated_data_ring.h5", "r") as f:
+    with h5py.File("example/data_random_with_thin_ring.h5", "r") as f:
         data = np.array(f["data/data"])
     center_from_circle_detection = circle_detection_method(data = data)
     assert center_from_circle_detection == [600,200]
@@ -77,7 +77,7 @@ def test_output_from_circle_detection_with_plot():
     PF8Config.set_geometry_from_file("example/simple.geom")
     config["plots_flag"]=True
     circle_detection_method = CircleDetection(config=config, PF8Config=PF8Config, plots_info=plots_info)
-    with h5py.File("example/calibrated_data_ring.h5", "r") as f:
+    with h5py.File("example/data_random_with_thin_ring.h5", "r") as f:
         data = np.array(f["data/data"])
     center_from_circle_detection = circle_detection_method(data = data)
     assert center_from_circle_detection == [600,200]

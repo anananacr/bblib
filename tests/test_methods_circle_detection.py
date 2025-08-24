@@ -5,7 +5,6 @@ import numpy as np
 
 config = {
     "plots_flag": False,
-	"search_radius": 10,
 	"offset": {
 		"x": 0,
 		"y": 0
@@ -20,13 +19,7 @@ config = {
 		"high_threshold": 0.99
 		},
 	"hough_rank": 1,
-	"bragg_peaks_positions_for_center_of_mass_calculation": 0,
-	"pixels_for_mask_of_bragg_peaks": 2,
-	"polarization": {
-		"apply_polarization_correction": False,
-		"axis": "x",
-		"value": 0.99
-		}
+	"pixels_for_mask_of_bragg_peaks": 2
     }
 
 plots_info = {

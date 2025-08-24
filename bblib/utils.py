@@ -130,7 +130,13 @@ def correct_polarization(
     mask = mask.flatten()
     intensity = np.reshape(data.copy(), len(mask))
     pol = mask.copy().astype(np.float32)
-    pol = make_polarization_array(pol, x.flatten(), y.flatten(), dist, p)
+    if polarization_axis== "x":
+        pol = make_polarization_array(pol, x.flatten(), y.flatten(), dist, p)
+    elif polarization_axis== "y":
+        pol = make_polarization_array(pol, x.flatten(), y.flatten(), dist, 1-p)
+    else:
+        raise ValueError("Unreconized polarization axis. Options available are x or y.")
+
     intensity = intensity / pol
     return intensity.reshape(data.shape), pol.reshape(data.shape)
 
@@ -143,7 +149,7 @@ def make_polarization_array(
     Acknowledgements: Oleksandr Yefanov, Marina Galchenkova
 
     Args:
-        pol (np.ndarray): An array where polarization arra will be built based on its shape. Mask shape is the same size of data. Unvalid pixels (values containing 0) will be skipped from calculation and put 1.
+        pol (np.ndarray): An array where polarization array will be built based on its shape. Mask shape is the same size of data. Unvalid pixels (values containing 0) will be skipped from calculation and put 1.
         cox (np.ndarray): Array containg pixels coordinates in x (pixels) distance from the direct beam. It has same shape of data.
         coy (np.ndarray): Array containg pixels coordinates in y (pixels) distance from the direct beam. It has same shape of data.
         detdist (float): Detector distance from the sample in meters . The detctor distance will be transformed in pixel units based on Res defined as global parameter.
@@ -333,7 +339,6 @@ def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:
         mask (np.ndarray): Mask array containg zeros (pixels to be masked) and ones (valid pixels).
     """
 
-    bin_size = bin
     a = data.shape[0]
     b = data.shape[1]
 

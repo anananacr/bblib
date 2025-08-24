@@ -231,7 +231,7 @@ def get_fwhm_map_min_from_projection(
     lines: list, output_folder: str, label: str, pixel_step: int, plots_flag: bool
 ) -> tuple:
     """
-    Open FWHM grid search optmization plot, fit projections in both axis to get the point of maximum sharpness of the radial average.
+    Open FWHM grid search optmization plot, then fit the projection in both axis to get the point of minimum FWHM of the azimuthal average.
 
     Args:
         lines (list): Output of grid search for FWHM optmization, each line must contain a values of xc,yc,fwhm,r_square.
@@ -329,7 +329,7 @@ def get_fwhm_map_min_from_projection(
 
 def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:
     """
-    Make a  ring mask for the data
+    Make a circular mask for the data.
 
     Args:
         data (np.ndarray): Image in which mask will be shaped
@@ -351,7 +351,7 @@ def ring_mask(
     data: np.ndarray, center: tuple, inner_radius: int, outer_radius: int
 ) -> np.ndarray:
     """
-    Make a  ring mask for the data
+    Make a ring mask for the data.
 
     Args:
         data (np.ndarray): Image in which mask will be shaped

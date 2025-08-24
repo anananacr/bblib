@@ -153,7 +153,7 @@ def make_polarization_array(
         cox (np.ndarray): Array containg pixels coordinates in x (pixels) distance from the direct beam. It has same shape of data.
         coy (np.ndarray): Array containg pixels coordinates in y (pixels) distance from the direct beam. It has same shape of data.
         detdist (float): Detector distance from the sample in meters . The detctor distance will be transformed in pixel units based on Res defined as global parameter.
-        poldegree (float): Polarization degree from [0,1]. The horizontal polarization at most synchrotrons sources, e.g DESY, p is 0.99.
+        poldegree (float): Polarization degree from [0,1]. If the polarization is completely horizontal (along the x-axis), then poldegree equals 1.
     Returns:
         pol (np.ndarray): Polarization array for polarization correction.
     """

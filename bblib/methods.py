@@ -156,6 +156,8 @@ class CenterOfMass(CenteringMethod):
                     matplotlib.colormaps[self.plots_info["color_map"]]
                 )
                 color_map.set_bad(color_map(0))
+                if self.plots_info["value_min"] <=0:
+                    self.plots_info["value_min"]=1
                 pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(
@@ -345,6 +347,8 @@ class CircleDetection(CenteringMethod):
                     matplotlib.colormaps[self.plots_info["color_map"]]
                 )
                 color_map.set_bad(color_map(0))
+                if self.plots_info["value_min"] <=0:
+                    self.plots_info["value_min"]=1
                 pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(
@@ -660,6 +664,8 @@ class MinimizePeakFWHM(CenteringMethod):
                     matplotlib.colormaps[self.plots_info["color_map"]]
                 )
                 color_map.set_bad(color_map(0))
+                if self.plots_info["value_min"] <=0:
+                    self.plots_info["value_min"]=1
                 pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(
@@ -953,6 +959,8 @@ class FriedelPairs(CenteringMethod):
                     matplotlib.colormaps[self.plots_info["color_map"]]
                 )
                 color_map.set_bad(color_map(0))
+                if self.plots_info["value_min"] <=0:
+                    self.plots_info["value_min"]=1
                 pos = ax1.imshow(
                     self.visual_data * self.visual_mask,
                     norm=LogNorm(

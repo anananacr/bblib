@@ -166,6 +166,8 @@ class CenterOfMass(CenteringMethod):
                     cmap=color_map,
                     origin="lower",
                 )
+            if not "marker_size" in self.plots_info:
+                self.plots_info["marker_size"]=20
             ax1.scatter(
                 self.initial_detector_center[0],
                 self.initial_detector_center[1],
@@ -357,6 +359,8 @@ class CircleDetection(CenteringMethod):
                     origin="lower",
                     cmap=color_map,
                 )
+            if not "marker_size" in self.plots_info:
+                self.plots_info["marker_size"]=20
             ax1.scatter(
                 self.initial_detector_center[0],
                 self.initial_detector_center[1],
@@ -674,7 +678,8 @@ class MinimizePeakFWHM(CenteringMethod):
                     origin="lower",
                     cmap=color_map,
                 )
-
+            if not "marker_size" in self.plots_info:
+                self.plots_info["marker_size"]=20
             ax1.scatter(
                 self.initial_guess[0],
                 self.initial_guess[1],
@@ -981,6 +986,8 @@ class FriedelPairs(CenteringMethod):
                 label=f"Initial guess:({np.round(self.initial_guess[0],1)},{np.round(self.initial_guess[1], 1)})",
             )
 
+            if not "marker_size" in self.plots_info:
+                self.plots_info["marker_size"]=20
             ax1.scatter(
                 center[0],
                 center[1],

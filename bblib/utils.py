@@ -332,8 +332,8 @@ def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:
     Make a circular mask for the data.
 
     Args:
-        data (np.ndarray): Image in which mask will be shaped
-        radius (int): Outer radius of the mask
+        data (np.ndarray): Image in which mask will be shaped.
+        radius (int): Outer radius of the mask, in pixels.
 
     Returns:
         mask (np.ndarray): Mask array containg zeros (pixels to be masked) and ones (valid pixels).
@@ -354,10 +354,10 @@ def ring_mask(
     Make a ring mask for the data.
 
     Args:
-        data (np.ndarray): Image in which mask will be shaped
-        center (tuple): (xc,yc)
-        inner_radius (int):
-        outer_radius (int):
+        data (np.ndarray): Image in which mask will be shaped.
+        center (tuple): Center coordinates (xc,yc) of the concentric rings for the mask.
+        inner_radius (int): Inner radius of the mask, in pixels.
+        outer_radius (int): Outer radius of the mask, in pixels.
 
     Returns:
         mask (np.ndarray): Mask array containg zeros (pixels to be masked) and ones (valid pixels).
@@ -380,12 +380,11 @@ def visualize_single_panel(
 
     Args:
         data (np.ndarray): Image in which mask will be shaped
-        transformation_matrix (np.ndarray): A 2x2 transformation matrix used to map
-                    from fast-scan/slow-scan to x/y coordinates.
-                ss_in_rows (bool): If True, the slow-scan axis is mapped to rows; otherwise to columns.
+        transformation_matrix (np.ndarray): A 2x2 transformation matrix used to map from fast-scan/slow-scan to x/y coordinates.
+        ss_in_rows (bool): If True, the slow-scan axis is mapped to rows; otherwise to columns.
 
-            Returns:
-                np.ndarray: The transformed visualization array.
+    Returns:
+        np.ndarray: The transformed visualization array.
     """
     visual_data = np.full((2 * max(data.shape) + 1, 2 * max(data.shape) + 1), np.nan)
 
@@ -409,12 +408,11 @@ def fsss_to_xy(point: tuple, m: list) -> tuple:
     Transforms from the fast-scan/slow-scan basis to the x/y basis.
 
     Args:
-        point (tuple):
+        point (tuple): Coordinates in the fast-scan/slow-scan basis (ss,fs).
         m (list): A 2x2 transformation matrix.
 
     Returns:
         tuple: The corresponding (x, y) coordinates.
-
     """
 
     d = m[0][0] * m[1][1] - m[0][1] * m[1][0]

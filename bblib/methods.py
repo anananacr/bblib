@@ -483,7 +483,7 @@ class MinimizePeakFWHM(CenteringMethod):
             x_fit = x.copy()
             y_fit = gaussian(x_fit, *popt)
 
-            plt.vlines([x[0], x[-1]], 0, round(popt[0]) * 10, "r")
+            plt.vlines([x[0], x[-1]], 0, round(popt[0]) * 1.5, "r")
 
             plt.plot(
                 x_fit,

@@ -1,8 +1,8 @@
 # beambusters library
 
-The beambusters library (bblib) is a library that contains methods to determine the detector center directly from still diffraction patterns collected in serial crystallography experiments.
+[![PyPI pyversions](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/release/python-3100/)
 
-![Python](https://img.shields.io/badge/-Python-000?&logo=Python) Python 3.10
+The beambusters library (bblib) is a library that contains methods to determine the detector center directly from still diffraction patterns collected in serial crystallography experiments.
 
 ## Installation
 
@@ -147,7 +147,7 @@ center_coordinates_from_friedel_pairs = friedel_pairs_method(
                         data = ..., initial_guess= ...
                     )
 ```
-# Contact
+## Contact
 
 Ana Carolina Rodrigues led the development of bblib from 2021 to 2025 at the Deutsches Elektronen-Synchrotron (DESY) in Hamburg, Germany.
 

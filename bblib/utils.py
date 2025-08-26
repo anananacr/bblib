@@ -210,23 +210,6 @@ def mask_peaks(mask: np.ndarray, indexes: tuple, bragg: int, n: int) -> np.ndarr
 
     return surrounding_mask
 
-
-def gaussian(x: np.ndarray, a: float, x0: float, sigma: float) -> np.ndarray:
-    """
-    Gaussian function.
-
-    Args:
-        x (np.ndarray): x-axis.
-        a (float): Amplitude of the Gaussian.
-        x0 (float): Average of the Gaussian.
-        sigma (float): Standard deviation of the Gaussian.
-
-    Returns:
-        y (np.ndarray): y-axis.
-    """
-
-    return a * exp(-((x - x0) ** 2) / (2 * sigma**2))
-
 def gaussian_lin(
     x: np.ndarray, a: float, x0: float, sigma: float, m: float, n: float
 ) -> np.ndarray:

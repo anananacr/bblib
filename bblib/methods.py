@@ -8,7 +8,6 @@ from bblib.utils import (
     mask_peaks,
     center_of_mass,
     azimuthal_average_fast,
-    gaussian,
     gaussian_lin,
     get_fwhm_map_min_from_projection,
     correct_polarization,

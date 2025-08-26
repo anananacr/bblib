@@ -408,6 +408,19 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Usage
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -419,6 +432,43 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-dictionaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration dictionaries
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#calling-the-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Calling the methods
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -746,6 +796,32 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-dictionaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration dictionaries
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#calling-the-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Calling the methods
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -764,6 +840,7 @@
 
 
 <h1 id="usage">Usage</h1>
+<h2 id="configuration-dictionaries">Configuration dictionaries</h2>
 <p>To utilize the methods <code>CenterOfMass</code>,  <code>FriedelPairs</code>, <code>MinimizePeakFWHM</code>  and <code>CircleDetection</code> it is required to have two configuration dictionaries, one for PeakFinder8 and another one for this library itself. The following snippet shows the general structure for both (parameters not used in your case can be omitted):</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="s2">&quot;plots_flag&quot;</span><span class="p">:</span> <span class="o">...</span><span class="p">,</span>
@@ -852,8 +929,9 @@
 </span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="s2">&quot;color_map&quot;</span><span class="p">:</span> <span class="o">...</span><span class="p">,</span>
 </span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="s2">&quot;marker_size&quot;</span><span class="p">:</span> <span class="o">...</span>
 </span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="p">}</span>
-</span></code></pre></div>
-To calculate the refined detector center of raw data frame as a numpy array using the following methods:</p>
+</span></code></pre></div></p>
+<h2 id="calling-the-methods">Calling the methods</h2>
+<p>To calculate the refined detector center of raw data frame as a numpy array using the following methods:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span> <span class="nn">bblib.methods</span> <span class="kn">import</span> <span class="n">CenterOfMass</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">center_of_mass_method</span> <span class="o">=</span> <span class="n">CenterOfMass</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span> <span class="n">PF8Config</span><span class="o">=</span><span class="n">PF8Config</span><span class="p">,</span> <span class="n">plots_info</span><span class="o">=</span><span class="n">plots_info</span><span class="p">)</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">center_coordinates_from_center_of_mass</span> <span class="o">=</span> <span class="n">center_of_mass_method</span><span class="p">(</span>

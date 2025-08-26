@@ -9,10 +9,12 @@ from bblib.utils import (
     center_of_mass,
     azimuthal_average_fast,
     gaussian,
+    gaussian_lin,
     get_fwhm_map_min_from_projection,
     correct_polarization,
     visualize_single_panel,
 )
+from scipy.optimize import curve_fit
 import math
 from bblib.models import PF8Info, PF8
 import h5py
@@ -428,7 +430,7 @@ class MinimizePeakFWHM(CenteringMethod):
         if not config["plots_flag"] and not plots_info:
             plots_info = {"filename": "", "folder_name": "", "root_path": ""}
 
-    def _calculate_fwhm_log_fit(self, coordinate: tuple) -> dict:
+    def _calculate_fwhm(self, coordinate: tuple) -> dict:
         center_to_radial_average = coordinate
         try:
             x_all, y_all = azimuthal_average_fast(
@@ -456,23 +458,26 @@ class MinimizePeakFWHM(CenteringMethod):
         x_max = self.config["peak_region"]["max"]
         x = x_all[x_min:x_max]
         y = y_all[x_min:x_max]
+        ## Estimation of initial parameters
 
-        y = np.clip(y, 1e-10, None)
+        m0 = 0
+        n0 = 2
+        y_linear = m0 * x + n0
+        y_gaussian = y - y_linear
 
         try:
-            a, b, c = np.polyfit(x, np.log(y), 2)
+            mean = sum(x * y_gaussian) / sum(y_gaussian)
+            sigma = np.sqrt(sum(y_gaussian * (x - mean) ** 2) / sum(y_gaussian))
+            popt, pcov = curve_fit(
+                gaussian_lin, x, y, p0=[max(y_gaussian), mean, sigma, m0, n0]
+            )
+            fwhm = popt[2] * math.sqrt(8 * np.log(2))
 
-            sigma = np.sqrt(-1/(2*a))
-            mean = -b/(2*a)
-            amp = np.exp(c - b**2/(4*a))
-            popt = [amp, mean, sigma]
-            y_pred = gaussian(x, a=amp, x0=mean, sigma=sigma)
-
-            fwhm =  2 * np.sqrt(2*np.log(2)) * sigma
-
-            ss_res = np.sum((y - y_pred)**2)
-            ss_tot = np.sum((y - np.mean(y))**2)
-            r_square = 1 - ss_res/ss_tot
+            ##Calculate residues
+            residuals = y - gaussian_lin(x, *popt)
+            ss_res = np.sum(residuals**2)
+            ss_tot = np.sum((y - np.mean(y)) ** 2)
+            r_square = 1 - (ss_res / ss_tot)
         except (ZeroDivisionError, RuntimeError):
             r_square = 0
             fwhm = 10000
@@ -481,9 +486,9 @@ class MinimizePeakFWHM(CenteringMethod):
         ## Display plots
         if self.plot_fwhm_flag and len(popt) > 0:
             x_fit = x.copy()
-            y_fit = gaussian(x_fit, *popt)
+            y_fit = gaussian_lin(x_fit, *popt)
 
-            plt.vlines([x[0], x[-1]], 0, round(popt[0]) * 1.5, "r")
+            plt.vlines([x[0], x[-1]], 0, np.max(y)* 1.5, "r")
 
             plt.plot(
                 x_fit,
@@ -506,7 +511,7 @@ class MinimizePeakFWHM(CenteringMethod):
             "xc": center_to_radial_average[0],
             "yc": center_to_radial_average[1],
             "fwhm": fwhm,
-            "r_square": r_square,
+            "r_square": r_square
         }
 
     def _prep_for_centering(self, data: np.ndarray, initial_guess: tuple) -> None:
@@ -623,7 +628,7 @@ class MinimizePeakFWHM(CenteringMethod):
             ),
         )
 
-        self.fwhm_summary = [self._calculate_fwhm_log_fit((x, y)) for x, y in zip(xx.ravel(), yy.ravel())]
+        self.fwhm_summary = [self._calculate_fwhm((x, y)) for x, y in zip(xx.ravel(), yy.ravel())]
 
     def _run_centering(self, **kwargs) -> tuple:
         if self.config["plots_flag"]:
@@ -646,7 +651,7 @@ class MinimizePeakFWHM(CenteringMethod):
 
         if self.centering_converged(center):
             self.plot_fwhm_flag = True
-            self._calculate_fwhm_log_fit(center)
+            self._calculate_fwhm(center)
             self.plot_fwhm_flag = False
 
         if self.config["plots_flag"]:

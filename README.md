@@ -14,6 +14,8 @@ pip install bblib
 
 ## Usage
 
+### Configuration dictionaries
+
 To utilize the methods `CenterOfMass`,  `FriedelPairs`, `MinimizePeakFWHM`  and `CircleDetection` it is required to have two configuration dictionaries, one for PeakFinder8 and another one for this library itself. The following snippet shows the general structure for both (parameters not used in your case can be omitted):
 
 ```python
@@ -111,6 +113,9 @@ plots_info =  {
 	"marker_size": ...
 }
 ```
+
+### Calling the methods
+
 To calculate the refined detector center of raw data frame as a numpy array using the following methods:
 
 ```python
@@ -147,6 +152,7 @@ center_coordinates_from_friedel_pairs = friedel_pairs_method(
                         data = ..., initial_guess= ...
                     )
 ```
+
 ## Contact
 
 Ana Carolina Rodrigues led the development of bblib from 2021 to 2025 at the Deutsches Elektronen-Synchrotron (DESY) in Hamburg, Germany.

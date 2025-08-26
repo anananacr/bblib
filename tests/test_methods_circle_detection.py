@@ -34,7 +34,8 @@ plots_info = {
 	"xlim_max": 0,
 	"ylim_min": 0,
 	"ylim_max": 0,
-	"color_map": "viridis"
+	"color_map": "viridis",
+	"marker_size": 20
 }
 
 PF8Config = PF8Info()

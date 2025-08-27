@@ -37,10 +37,6 @@ config = {
 		"min_res": 0,
 		"max_res": 1200
 		},
-	"offset": {
-		"x": 0.5,
-		"y": 0.5
-		},
 	"polarization": {
 		"apply_polarization_correction": True,
 		"axis":"x",

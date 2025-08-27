@@ -36,10 +36,6 @@ config = {
 		"min_res": 0,
 		"max_res": 1200
 		},
-	"offset": {
-		"x": 0.5,
-		"y": 0.5
-		},
 	"bragg_peaks_for_center_of_mass_calculation": 0,
 	"pixels_for_mask_of_bragg_peaks": 2
 }

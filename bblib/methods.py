@@ -926,19 +926,19 @@ class FriedelPairs(CenteringMethod):
                 int(self.initial_guess[1] + shift_y),
             ]
 
-            print(f"Friedel pairs position after center correction in pixels:")
+            print("Friedel pairs position after center correction in pixels:")
             pairs_list_after_correction = [
-                (int(x[0] - shift_x), int(x[1] - shift_y))
+                (np.round(x[0] - shift_x,1), np.round(x[1] - shift_y,1))
                 for x in self.peaks_list_original
             ]
             print(pairs_list_after_correction)
-            print(f"All reflections after center correction in pixels:")
+            print("All reflections after center correction in pixels:")
             peaks_list_after_correction = [
-                (int(x[0] - shift_x), int(x[1] - shift_y))
+                (np.round(x[0] - shift_x,1), np.round(x[1] - shift_y,1))
                 for x in peaks
             ]
             print(peaks_list_after_correction)
-            print(f"-- End --")
+            print("-- End --")
 
         else:
             center = [-1, -1]

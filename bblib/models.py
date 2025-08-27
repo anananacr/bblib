@@ -258,8 +258,8 @@ class PF8Info:
                 )
                 visual_img_shape = (y_minimum, x_minimum)
                 # Detector center in the middle of the minimum array
-                _img_center_x = int(visual_img_shape[1] / 2)
-                _img_center_y = int(visual_img_shape[0] / 2)
+                _img_center_x = int(visual_img_shape[1] // 2 -1)
+                _img_center_y = int(visual_img_shape[0] // 2 -1)
             else:
                 # Single panel
                 _img_center_x = int(abs(np.min(self.pixel_maps["x"])))

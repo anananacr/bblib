@@ -40,7 +40,7 @@ config = {
 		"x": 0.5,
 		"y": 0.5
 		},
-	"bragg_peaks_positions_for_center_of_mass_calculation": 0,
+	"bragg_peaks_for_center_of_mass_calculation": 0,
 	"pixels_for_mask_of_bragg_peaks": 2
 }
 ```

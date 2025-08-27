@@ -36,10 +36,6 @@ config = {
 		"min_res": 0,
 		"max_res": 1200
 		},
-	"offset": {
-		"x": 0.5,
-		"y": 0.5
-		},
 	"peak_region":{
 		"min": 60,
 		"max": 80

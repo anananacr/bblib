@@ -18,10 +18,6 @@ config = {
 		"min_res": ...,
 		"max_res": ...
 		},
-	"offset": {
-		"x": ...,
-		"y": ...
-		},
 	"peak_region":{
 		"min": ...,
 		"max": ...

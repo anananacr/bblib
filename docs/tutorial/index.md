@@ -9,7 +9,7 @@ In the folder `bblib_tutorial/data` you will find the data required to run the c
 
 Remember to set the `mask_file` path in the geometry files (*.geom) to the corresponding path on your system.
 
-This tutorial is runs on bblib version >= 2.2.0.
+This tutorial runs on bblib version >= 3.0.0.
 
 ## Installation
 To run this tutorial, you will need Python **3.10**.

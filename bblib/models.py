@@ -36,6 +36,7 @@ class PF8Info:
         pixel_resolution (float): Reciprocal of the pixel size (1/m).
         geometry_txt (list): Content of the geometry file (.geom), in CrystFEL format.
     """
+
     max_num_peaks: np.int32 = 200
     adc_threshold: np.int32 = 0
     minimum_snr: np.float32 = 5
@@ -258,8 +259,8 @@ class PF8Info:
                 )
                 visual_img_shape = (y_minimum, x_minimum)
                 # Detector center in the middle of the minimum array
-                _img_center_x = int(visual_img_shape[1] // 2 -1)
-                _img_center_y = int(visual_img_shape[0] // 2 -1)
+                _img_center_x = int(visual_img_shape[1] // 2 - 1)
+                _img_center_y = int(visual_img_shape[0] // 2 - 1)
             else:
                 # Single panel
                 _img_center_x = int(abs(np.min(self.pixel_maps["x"])))
@@ -277,6 +278,7 @@ class PF8:
     """
     This class defines an object that determine the Bragg peaks using the peakfinder8 algorithm from OnDA monitor.
     """
+
     def __init__(self, info):
         """
         This method initilizes the PF8 class.

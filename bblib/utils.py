@@ -11,6 +11,7 @@ import math
 
 plt.switch_backend("agg")
 
+
 def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
     """
     Adapted from Robert Bücker work on diffractem (https://github.com/robertbuecker/diffractem/tree/master)
@@ -42,6 +43,7 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
 
     return [np.round(xc, 1), np.round(yc, 1)]
 
+
 @njit
 def _radial_reduce(vals, rr, maxr):
     sums = np.zeros(maxr + 1, dtype=np.float64)
@@ -52,6 +54,7 @@ def _radial_reduce(vals, rr, maxr):
         counts[r] += 1
     return sums, counts
 
+
 def _precompute_rbins(shape, center):
     a, b = shape
     yy, xx = np.ogrid[:a, :b]
@@ -61,6 +64,7 @@ def _precompute_rbins(shape, center):
     Rint = (R + 0.5).astype(np.int32)
     maxr = int(Rint.max())
     return Rint, maxr
+
 
 def azimuthal_average_fast(
     data: np.ndarray, center: tuple = None, mask: np.ndarray = None
@@ -80,7 +84,7 @@ def azimuthal_average_fast(
     """
     a, b = data.shape
     if center is None:
-        center = (b/2, a/2)
+        center = (b / 2, a / 2)
 
     if mask is None:
         mask = np.ones((a, b), dtype=bool)
@@ -100,6 +104,7 @@ def azimuthal_average_fast(
 
     radius = np.arange(prof.size, dtype=np.int32)
     return radius, prof
+
 
 def correct_polarization(
     x: np.ndarray,
@@ -130,10 +135,10 @@ def correct_polarization(
     mask = mask.flatten()
     intensity = np.reshape(data.copy(), len(mask))
     pol = mask.copy().astype(np.float32)
-    if polarization_axis== "x":
+    if polarization_axis == "x":
         pol = make_polarization_array(pol, x.flatten(), y.flatten(), dist, p)
-    elif polarization_axis== "y":
-        pol = make_polarization_array(pol, x.flatten(), y.flatten(), dist, 1-p)
+    elif polarization_axis == "y":
+        pol = make_polarization_array(pol, x.flatten(), y.flatten(), dist, 1 - p)
     else:
         raise ValueError("Unreconized polarization axis. Options available are x or y.")
 
@@ -210,6 +215,7 @@ def mask_peaks(mask: np.ndarray, indexes: tuple, bragg: int, n: int) -> np.ndarr
 
     return surrounding_mask
 
+
 def gaussian_lin(
     x: np.ndarray, a: float, x0: float, sigma: float, m: float, n: float
 ) -> np.ndarray:
@@ -228,6 +234,7 @@ def gaussian_lin(
         y (np.ndarray): y-axis.
     """
     return m * x + n + a * exp(-((x - x0) ** 2) / (2 * sigma**2))
+
 
 def get_fwhm_map_min_from_projection(
     lines: list, output_folder: str, label: str, pixel_step: int, plots_flag: bool
@@ -283,13 +290,14 @@ def get_fwhm_map_min_from_projection(
         pos1 = ax1.imshow(z_grid, cmap="rainbow")
 
         n = z_grid.shape[0]
-        step=2
+        step = 2
 
         ax1.set_xticks(np.arange(0, n, step, dtype=int))
         ax1.set_yticks(np.arange(0, n, step, dtype=int))
-        ax1.set_xticklabels(np.arange(x_vals[0], x_vals[-1]+1, step, dtype=int), rotation=45)
-        ax1.set_yticklabels(np.arange(y_vals[0], y_vals[-1]+1, step, dtype=int))
-
+        ax1.set_xticklabels(
+            np.arange(x_vals[0], x_vals[-1] + 1, step, dtype=int), rotation=45
+        )
+        ax1.set_yticklabels(np.arange(y_vals[0], y_vals[-1] + 1, step, dtype=int))
 
         ax1.set_ylabel("yc [px]")
         ax1.set_xlabel("xc [px]")
@@ -298,8 +306,10 @@ def get_fwhm_map_min_from_projection(
         pos2 = ax2.imshow(r_grid, cmap="rainbow")
         ax2.set_xticks(np.arange(0, n, step, dtype=int))
         ax2.set_yticks(np.arange(0, n, step, dtype=int))
-        ax2.set_xticklabels(np.arange(x_vals[0], x_vals[-1]+1, step, dtype=int), rotation=45)
-        ax2.set_yticklabels(np.arange(y_vals[0], y_vals[-1]+1, step, dtype=int))
+        ax2.set_xticklabels(
+            np.arange(x_vals[0], x_vals[-1] + 1, step, dtype=int), rotation=45
+        )
+        ax2.set_yticklabels(np.arange(y_vals[0], y_vals[-1] + 1, step, dtype=int))
 
         ax2.set_ylabel("yc [px]")
         ax2.set_xlabel("xc [px]")
@@ -320,7 +330,7 @@ def get_fwhm_map_min_from_projection(
         fig.colorbar(pos1, ax=ax1, shrink=0.6)
         fig.colorbar(pos2, ax=ax2, shrink=0.6)
 
-        path = pathlib.Path(f'{output_folder}/fwhm_map/')
+        path = pathlib.Path(f"{output_folder}/fwhm_map/")
         path.mkdir(parents=True, exist_ok=True)
         plt.savefig(f"{output_folder}/fwhm_map/{label}.png")
         plt.close()

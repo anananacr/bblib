@@ -1,5 +1,7 @@
 # Usage
 
+## Configuration dictionaries
+
 To utilize the methods `CenterOfMass`,  `FriedelPairs`, `MinimizePeakFWHM`  and `CircleDetection` it is required to have two configuration dictionaries, one for PeakFinder8 and another one for this library itself. The following snippet shows the general structure for both (parameters not used in your case can be omitted):
 
 ```python
@@ -24,13 +26,14 @@ config = {
 		"min": ...,
 		"max": ...
 		},
+	"grid_search_radius": ...,
 	"canny":{
 		"sigma": ...,
 		"low_threshold": ...,
 		"high_threshold": ...
 		},
 	"hough_rank": ...,
-	"bragg_peaks_positions_for_center_of_mass_calculation": ...,
+	"bragg_peaks_for_center_of_mass_calculation": ...,
 	"pixels_for_mask_of_bragg_peaks": ...,
 	"polarization": {
 		"apply_polarization_correction": ...,
@@ -81,7 +84,7 @@ pixel_maps =  {
 The methods `FriedelPairs`, `MinimizePeakFWHM` and  `CircleDetection ` need a `plots_info` parameter if you want to save plots:
 ```python
 plots_info =  {
-	"file_name": ...,
+	"filename": ...,
 	"folder_name": ...,
 	"root_path": ...,
 	"value_auto": ...,
@@ -96,6 +99,9 @@ plots_info =  {
 	"marker_size": ...
 }
 ```
+
+## Calling the methods
+
 To calculate the refined detector center of raw data frame as a numpy array using the following methods:
 
 ```python

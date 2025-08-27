@@ -7,23 +7,21 @@ import om.lib.geometry as geometry
 from bblib.utils import (
     mask_peaks,
     center_of_mass,
-    azimuthal_average,
+    azimuthal_average_fast,
     gaussian_lin,
-    get_fwhm_map_global_min,
+    get_fwhm_map_min_from_projection,
     correct_polarization,
     visualize_single_panel,
 )
+from scipy.optimize import curve_fit
 import math
-from scipy import ndimage
 from bblib.models import PF8Info, PF8
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.transform import hough_circle, hough_circle_peaks
 from skimage.feature import canny
-import multiprocessing
 import pathlib
-from scipy.optimize import curve_fit
 from matplotlib.colors import LogNorm
 import copy
 import matplotlib
@@ -34,6 +32,7 @@ class CenteringMethod(ABC):
     This class defines the structure of a centering method used to determine the center of diffraction patterns.
 
     """
+
     @abstractmethod
     def __init__(self, **kwargs) -> None: ...
 
@@ -59,6 +58,7 @@ class CenterOfMass(CenteringMethod):
     This class determine the center of a diffraction pattern by calculating the center of mass of the image.
 
     """
+
     def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict = None):
         """
         This method initializes the CenterOfMass centering method.
@@ -130,7 +130,7 @@ class CenterOfMass(CenteringMethod):
         peaks_mask = mask_peaks(
             visual_mask,
             peaks_indexes,
-            bragg=self.config["bragg_peaks_positions_for_center_of_mass_calculation"],
+            bragg=self.config["bragg_peaks_for_center_of_mass_calculation"],
             n=self.config["pixels_for_mask_of_bragg_peaks"],
         )
         self.mask_for_center_of_mass = peaks_mask * visual_mask
@@ -138,9 +138,6 @@ class CenterOfMass(CenteringMethod):
     def _run_centering(self) -> tuple:
 
         center = center_of_mass(self.visual_data, self.mask_for_center_of_mass)
-        if self.centering_converged(center):
-            center[0] += self.config["offset"]["x"]
-            center[1] += self.config["offset"]["y"]
 
         if self.config["plots_flag"]:
             visual_img = self.visual_data * self.mask_for_center_of_mass
@@ -159,6 +156,8 @@ class CenterOfMass(CenteringMethod):
                     matplotlib.colormaps[self.plots_info["color_map"]]
                 )
                 color_map.set_bad(color_map(0))
+                if self.plots_info["value_min"] <= 0:
+                    self.plots_info["value_min"] = 1
                 pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(
@@ -167,6 +166,8 @@ class CenterOfMass(CenteringMethod):
                     cmap=color_map,
                     origin="lower",
                 )
+            if not "marker_size" in self.plots_info:
+                self.plots_info["marker_size"] = 20
             ax1.scatter(
                 self.initial_detector_center[0],
                 self.initial_detector_center[1],
@@ -206,13 +207,15 @@ class CenterOfMass(CenteringMethod):
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_of_mass/{self.plots_info["filename"]}.png'
             )
             plt.close()
-        return np.round(center, 0)
+
+        return list(np.round(center, 0))
 
 
 class CircleDetection(CenteringMethod):
     """
     This class determines the center of a diffraction pattern as the center of a circle contained in the image.
     """
+
     def __init__(self, config: dict, PF8Config: PF8Info, plots_info: dict = None):
         """
         This method initializes the CircleDetection centering method.
@@ -318,12 +321,12 @@ class CircleDetection(CenteringMethod):
         hough_res = hough_circle(edges, hough_radii)
         # Select the most prominent circle given the hough_rank chosen
         accums, xc, yc, radii = hough_circle_peaks(
-            hough_res, hough_radii, total_num_peaks = int(self.config["hough_rank"])
+            hough_res, hough_radii, total_num_peaks=int(self.config["hough_rank"])
         )
 
         if len(xc) > 0:
-            xc = xc[int(self.config["hough_rank"] - 1)] + self.config["offset"]["x"]
-            yc = yc[int(self.config["hough_rank"] - 1)] + self.config["offset"]["y"]
+            xc = xc[int(self.config["hough_rank"] - 1)]
+            yc = yc[int(self.config["hough_rank"] - 1)]
         else:
             xc = -1
             yc = -1
@@ -348,6 +351,8 @@ class CircleDetection(CenteringMethod):
                     matplotlib.colormaps[self.plots_info["color_map"]]
                 )
                 color_map.set_bad(color_map(0))
+                if self.plots_info["value_min"] <= 0:
+                    self.plots_info["value_min"] = 1
                 pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(
@@ -356,6 +361,8 @@ class CircleDetection(CenteringMethod):
                     origin="lower",
                     cmap=color_map,
                 )
+            if not "marker_size" in self.plots_info:
+                self.plots_info["marker_size"] = 20
             ax1.scatter(
                 self.initial_detector_center[0],
                 self.initial_detector_center[1],
@@ -426,7 +433,7 @@ class MinimizePeakFWHM(CenteringMethod):
     def _calculate_fwhm(self, coordinate: tuple) -> dict:
         center_to_radial_average = coordinate
         try:
-            x_all, y_all = azimuthal_average(
+            x_all, y_all = azimuthal_average_fast(
                 self.visual_data,
                 center=center_to_radial_average,
                 mask=self.mask_for_fwhm_min,
@@ -436,7 +443,7 @@ class MinimizePeakFWHM(CenteringMethod):
                 "xc": center_to_radial_average[0],
                 "yc": center_to_radial_average[1],
                 "fwhm": 10000,
-                "r_squared": 0,
+                "r_square": 0,
             }
 
         if self.plot_fwhm_flag:
@@ -465,16 +472,14 @@ class MinimizePeakFWHM(CenteringMethod):
                 gaussian_lin, x, y, p0=[max(y_gaussian), mean, sigma, m0, n0]
             )
             fwhm = popt[2] * math.sqrt(8 * np.log(2))
-            ## Divide by radius of the peak to get shasrpness ratio
-            fwhm_over_radius = fwhm / popt[1]
 
             ##Calculate residues
             residuals = y - gaussian_lin(x, *popt)
             ss_res = np.sum(residuals**2)
             ss_tot = np.sum((y - np.mean(y)) ** 2)
-            r_squared = 1 - (ss_res / ss_tot)
+            r_square = 1 - (ss_res / ss_tot)
         except (ZeroDivisionError, RuntimeError):
-            r_squared = 0
+            r_square = 0
             fwhm = 10000
             popt = []
 
@@ -483,13 +488,13 @@ class MinimizePeakFWHM(CenteringMethod):
             x_fit = x.copy()
             y_fit = gaussian_lin(x_fit, *popt)
 
-            plt.vlines([x[0], x[-1]], 0, round(popt[0]) * 10, "r")
+            plt.vlines([x[0], x[-1]], 0, np.max(y) * 1.5, "r")
 
             plt.plot(
                 x_fit,
                 y_fit,
                 "r--",
-                label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_squared, 4)}\n FWHM : {round(fwhm,3)}",
+                label=f"gaussian fit \n a:{round(popt[0],2)} \n x0:{round(popt[1],2)} \n sigma:{round(popt[2],2)} \n R² {round(r_square, 4)}\n FWHM : {round(fwhm,3)}",
             )
 
             plt.legend(fontsize=14, loc=1, markerscale=1)
@@ -506,7 +511,7 @@ class MinimizePeakFWHM(CenteringMethod):
             "xc": center_to_radial_average[0],
             "yc": center_to_radial_average[1],
             "fwhm": fwhm,
-            "r_squared": r_squared,
+            "r_square": r_square,
         }
 
     def _prep_for_centering(self, data: np.ndarray, initial_guess: tuple) -> None:
@@ -605,25 +610,27 @@ class MinimizePeakFWHM(CenteringMethod):
         self.mask_for_fwhm_min = only_peaks_mask * visual_mask
 
         self.pixel_step = 1
+
+        box_radius = self.config["grid_search_radius"]
+
         xx, yy = np.meshgrid(
             np.arange(
-                self.initial_guess[0] - 20,
-                self.initial_guess[0] + 21,
+                self.initial_guess[0] - box_radius,
+                self.initial_guess[0] + box_radius + 1,
                 self.pixel_step,
                 dtype=int,
             ),
             np.arange(
-                self.initial_guess[1] - 20,
-                self.initial_guess[1] + 21,
+                self.initial_guess[1] - box_radius,
+                self.initial_guess[1] + box_radius + 1,
                 self.pixel_step,
                 dtype=int,
             ),
         )
-        coordinates = np.column_stack((np.ravel(xx), np.ravel(yy)))
 
-        pool = multiprocessing.Pool()
-        with pool:
-            self.fwhm_summary = pool.map(self._calculate_fwhm, coordinates)
+        self.fwhm_summary = [
+            self._calculate_fwhm((x, y)) for x, y in zip(xx.ravel(), yy.ravel())
+        ]
 
     def _run_centering(self, **kwargs) -> tuple:
         if self.config["plots_flag"]:
@@ -632,7 +639,7 @@ class MinimizePeakFWHM(CenteringMethod):
             )
             path.mkdir(parents=True, exist_ok=True)
 
-        xc, yc = get_fwhm_map_global_min(
+        xc, yc = get_fwhm_map_min_from_projection(
             self.fwhm_summary,
             f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}',
             f'{self.plots_info["filename"]}',
@@ -640,8 +647,6 @@ class MinimizePeakFWHM(CenteringMethod):
             self.config["plots_flag"],
         )
 
-        xc += self.config["offset"]["x"]
-        yc += self.config["offset"]["y"]
         center = [xc, yc]
 
         if self.centering_converged(center):
@@ -668,6 +673,8 @@ class MinimizePeakFWHM(CenteringMethod):
                     matplotlib.colormaps[self.plots_info["color_map"]]
                 )
                 color_map.set_bad(color_map(0))
+                if self.plots_info["value_min"] <= 0:
+                    self.plots_info["value_min"] = 1
                 pos = ax1.imshow(
                     visual_img,
                     norm=LogNorm(
@@ -676,7 +683,8 @@ class MinimizePeakFWHM(CenteringMethod):
                     origin="lower",
                     cmap=color_map,
                 )
-
+            if not "marker_size" in self.plots_info:
+                self.plots_info["marker_size"] = 20
             ax1.scatter(
                 self.initial_guess[0],
                 self.initial_guess[1],
@@ -919,26 +927,24 @@ class FriedelPairs(CenteringMethod):
             print("Center shift in x", shift_x)
             print("Center shift in y", shift_y)
             center = [
-                np.round(self.initial_guess[0] + shift_x, 1),
-                np.round(self.initial_guess[1] + shift_y, 1),
+                int(self.initial_guess[0] + shift_x),
+                int(self.initial_guess[1] + shift_y),
             ]
 
-            print(f"Friedel pairs position after center correction in pixels:")
+            print("Friedel pairs position after center correction in pixels:")
             pairs_list_after_correction = [
                 (np.round(x[0] - shift_x, 1), np.round(x[1] - shift_y, 1))
                 for x in self.peaks_list_original
             ]
             print(pairs_list_after_correction)
-            print(f"All reflections after center correction in pixels:")
+            print("All reflections after center correction in pixels:")
             peaks_list_after_correction = [
                 (np.round(x[0] - shift_x, 1), np.round(x[1] - shift_y, 1))
                 for x in peaks
             ]
             print(peaks_list_after_correction)
-            print(f"-- End --")
+            print("-- End --")
 
-            center[0] += self.config["offset"]["x"]
-            center[1] += self.config["offset"]["y"]
         else:
             center = [-1, -1]
 
@@ -961,6 +967,8 @@ class FriedelPairs(CenteringMethod):
                     matplotlib.colormaps[self.plots_info["color_map"]]
                 )
                 color_map.set_bad(color_map(0))
+                if self.plots_info["value_min"] <= 0:
+                    self.plots_info["value_min"] = 1
                 pos = ax1.imshow(
                     self.visual_data * self.visual_mask,
                     norm=LogNorm(
@@ -981,6 +989,8 @@ class FriedelPairs(CenteringMethod):
                 label=f"Initial guess:({np.round(self.initial_guess[0],1)},{np.round(self.initial_guess[1], 1)})",
             )
 
+            if not "marker_size" in self.plots_info:
+                self.plots_info["marker_size"] = 20
             ax1.scatter(
                 center[0],
                 center[1],

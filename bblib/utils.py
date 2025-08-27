@@ -4,10 +4,12 @@ This module defines auxiliary funtions to process the data.
 
 from numpy import exp
 import numpy as np
+from numba import njit
 import matplotlib.pyplot as plt
+import pathlib
+import math
 
 plt.switch_backend("agg")
-import math
 
 
 def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
@@ -42,13 +44,34 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
     return [np.round(xc, 1), np.round(yc, 1)]
 
 
-def azimuthal_average(
+@njit
+def _radial_reduce(vals, rr, maxr):
+    sums = np.zeros(maxr + 1, dtype=np.float64)
+    counts = np.zeros(maxr + 1, dtype=np.int64)
+    for i in range(rr.size):
+        r = rr[i]
+        sums[r] += vals[i]
+        counts[r] += 1
+    return sums, counts
+
+
+def _precompute_rbins(shape, center):
+    a, b = shape
+    yy, xx = np.ogrid[:a, :b]
+    dy = yy - center[1]
+    dx = xx - center[0]
+    R = np.hypot(dx, dy)
+    Rint = (R + 0.5).astype(np.int32)
+    maxr = int(Rint.max())
+    return Rint, maxr
+
+
+def azimuthal_average_fast(
     data: np.ndarray, center: tuple = None, mask: np.ndarray = None
-) -> np.ndarray:
+) -> tuple[np.ndarray, np.ndarray]:
     """
-    Calculate azimuthal integration of data in relation to the center of the image
-    Adapted from L. P. René de Cotret work on scikit-ued (https://github.com/LaurentRDC/scikit-ued/tree/master)
-    L. P. René de Cotret, M. R. Otto, M. J. Stern. and B. J. Siwick, An open-source software ecosystem for the interactive exploration of ultrafast electron scattering data, Advanced Structural and Chemical Imaging 4:11 (2018) DOI: 10.1186/s40679-018-0060-y.
+    Returns intensity over radius, where intensity is the mean per integer radius.
+    Improve performance.
 
     Args:
         data (np.ndarray): Input data in which center of mass will be calculated. Values equal or less than zero will not be considered.
@@ -59,30 +82,28 @@ def azimuthal_average(
         radius (np.ndarray): Radial axis in pixels.
         intensity (np.ndarray): Integrated intensity normalized by the number of valid pixels.
     """
-    a = data.shape[0]
-    b = data.shape[1]
-    if mask is None:
-        mask = np.zeros((a, b), dtype=bool)
-    else:
-        mask.astype(bool)
-
+    a, b = data.shape
     if center is None:
-        center = [b / 2, a / 2]
-    [X, Y] = np.meshgrid(np.arange(b) - center[0], np.arange(a) - center[1])
-    R = np.sqrt(np.square(X) + np.square(Y))
-    Rint = np.rint(R).astype(int)
+        center = (b / 2, a / 2)
 
-    valid = mask.flatten()
-    data = data.flatten()
-    Rint = Rint.flatten()
+    if mask is None:
+        mask = np.ones((a, b), dtype=bool)
+    else:
+        mask = mask.astype(bool, copy=False)
 
-    px_bin = np.bincount(Rint, weights=valid * data)
-    r_bin = np.bincount(Rint, weights=valid)
-    radius = np.arange(0, r_bin.size)
-    # Replace by one if r_bin is zero for division
-    np.maximum(r_bin, 1, out=r_bin)
+    Rint, maxr = _precompute_rbins(data.shape, (float(center[0]), float(center[1])))
 
-    return radius, px_bin / r_bin
+    m = mask.ravel()
+    rr = Rint.ravel()[m]
+    vals = data.ravel()[m]
+
+    sums, counts = _radial_reduce(vals, rr, maxr)
+
+    with np.errstate(invalid="ignore", divide="ignore"):
+        prof = sums / np.maximum(counts, 1)
+
+    radius = np.arange(prof.size, dtype=np.int32)
+    return radius, prof
 
 
 def correct_polarization(
@@ -104,7 +125,7 @@ def correct_polarization(
         dist (float): z distance coordinates of the detector position in pixels.
         data (np.ndarray): Raw data frame in which polarization correction will be applied.
         mask (np.ndarray): Corresponding mask of data, containing zeros for unvalid pixels and one for valid pixels. Mask shape should be same size of data.
-
+        p (float): Polarization degree.
     Returns:
         corrected_data (np.ndarray): Corrected data frame for polarization effect.
         pol (np.ndarray): Polarization array for polarization correction.
@@ -114,7 +135,13 @@ def correct_polarization(
     mask = mask.flatten()
     intensity = np.reshape(data.copy(), len(mask))
     pol = mask.copy().astype(np.float32)
-    pol = make_polarization_array(pol, x.flatten(), y.flatten(), dist, p)
+    if polarization_axis == "x":
+        pol = make_polarization_array(pol, x.flatten(), y.flatten(), dist, p)
+    elif polarization_axis == "y":
+        pol = make_polarization_array(pol, x.flatten(), y.flatten(), dist, 1 - p)
+    else:
+        raise ValueError("Unreconized polarization axis. Options available are x or y.")
+
     intensity = intensity / pol
     return intensity.reshape(data.shape), pol.reshape(data.shape)
 
@@ -127,11 +154,11 @@ def make_polarization_array(
     Acknowledgements: Oleksandr Yefanov, Marina Galchenkova
 
     Args:
-        pol (np.ndarray): An array where polarization arra will be built based on its shape. Mask shape is the same size of data. Unvalid pixels (values containing 0) will be skipped from calculation and put 1.
+        pol (np.ndarray): An array where polarization array will be built based on its shape. Mask shape is the same size of data. Unvalid pixels (values containing 0) will be skipped from calculation and put 1.
         cox (np.ndarray): Array containg pixels coordinates in x (pixels) distance from the direct beam. It has same shape of data.
         coy (np.ndarray): Array containg pixels coordinates in y (pixels) distance from the direct beam. It has same shape of data.
         detdist (float): Detector distance from the sample in meters . The detctor distance will be transformed in pixel units based on Res defined as global parameter.
-        poldegree (float): Polarization degree from [0,1]. The horizontal polarization at most synchrotrons sources, e.g DESY, p is 0.99.
+        poldegree (float): Polarization degree from [0,1]. If the polarization is completely horizontal (along the x-axis), then poldegree equals 1.
     Returns:
         pol (np.ndarray): Polarization array for polarization correction.
     """
@@ -189,23 +216,6 @@ def mask_peaks(mask: np.ndarray, indexes: tuple, bragg: int, n: int) -> np.ndarr
     return surrounding_mask
 
 
-def gaussian(x: np.ndarray, a: float, x0: float, sigma: float) -> np.ndarray:
-    """
-    Gaussian function.
-
-    Args:
-        x (np.ndarray): x-axis.
-        a (float): Amplitude of the Gaussian.
-        x0 (float): Average of the Gaussian.
-        sigma (float): Standard deviation of the Gaussian.
-
-    Returns:
-        y (np.ndarray): y-axis.
-    """
-
-    return a * exp(-((x - x0) ** 2) / (2 * sigma**2))
-
-
 def gaussian_lin(
     x: np.ndarray, a: float, x0: float, sigma: float, m: float, n: float
 ) -> np.ndarray:
@@ -226,23 +236,21 @@ def gaussian_lin(
     return m * x + n + a * exp(-((x - x0) ** 2) / (2 * sigma**2))
 
 
-def get_fwhm_map_global_min(
+def get_fwhm_map_min_from_projection(
     lines: list, output_folder: str, label: str, pixel_step: int, plots_flag: bool
 ) -> tuple:
     """
-    Open FWHM grid search optmization plot, fit projections in both axis to get the point of maximum sharpness of the radial average.
-    TODO Refactor.
+    Open FWHM grid search optmization plot, then fit the projection in both axis to get the point of minimum FWHM of the azimuthal average.
 
     Args:
-        lines (list): Output of grid search for FWHM optmization, each line must contain a dictionary contaning entries for xc, yc and fwhm_over_radius.
+        lines (list): Output of grid search for FWHM optmization, each line must contain a values of xc,yc,fwhm,r_square.
         output_folder (str): Path to the folder where plots are saved.
         label (str): Plots filename label.
         pixel_step (str): Step size between grid points in pixels.
         plots_flag (bool): If True, plots can be generated.
 
     Returns:
-        xc (int): Coordinate of the diffraction center in x, such that the image center corresponds to data [yc, xc].
-        yc (int): Coordinate of the diffraction center in y, such that the image center corresponds to data [yc, xc].
+        center (list): Coordinates of the center of the diffraction pattern in x and y.
     """
     n = int(math.sqrt(len(lines)))
 
@@ -254,102 +262,98 @@ def get_fwhm_map_global_min(
             else:
                 merged_dict[key] = [value]
 
-    # Create a figure with three subplots
-    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 10))
-
     # Extract x, y, and z from merged_dict
 
-    x = np.array(merged_dict["xc"]).reshape((n, n))[0]
-    y = np.array(merged_dict["yc"]).reshape((n, n))[:, 0]
-    z = np.array(merged_dict["fwhm"], dtype=np.float64).reshape((n, n))
-    r = np.array(merged_dict["r_squared"]).reshape((n, n))
-    z = np.nan_to_num(z)
-    r = np.nan_to_num(r)
-    pos1 = ax1.imshow(z, cmap="rainbow")
-    step = 10
-    n = z.shape[0]
+    x_grid = np.array(merged_dict["xc"], dtype=np.int16).reshape((n, n))
+    y_grid = np.array(merged_dict["yc"], dtype=np.int16).reshape((n, n))
+    z_grid = np.array(merged_dict["fwhm"], dtype=np.float32).reshape((n, n))
+    r_grid = np.array(merged_dict["r_square"], dtype=np.float32).reshape((n, n))
+    z_grid = np.nan_to_num(z_grid)
+    r_grid = np.nan_to_num(r_grid)
 
-    ax1.set_xticks(np.arange(0, n, step, dtype=int))
-    ax1.set_yticks(np.arange(0, n, step, dtype=int))
+    proj_x = np.mean(z_grid, axis=1)
+    proj_y = np.mean(z_grid, axis=0)
 
-    step = round(step * (abs(x[0] - x[1])), 1)
-    ax1.set_xticklabels(
-        np.arange(round(x[0], 1), round(x[-1] + step, 1), step, dtype=int), rotation=45
-    )
-    ax1.set_yticklabels(
-        np.arange(round(y[0], 1), round(y[-1] + step, 1), step, dtype=int)
-    )
-    ax1.set_ylabel("yc [px]")
-    ax1.set_xlabel("xc [px]")
-    ax1.set_title("FWHM")
+    x_vals = np.arange(np.min(x_grid), np.max(x_grid) + pixel_step, pixel_step)
+    y_vals = np.arange(np.min(y_grid), np.max(y_grid) + pixel_step, pixel_step)
 
-    pos2 = ax2.imshow(r, cmap="rainbow")
-    step = 10
-    n = z.shape[0]
+    try:
+        xc = x_vals[np.argmin(proj_x)]
+        yc = y_vals[np.argmin(proj_y)]
+    except (ValueError, IndexError):
+        xc = -1.0
+        yc = -1.0
 
-    ax2.set_xticks(np.arange(0, n, step, dtype=int))
-    ax2.set_yticks(np.arange(0, n, step, dtype=int))
+    if plots_flag:
+        # Create a figure with three subplots
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 10))
+        pos1 = ax1.imshow(z_grid, cmap="rainbow")
 
-    step = round(step * (abs(x[0] - x[1])), 1)
-    ax2.set_xticklabels(
-        np.arange(round(x[0], 1), round(x[-1] + step, 1), step, dtype=int), rotation=45
-    )
-    ax2.set_yticklabels(
-        np.arange(round(y[0], 1), round(y[-1] + step, 1), step, dtype=int)
-    )
+        n = z_grid.shape[0]
+        step = 2
 
-    ax2.set_ylabel("yc [px]")
-    ax2.set_xlabel("xc [px]")
-    ax2.set_title("R²")
+        ax1.set_xticks(np.arange(0, n, step, dtype=int))
+        ax1.set_yticks(np.arange(0, n, step, dtype=int))
+        ax1.set_xticklabels(
+            np.arange(x_vals[0], x_vals[-1] + 1, step, dtype=int), rotation=45
+        )
+        ax1.set_yticklabels(np.arange(y_vals[0], y_vals[-1] + 1, step, dtype=int))
 
-    proj_x = np.sum(z, axis=0) // n
-    x = np.arange(x[0], x[-1] + pixel_step, pixel_step)
-    index_x = np.unravel_index(np.argmin(proj_x, axis=None), proj_x.shape)
-    xc = x[index_x]
-    ax3.scatter(x, proj_x, color="b")
-    ax3.scatter(xc, proj_x[index_x], color="r", label=f"xc: {xc}")
-    ax3.set_ylabel("Average FWHM")
-    ax3.set_xlabel("xc [px]")
-    ax3.set_title("FWHM projection in x")
-    ax3.legend()
+        ax1.set_ylabel("yc [px]")
+        ax1.set_xlabel("xc [px]")
+        ax1.set_title("FWHM")
 
-    proj_y = np.sum(z, axis=1) // n
-    x = np.arange(y[0], y[-1] + pixel_step, pixel_step)
-    index_y = np.unravel_index(np.argmin(proj_y, axis=None), proj_y.shape)
-    yc = x[index_y]
-    ax4.scatter(x, proj_y, color="b")
-    ax4.scatter(yc, proj_y[index_y], color="r", label=f"yc: {yc}")
-    ax4.set_ylabel("Average FWHM")
-    ax4.set_xlabel("yc [px]")
-    ax4.set_title("FWHM projection in y")
-    ax4.legend()
+        pos2 = ax2.imshow(r_grid, cmap="rainbow")
+        ax2.set_xticks(np.arange(0, n, step, dtype=int))
+        ax2.set_yticks(np.arange(0, n, step, dtype=int))
+        ax2.set_xticklabels(
+            np.arange(x_vals[0], x_vals[-1] + 1, step, dtype=int), rotation=45
+        )
+        ax2.set_yticklabels(np.arange(y_vals[0], y_vals[-1] + 1, step, dtype=int))
 
-    fig.colorbar(pos1, ax=ax1, shrink=0.6)
-    fig.colorbar(pos2, ax=ax2, shrink=0.6)
+        ax2.set_ylabel("yc [px]")
+        ax2.set_xlabel("xc [px]")
+        ax2.set_title("R²")
+
+        ax3.scatter(x_vals, proj_x, color="b")
+        ax3.scatter(xc, proj_x[np.argmin(proj_x)], color="r", label=f"xc: {xc}")
+        ax3.set_ylabel("Average FWHM")
+        ax3.set_xlabel("xc [px]")
+        ax3.set_title("FWHM projection in x")
+        ax3.legend()
+        ax4.scatter(y_vals, proj_y, color="b")
+        ax4.scatter(yc, proj_y[np.argmin(proj_y)], color="r", label=f"yc: {yc}")
+        ax4.set_ylabel("Average FWHM")
+        ax4.set_xlabel("yc [px]")
+        ax4.set_title("FWHM projection in y")
+        ax4.legend()
+        fig.colorbar(pos1, ax=ax1, shrink=0.6)
+        fig.colorbar(pos2, ax=ax2, shrink=0.6)
+
+        path = pathlib.Path(f"{output_folder}/fwhm_map/")
+        path.mkdir(parents=True, exist_ok=True)
+        plt.savefig(f"{output_folder}/fwhm_map/{label}.png")
+        plt.close()
 
     if int(np.sum(proj_y)) == 0 or int(np.sum(proj_x)) == 0:
         xc = -1
         yc = -1
-    else:
-        if plots_flag:
-            plt.savefig(f"{output_folder}/fwhm_map/{label}.png")
-    plt.close()
+
     return [np.round(xc, 0), np.round(yc, 0)]
 
 
 def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:
     """
-    Make a  ring mask for the data
+    Make a circular mask for the data.
 
     Args:
-        data (np.ndarray): Image in which mask will be shaped
-        radius (int): Outer radius of the mask
+        data (np.ndarray): Image in which mask will be shaped.
+        radius (int): Outer radius of the mask, in pixels.
 
     Returns:
         mask (np.ndarray): Mask array containg zeros (pixels to be masked) and ones (valid pixels).
     """
 
-    bin_size = bin
     a = data.shape[0]
     b = data.shape[1]
 
@@ -362,13 +366,13 @@ def ring_mask(
     data: np.ndarray, center: tuple, inner_radius: int, outer_radius: int
 ) -> np.ndarray:
     """
-    Make a  ring mask for the data
+    Make a ring mask for the data.
 
     Args:
-        data (np.ndarray): Image in which mask will be shaped
-        center (tuple): (xc,yc)
-        inner_radius (int):
-        outer_radius (int):
+        data (np.ndarray): Image in which mask will be shaped.
+        center (tuple): Center coordinates (xc,yc) of the concentric rings for the mask.
+        inner_radius (int): Inner radius of the mask, in pixels.
+        outer_radius (int): Outer radius of the mask, in pixels.
 
     Returns:
         mask (np.ndarray): Mask array containg zeros (pixels to be masked) and ones (valid pixels).
@@ -391,12 +395,11 @@ def visualize_single_panel(
 
     Args:
         data (np.ndarray): Image in which mask will be shaped
-        transformation_matrix (np.ndarray): A 2x2 transformation matrix used to map
-                    from fast-scan/slow-scan to x/y coordinates.
-                ss_in_rows (bool): If True, the slow-scan axis is mapped to rows; otherwise to columns.
+        transformation_matrix (np.ndarray): A 2x2 transformation matrix used to map from fast-scan/slow-scan to x/y coordinates.
+        ss_in_rows (bool): If True, the slow-scan axis is mapped to rows; otherwise to columns.
 
-            Returns:
-                np.ndarray: The transformed visualization array.
+    Returns:
+        np.ndarray: The transformed visualization array.
     """
     visual_data = np.full((2 * max(data.shape) + 1, 2 * max(data.shape) + 1), np.nan)
 
@@ -420,12 +423,11 @@ def fsss_to_xy(point: tuple, m: list) -> tuple:
     Transforms from the fast-scan/slow-scan basis to the x/y basis.
 
     Args:
-        point (tuple):
+        point (tuple): Coordinates in the fast-scan/slow-scan basis (ss,fs).
         m (list): A 2x2 transformation matrix.
 
     Returns:
         tuple: The corresponding (x, y) coordinates.
-
     """
 
     d = m[0][0] * m[1][1] - m[0][1] * m[1][0]

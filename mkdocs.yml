@@ -40,7 +40,8 @@ nav:
   - About bblib: reference/index.md
   - Installation: reference/install.md
   - Usage: reference/usage.md
-  - Tutorials:
+  - Tutorial:
+      - bblib tutorial: tutorial/index.md
       - Center of mass: tutorial/center_of_mass/center_of_mass.md
       - Circle detection: tutorial/circle_detection/circle_detection.md
       - Minimize peak FWHM: tutorial/minimize_peak_fwhm/minimize_peak_fwhm.md

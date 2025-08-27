@@ -6,10 +6,10 @@ from numpy import exp
 import numpy as np
 from numba import njit
 import matplotlib.pyplot as plt
-
-plt.switch_backend("agg")
+import pathlib
 import math
 
+plt.switch_backend("agg")
 
 def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
     """
@@ -319,6 +319,9 @@ def get_fwhm_map_min_from_projection(
         ax4.legend()
         fig.colorbar(pos1, ax=ax1, shrink=0.6)
         fig.colorbar(pos2, ax=ax2, shrink=0.6)
+
+        path = pathlib.Path(f'{output_folder}/fwhm_map/')
+        path.mkdir(parents=True, exist_ok=True)
         plt.savefig(f"{output_folder}/fwhm_map/{label}.png")
         plt.close()
 

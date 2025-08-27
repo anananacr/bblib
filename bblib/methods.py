@@ -128,7 +128,7 @@ class CenterOfMass(CenteringMethod):
         peaks_mask = mask_peaks(
             visual_mask,
             peaks_indexes,
-            bragg=self.config["bragg_peaks_positions_for_center_of_mass_calculation"],
+            bragg=self.config["bragg_peaks_for_center_of_mass_calculation"],
             n=self.config["pixels_for_mask_of_bragg_peaks"],
         )
         self.mask_for_center_of_mass = peaks_mask * visual_mask
@@ -136,9 +136,6 @@ class CenterOfMass(CenteringMethod):
     def _run_centering(self) -> tuple:
 
         center = center_of_mass(self.visual_data, self.mask_for_center_of_mass)
-        if self.centering_converged(center):
-            center[0] += self.config["offset"]["x"]
-            center[1] += self.config["offset"]["y"]
 
         if self.config["plots_flag"]:
             visual_img = self.visual_data * self.mask_for_center_of_mass
@@ -208,7 +205,8 @@ class CenterOfMass(CenteringMethod):
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_of_mass/{self.plots_info["filename"]}.png'
             )
             plt.close()
-        return np.round(center, 0)
+
+        return list(np.round(center, 0))
 
 
 class CircleDetection(CenteringMethod):
@@ -324,8 +322,8 @@ class CircleDetection(CenteringMethod):
         )
 
         if len(xc) > 0:
-            xc = xc[int(self.config["hough_rank"] - 1)] + self.config["offset"]["x"]
-            yc = yc[int(self.config["hough_rank"] - 1)] + self.config["offset"]["y"]
+            xc = xc[int(self.config["hough_rank"] - 1)]
+            yc = yc[int(self.config["hough_rank"] - 1)]
         else:
             xc = -1
             yc = -1
@@ -644,8 +642,6 @@ class MinimizePeakFWHM(CenteringMethod):
             self.config["plots_flag"],
         )
 
-        xc += self.config["offset"]["x"]
-        yc += self.config["offset"]["y"]
         center = [xc, yc]
 
         if self.centering_converged(center):
@@ -926,26 +922,24 @@ class FriedelPairs(CenteringMethod):
             print("Center shift in x", shift_x)
             print("Center shift in y", shift_y)
             center = [
-                np.round(self.initial_guess[0] + shift_x, 1),
-                np.round(self.initial_guess[1] + shift_y, 1),
+                int(self.initial_guess[0] + shift_x),
+                int(self.initial_guess[1] + shift_y),
             ]
 
             print(f"Friedel pairs position after center correction in pixels:")
             pairs_list_after_correction = [
-                (np.round(x[0] - shift_x, 1), np.round(x[1] - shift_y, 1))
+                (int(x[0] - shift_x), int(x[1] - shift_y))
                 for x in self.peaks_list_original
             ]
             print(pairs_list_after_correction)
             print(f"All reflections after center correction in pixels:")
             peaks_list_after_correction = [
-                (np.round(x[0] - shift_x, 1), np.round(x[1] - shift_y, 1))
+                (int(x[0] - shift_x), int(x[1] - shift_y))
                 for x in peaks
             ]
             print(peaks_list_after_correction)
             print(f"-- End --")
 
-            center[0] += self.config["offset"]["x"]
-            center[1] += self.config["offset"]["y"]
         else:
             center = [-1, -1]
 

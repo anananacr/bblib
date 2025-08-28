@@ -927,8 +927,8 @@ class FriedelPairs(CenteringMethod):
             print("Center shift in x", shift_x)
             print("Center shift in y", shift_y)
             center = [
-                int(self.initial_guess[0] + shift_x),
-                int(self.initial_guess[1] + shift_y),
+                self.initial_guess[0] + shift_x,
+                self.initial_guess[1] + shift_y,
             ]
 
             print("Friedel pairs position after center correction in pixels:")
@@ -992,8 +992,8 @@ class FriedelPairs(CenteringMethod):
             if not "marker_size" in self.plots_info:
                 self.plots_info["marker_size"] = 20
             ax1.scatter(
-                center[0],
-                center[1],
+                int(center[0]),
+                int(center[1]),
                 color="r",
                 marker="^",
                 edgecolor="black",

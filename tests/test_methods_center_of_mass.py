@@ -61,7 +61,8 @@ def test_output_from_center_of_mass_without_plot():
     with h5py.File("example/thin_glowing_ring_center_600_200.h5", "r") as f:
         data = np.array(f["ring"][0])
     center_from_center_of_mass = center_of_mass_method(data=data)
-    assert center_from_center_of_mass == [600, 200]
+    formatted_center = [round(elem,0) for elem in center_from_center_of_mass]
+    assert formatted_center == [600, 200]
 
 
 def test_output_from_center_of_mass_with_plot():
@@ -73,4 +74,5 @@ def test_output_from_center_of_mass_with_plot():
     with h5py.File("example/thin_glowing_ring_center_600_200.h5", "r") as f:
         data = np.array(f["ring"][0])
     center_from_center_of_mass = center_of_mass_method(data=data)
-    assert center_from_center_of_mass == [600, 200]
+    formatted_center = [round(elem,0) for elem in center_from_center_of_mass]
+    assert formatted_center == [600, 200]

@@ -53,13 +53,13 @@ class PF8Info:
     _shifted_pixel_maps: bool = False
     geometry_txt: list = None
 
-    def update_pixel_maps(self, detector_shift_x: int, detector_shift_y: int):
+    def update_pixel_maps(self, detector_shift_x: float, detector_shift_y: float):
         """
         This module checks whether the pixel maps have been shifted. If not, it shifts the entire detector along the x and y axes by the specified values.
 
         Args:
-            detector_shift_x (int): Number of pixels to shift the entire detector in the x-axis, according to the CXI coordinate system.
-            detector_shift_y (int): Number of pixels to shift the entire detector in the y-axis, according to the CXI coordinate system.
+            detector_shift_x (float): Number of pixels to shift the entire detector in the x-axis, according to the CXI coordinate system.
+            detector_shift_y (float): Number of pixels to shift the entire detector in the y-axis, according to the CXI coordinate system.
         """
 
         if not self._shifted_pixel_maps:
@@ -147,6 +147,7 @@ class PF8Info:
             detector, _, _ = _read_crystfel_geometry_from_text(
                 text_lines=self.geometry_txt
             )
+
             detector_panels = dict(detector["panels"])
             panel_name = list(detector_panels.keys())[0]
             frame_dim_structure = [
@@ -183,14 +184,14 @@ class PF8Info:
                 ssx, ssy = re.findall(pattern, ss_string)
 
             ## The transformation matrix here is only for visualization purposes. Small stretching factors won't have an impact on the visualization of the images (slabby data).
-            self.transformation_matrix = [
+            self.transformation_matrix_for_visualization = [
                 [
-                    np.round(float(fsx)),
-                    np.round(float(fsy)),
+                    round(float(fsx)),
+                    round(float(fsy)),
                 ],
                 [
-                    np.round(float(ssx)),
-                    np.round(float(ssy)),
+                    round(float(ssx)),
+                    round(float(ssy)),
                 ],
             ]
 
@@ -239,32 +240,30 @@ class PF8Info:
                 # Get minimum array shape
                 y_minimum = (
                     2
-                    * int(
-                        max(
+                    *   max(
                             abs(self.pixel_maps["y"].max()),
                             abs(self.pixel_maps["y"].min()),
                         )
-                    )
+
                     + 2
                 )
                 x_minimum = (
                     2
-                    * int(
-                        max(
+                    *   max(
                             abs(self.pixel_maps["x"].max()),
                             abs(self.pixel_maps["x"].min()),
                         )
-                    )
+
                     + 2
                 )
                 visual_img_shape = (y_minimum, x_minimum)
                 # Detector center in the middle of the minimum array
-                _img_center_x = int(visual_img_shape[1] // 2 - 1)
-                _img_center_y = int(visual_img_shape[0] // 2 - 1)
+                _img_center_x = visual_img_shape[1] / 2 - 1
+                _img_center_y = visual_img_shape[0] / 2 - 1
             else:
                 # Single panel
-                _img_center_x = int(abs(np.min(self.pixel_maps["x"])))
-                _img_center_y = int(abs(np.min(self.pixel_maps["y"])))
+                _img_center_x = abs(np.min(self.pixel_maps["x"]))
+                _img_center_y = abs(np.min(self.pixel_maps["y"]))
         else:
             print(
                 "Warning! The detector center was moved by a previous operation, the detector center is not the same as in the geometry file."

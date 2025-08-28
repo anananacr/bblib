@@ -85,7 +85,6 @@ class CenterOfMass(CenteringMethod):
     def _prep_for_centering(self, data: np.ndarray):
 
         self.initial_detector_center = self.PF8Config.get_detector_center()
-
         # Determine Bragg peaks position.
         pf8 = PF8(self.PF8Config)
         peak_list = pf8.get_peaks_pf8(data=data)
@@ -117,10 +116,10 @@ class CenterOfMass(CenteringMethod):
         else:
 
             self.visual_data = visualize_single_panel(
-                data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows
+                data, self.PF8Config.transformation_matrix_for_visualization, self.PF8Config.ss_in_rows
             )
             visual_mask = visualize_single_panel(
-                mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows
+                mask, self.PF8Config.transformation_matrix_for_visualization, self.PF8Config.ss_in_rows
             )
 
         # JF for safety
@@ -169,24 +168,24 @@ class CenterOfMass(CenteringMethod):
             if not "marker_size" in self.plots_info:
                 self.plots_info["marker_size"] = 20
             ax1.scatter(
-                self.initial_detector_center[0],
-                self.initial_detector_center[1],
+                int(self.initial_detector_center[0]),
+                int(self.initial_detector_center[1]),
                 s=self.plots_info["marker_size"],
                 color="blue",
                 marker="o",
                 edgecolor="black",
                 linewidth=0.5,
-                label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})",
+                label=f"Initial detector center: ({round(self.initial_detector_center[0],1)}, {round(self.initial_detector_center[1],1)})",
             )
             ax1.scatter(
-                center[0],
-                center[1],
+                int(center[0]),
+                int(center[1]),
                 s=self.plots_info["marker_size"],
                 color="r",
                 marker="^",
                 edgecolor="black",
                 linewidth=0.5,
-                label=f"Refined detector center: ({center[0]}, {center[1]})",
+                label=f"Refined detector center: ({round(center[0],1)}, {round(center[1],1)})",
             )
             ax1.legend(fontsize=14, loc=1, markerscale=1)
             plt.tick_params(axis="both", which="major", labelsize=16)
@@ -208,7 +207,7 @@ class CenterOfMass(CenteringMethod):
             )
             plt.close()
 
-        return list(np.round(center, 0))
+        return center
 
 
 class CircleDetection(CenteringMethod):
@@ -268,10 +267,10 @@ class CircleDetection(CenteringMethod):
         else:
 
             self.visual_data = visualize_single_panel(
-                data, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows
+                data, self.PF8Config.transformation_matrix_for_visualization, self.PF8Config.ss_in_rows
             )
             visual_mask = visualize_single_panel(
-                mask, self.PF8Config.transformation_matrix, self.PF8Config.ss_in_rows
+                mask, self.PF8Config.transformation_matrix_for_visualization, self.PF8Config.ss_in_rows
             )
 
         # JF for safety
@@ -364,18 +363,18 @@ class CircleDetection(CenteringMethod):
             if not "marker_size" in self.plots_info:
                 self.plots_info["marker_size"] = 20
             ax1.scatter(
-                self.initial_detector_center[0],
-                self.initial_detector_center[1],
+                int(self.initial_detector_center[0]),
+                int(self.initial_detector_center[1]),
                 s=self.plots_info["marker_size"],
                 color="blue",
                 marker="o",
                 edgecolor="black",
                 linewidth=0.5,
-                label=f"Initial detector center: ({np.round(self.initial_detector_center[0])}, {np.round(self.initial_detector_center[1])})",
+                label=f"Initial detector center: ({round(self.initial_detector_center[0],1)}, {round(self.initial_detector_center[1],1)})",
             )
             ax1.scatter(
-                center[0],
-                center[1],
+                int(center[0]),
+                int(center[1]),
                 s=self.plots_info["marker_size"],
                 color="r",
                 marker="^",
@@ -544,12 +543,12 @@ class MinimizePeakFWHM(CenteringMethod):
             else:
                 self.visual_data = visualize_single_panel(
                     data,
-                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.transformation_matrix_for_visualization,
                     self.PF8Config.ss_in_rows,
                 )
                 visual_mask = visualize_single_panel(
                     mask,
-                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.transformation_matrix_for_visualization,
                     self.PF8Config.ss_in_rows,
                 )
         else:
@@ -578,12 +577,12 @@ class MinimizePeakFWHM(CenteringMethod):
             else:
                 self.visual_data = visualize_single_panel(
                     pol_corrected_data,
-                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.transformation_matrix_for_visualization,
                     self.PF8Config.ss_in_rows,
                 )
                 visual_mask = visualize_single_panel(
                     mask,
-                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.transformation_matrix_for_visualization,
                     self.PF8Config.ss_in_rows,
                 )
 
@@ -686,24 +685,24 @@ class MinimizePeakFWHM(CenteringMethod):
             if not "marker_size" in self.plots_info:
                 self.plots_info["marker_size"] = 20
             ax1.scatter(
-                self.initial_guess[0],
-                self.initial_guess[1],
+                int(self.initial_guess[0]),
+                int(self.initial_guess[1]),
                 s=self.plots_info["marker_size"],
                 color="blue",
                 marker="o",
                 edgecolor="black",
                 linewidth=0.5,
-                label=f"Initial guess: ({np.round(self.initial_guess[0])}, {np.round(self.initial_guess[1])})",
+                label=f"Initial guess: ({round(self.initial_guess[0],1)}, {round(self.initial_guess[1],1)})",
             )
             ax1.scatter(
-                center[0],
-                center[1],
+                int(center[0]),
+                int(center[1]),
                 s=self.plots_info["marker_size"],
                 color="r",
                 marker="^",
                 edgecolor="black",
                 linewidth=0.5,
-                label=f"Refined detector center: ({center[0]}, {center[1]})",
+                label=f"Refined detector center: ({int(center[0])}, {int(center[1])})",
             )
             path = pathlib.Path(
                 f'{self.plots_info["root_path"]}/center_refinement/plots/{self.plots_info["folder_name"]}/center_fwhm_minimization/'
@@ -846,12 +845,12 @@ class FriedelPairs(CenteringMethod):
             else:
                 self.visual_data = visualize_single_panel(
                     data,
-                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.transformation_matrix_for_visualization,
                     self.PF8Config.ss_in_rows,
                 )
                 self.visual_mask = visualize_single_panel(
                     mask,
-                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.transformation_matrix_for_visualization,
                     self.PF8Config.ss_in_rows,
                 )
         else:
@@ -880,12 +879,12 @@ class FriedelPairs(CenteringMethod):
             else:
                 self.visual_data = visualize_single_panel(
                     pol_corrected_data,
-                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.transformation_matrix_for_visualization,
                     self.PF8Config.ss_in_rows,
                 )
                 self.visual_mask = visualize_single_panel(
                     mask,
-                    self.PF8Config.transformation_matrix,
+                    self.PF8Config.transformation_matrix_for_visualization,
                     self.PF8Config.ss_in_rows,
                 )
 
@@ -933,13 +932,13 @@ class FriedelPairs(CenteringMethod):
 
             print("Friedel pairs position after center correction in pixels:")
             pairs_list_after_correction = [
-                (np.round(x[0] - shift_x, 1), np.round(x[1] - shift_y, 1))
+                (round(x[0] - shift_x, 1), round(x[1] - shift_y, 1))
                 for x in self.peaks_list_original
             ]
             print(pairs_list_after_correction)
             print("All reflections after center correction in pixels:")
             peaks_list_after_correction = [
-                (np.round(x[0] - shift_x, 1), np.round(x[1] - shift_y, 1))
+                (round(x[0] - shift_x, 1), round(x[1] - shift_y, 1))
                 for x in peaks
             ]
             print(peaks_list_after_correction)
@@ -986,7 +985,7 @@ class FriedelPairs(CenteringMethod):
                 edgecolor="black",
                 linewidth=0.5,
                 s=self.plots_info["marker_size"],
-                label=f"Initial guess:({np.round(self.initial_guess[0],1)},{np.round(self.initial_guess[1], 1)})",
+                label=f"Initial guess:({round(self.initial_guess[0],1)},{round(self.initial_guess[1], 1)})",
             )
 
             if not "marker_size" in self.plots_info:
@@ -999,7 +998,7 @@ class FriedelPairs(CenteringMethod):
                 edgecolor="black",
                 linewidth=0.5,
                 s=self.plots_info["marker_size"],
-                label=f"Refined detector center:({np.round(center[0],1)}, {np.round(center[1],1)})",
+                label=f"Refined detector center:({round(center[0],1)}, {round(center[1],1)})",
             )
 
             cbar = fig.colorbar(pos, ax=ax1, shrink=0.6)
@@ -1023,24 +1022,24 @@ class FriedelPairs(CenteringMethod):
             plt.close("all")
 
             original_peaks_x = [
-                np.round(k + self.initial_guess[0]) for k in peak_list_x_in_frame
+                round(k + self.initial_guess[0]) for k in peak_list_x_in_frame
             ]
             original_peaks_y = [
-                np.round(k + self.initial_guess[1]) for k in peak_list_y_in_frame
+                round(k + self.initial_guess[1]) for k in peak_list_y_in_frame
             ]
 
             inverted_non_shifted_peaks_x = [
-                np.round(k[0] + self.initial_guess[0]) for k in self.peaks_list_inverted
+                round(k[0] + self.initial_guess[0]) for k in self.peaks_list_inverted
             ]
             inverted_non_shifted_peaks_y = [
-                np.round(k[1] + self.initial_guess[1]) for k in self.peaks_list_inverted
+                round(k[1] + self.initial_guess[1]) for k in self.peaks_list_inverted
             ]
             inverted_shifted_peaks_x = [
-                np.round(k[0] + self.initial_guess[0] + shift_x)
+                round(k[0] + self.initial_guess[0] + shift_x)
                 for k in self.peaks_list_inverted
             ]
             inverted_shifted_peaks_y = [
-                np.round(k[1] + self.initial_guess[1] + shift_y)
+                round(k[1] + self.initial_guess[1] + shift_y)
                 for k in self.peaks_list_inverted
             ]
 

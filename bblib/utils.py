@@ -41,7 +41,7 @@ def center_of_mass(data: np.ndarray, mask: np.ndarray = None) -> list[int]:
         xc = -1
         yc = -1
 
-    return [np.round(xc, 1), np.round(yc, 1)]
+    return [xc, yc]
 
 
 @njit
@@ -197,7 +197,6 @@ def mask_peaks(mask: np.ndarray, indexes: tuple, bragg: int, n: int) -> np.ndarr
                 surrounding_positions.append((row + i, col + k))
         count += 1
 
-    # print(args.bragg)
     if bragg == 1:
         surrounding_mask = np.zeros_like(mask)
         for pos in surrounding_positions:
@@ -339,7 +338,7 @@ def get_fwhm_map_min_from_projection(
         xc = -1
         yc = -1
 
-    return [np.round(xc, 0), np.round(yc, 0)]
+    return [xc, yc]
 
 
 def circle_mask(data: np.ndarray, center: tuple, radius: int) -> np.ndarray:

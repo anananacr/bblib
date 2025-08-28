@@ -40,7 +40,7 @@ def test_type_output_from_friedel_pairs_without_plot():
     with h5py.File("example/thin_glowing_ring_bragg_center_600_200.h5", "r") as f:
         data = np.array(f["image"][0])
     center_from_friedel_pairs = friedel_pairs_method(
-        data=data, initial_guess=[604, 202]
+        data=data, initial_guess=[604.5, 202]
     )
     assert isinstance(center_from_friedel_pairs, list)
 
@@ -54,7 +54,7 @@ def test_type_output_from_friedel_pairs_with_plot():
     with h5py.File("example/thin_glowing_ring_bragg_center_600_200.h5", "r") as f:
         data = np.array(f["image"][0])
     center_from_friedel_pairs = friedel_pairs_method(
-        data=data, initial_guess=[604, 202]
+        data=data, initial_guess=[604.5, 202]
     )
     assert isinstance(center_from_friedel_pairs, list)
 
@@ -67,7 +67,7 @@ def test_output_from_friedel_pairs_without_plot():
     with h5py.File("example/thin_glowing_ring_bragg_center_600_200.h5", "r") as f:
         data = np.array(f["image"][0])
     center_from_friedel_pairs = friedel_pairs_method(
-        data=data, initial_guess=[604, 202]
+        data=data, initial_guess=[604.5, 202]
     )
     assert center_from_friedel_pairs == [600, 200]
 
@@ -81,6 +81,6 @@ def test_output_from_friedel_pairs_with_plot():
     with h5py.File("example/thin_glowing_ring_bragg_center_600_200.h5", "r") as f:
         data = np.array(f["image"][0])
     center_from_friedel_pairs = friedel_pairs_method(
-        data=data, initial_guess=[604, 202]
+        data=data, initial_guess=[604.5, 202]
     )
     assert center_from_friedel_pairs == [600, 200]
